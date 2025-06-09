@@ -22,6 +22,7 @@ import { theme } from '@/shared/ui/theme/theme';
 import { ImportButton } from '@/features/import/ui/components/ImportButton';
 import { ImportPreviewModal } from '@/features/import/ui/components/ImportPreviewModal';
 // import { generateSampleTransactions } from '../../../../../tests/fixtures/transactionFixtures';
+// import { realBankParser } from '../../../../../tests/fixtures/realBankStatementParser';
 import { importService } from '@/features/import/service/ImportService';
 import { ImportResult } from '@/features/import/strategies/ImportStrategy';
 import { Transaction } from '../../model/Transaction';
@@ -215,10 +216,135 @@ export const TransactionListScreen: React.FC = () => {
   }, [filters]);
 
   const handleAddSampleTransactions = async () => {
-    // const samples = generateSampleTransactions(5);
-    // for (const transaction of samples) {
-    //   await addTransaction(transaction);
-    // }
+    // Generate realistic samples based on Ukrainian bank statement patterns
+    const realisticSamples = generateRealisticUkrainianTransactions(5);
+    
+    try {
+      for (const transaction of realisticSamples) {
+        await addTransaction(transaction);
+      }
+      setSnackbarMessage(`Successfully added ${realisticSamples.length} sample transactions`);
+      setShowSnackbar(true);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add sample transactions');
+    }
+  };
+
+  const generateRealisticUkrainianTransactions = (count: number): CreateTransactionRequest[] => {
+    // Real Ukrainian bank transaction patterns based on the provided bank statement
+    const templates = [
+      {
+        description: 'ATM Withdrawal',
+        amount: 500,
+        category: DEFAULT_CATEGORIES[8], // Other
+        card: 'PrivatBank',
+        isIncome: false,
+        comment: 'Cash withdrawal'
+      },
+      {
+        description: 'Grocery Store',
+        amount: 245.50,
+        category: DEFAULT_CATEGORIES[0], // Food & Dining
+        card: 'Monobank',
+        isIncome: false,
+        comment: 'Weekly groceries'
+      },
+      {
+        description: 'Salary Transfer',
+        amount: 35000,
+        category: DEFAULT_CATEGORIES[7], // Income
+        card: 'PrivatBank',
+        isIncome: true,
+        comment: 'Monthly salary'
+      },
+      {
+        description: 'Mobile Payment',
+        amount: 199,
+        category: DEFAULT_CATEGORIES[4], // Bills & Utilities
+        card: 'Monobank',
+        isIncome: false,
+        comment: 'Mobile plan'
+      },
+      {
+        description: 'Coffee Shop',
+        amount: 65,
+        category: DEFAULT_CATEGORIES[0], // Food & Dining
+        card: 'PUMB',
+        isIncome: false,
+        comment: 'Morning coffee'
+      },
+      {
+        description: 'Taxi Ride',
+        amount: 85,
+        category: DEFAULT_CATEGORIES[1], // Transportation
+        card: 'Monobank',
+        isIncome: false,
+        comment: 'To office'
+      },
+      {
+        description: 'Online Purchase',
+        amount: 1250,
+        category: DEFAULT_CATEGORIES[2], // Shopping
+        card: 'PrivatBank',
+        isIncome: false,
+        comment: 'Electronics'
+      },
+      {
+        description: 'Utility Payment',
+        amount: 850,
+        category: DEFAULT_CATEGORIES[4], // Bills & Utilities
+        card: 'PrivatBank',
+        isIncome: false,
+        comment: 'Electricity bill'
+      },
+      {
+        description: 'Gas Station',
+        amount: 750,
+        category: DEFAULT_CATEGORIES[1], // Transportation
+        card: 'PUMB',
+        isIncome: false,
+        comment: 'Car fuel'
+      },
+      {
+        description: 'Freelance Payment',
+        amount: 15000,
+        category: DEFAULT_CATEGORIES[7], // Income
+        card: 'Monobank',
+        isIncome: true,
+        comment: 'Web development'
+      }
+    ];
+
+    const cards = ['PrivatBank', 'Monobank', 'PUMB', 'Raiffeisen', 'OschadBank'];
+    const samples: CreateTransactionRequest[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const template = templates[Math.floor(Math.random() * templates.length)];
+      
+      // Add realistic date variation (last 60 days)
+      const daysAgo = Math.floor(Math.random() * 60);
+      const date = new Date();
+      date.setDate(date.getDate() - daysAgo);
+      
+      // Add amount variation (±30%)
+      const variance = 0.7 + (Math.random() * 0.6); // 0.7 to 1.3
+      const amount = Math.round(template.amount * variance * 100) / 100;
+      
+      const transaction: CreateTransactionRequest = {
+        date: date.toISOString().split('T')[0],
+        card: cards[Math.floor(Math.random() * cards.length)],
+        amount: parseCurrencyToSmallestUnit(amount),
+        currency: 'USD',
+        description: template.description,
+        category: template.category,
+        comment: template.comment,
+        isIncome: template.isIncome
+      };
+      
+      samples.push(transaction);
+    }
+
+    return samples;
   };
 
   const handleFileSelect = async (file: File) => {
@@ -298,78 +424,118 @@ export const TransactionListScreen: React.FC = () => {
 
       {/* Balance Summary */}
       <Card style={styles.balanceCard}>
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.balanceTitle}>
-            Account Balance
-          </Text>
-          <Text variant="headlineMedium" style={[styles.balanceAmount, { color: balance.total >= 0 ? '#4CAF50' : '#F44336' }]}>
-            {formatCurrency(Math.abs(balance.total))}
-          </Text>
-          <View style={styles.balanceBreakdown}>
-            <View style={styles.balanceItem}>
-              <Text variant="bodySmall" style={styles.balanceLabel}>Income</Text>
-              <Text variant="bodyMedium" style={[styles.balanceValue, { color: '#4CAF50' }]}>
-                +{formatCurrency(balance.income)}
+        <Card.Content style={styles.balanceContent}>
+          {/* Compact Header with Trend */}
+          <View style={styles.balanceHeader}>
+            <View style={styles.balanceMainRow}>
+              <Text variant="bodyMedium" style={styles.balanceLabel}>
+                💰 Balance
               </Text>
-            </View>
-            <View style={styles.balanceItem}>
-              <Text variant="bodySmall" style={styles.balanceLabel}>Expenses</Text>
-              <Text variant="bodyMedium" style={[styles.balanceValue, { color: '#F44336' }]}>
-                -{formatCurrency(balance.expenses)}
+              <Text variant="headlineMedium" style={[styles.balanceAmount, { color: balance.total >= 0 ? '#2E7D32' : '#D32F2F' }]}>
+                {formatCurrency(Math.abs(balance.total))}
               </Text>
+              <View style={styles.trendIndicator}>
+                <Text style={styles.trendIcon}>
+                  {balance.total >= 0 ? '📈' : '📉'}
+                </Text>
+                <Text style={[styles.trendText, { color: balance.total >= 0 ? '#2E7D32' : '#D32F2F' }]}>
+                  {balance.total >= 0 ? '+' : ''}
+                  {balance.income > 0 ? Math.round(((balance.total / balance.income) * 100)) : 0}%
+                </Text>
+              </View>
             </View>
+          </View>
+
+          {/* Compact Metrics Row */}
+          <View style={styles.metricsRow}>
+            <TouchableOpacity style={[styles.metricCard, styles.incomeCard]} activeOpacity={0.8}>
+              <Text style={styles.metricIcon}>📈</Text>
+              <View style={styles.metricContent}>
+                <Text variant="bodySmall" style={styles.metricLabel}>Income</Text>
+                <Text variant="bodyMedium" style={[styles.metricValue, { color: '#2E7D32' }]}>
+                  +{balance.income > 999 ? `$${(balance.income/1000).toFixed(1)}K` : formatCurrency(balance.income)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.metricCard, styles.expenseCard]} activeOpacity={0.8}>
+              <Text style={styles.metricIcon}>📉</Text>
+              <View style={styles.metricContent}>
+                <Text variant="bodySmall" style={styles.metricLabel}>Expenses</Text>
+                <Text variant="bodyMedium" style={[styles.metricValue, { color: balance.expenses === 0 ? '#666' : '#D32F2F' }]}>
+                  {balance.expenses === 0 ? 'None yet 🎉' : `-${balance.expenses > 999 ? `$${(balance.expenses/1000).toFixed(1)}K` : formatCurrency(balance.expenses)}`}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Enhanced Insights Row */}
+          <View style={styles.insightsRow}>
+            <Text style={styles.insightText}>
+              💡 {transactions.length} transaction{transactions.length !== 1 ? 's' : ''} this month
+            </Text>
+            {balance.expenses === 0 && transactions.length > 0 && (
+              <Text style={styles.insightText}>
+                • All income transactions ✨
+              </Text>
+            )}
           </View>
         </Card.Content>
       </Card>
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        <Button
-          mode="contained"
-          icon="plus"
-          onPress={() => setShowAddModal(true)}
-          style={styles.actionButton}
-        >
-          Add Transaction
-        </Button>
-        <ImportButton
-          onFileSelect={handleFileSelect}
-          loading={isImporting}
-          label="Import Bank"
-          icon="upload"
-          style={styles.actionButton}
-        />
-        <Button
-          mode="outlined"
-          icon="database"
-          onPress={handleAddSampleTransactions}
-          style={styles.actionButton}
-          disabled={true}
-        >
-          Add Samples
-        </Button>
-      </View>
-
-      {/* Filter Controls */}
-      <View style={styles.filterControls}>
-        <Button
-          mode="outlined"
-          icon="filter"
-          onPress={() => setShowFiltersModal(true)}
-          style={styles.filterButton}
-        >
-          Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
-        </Button>
-        
-        {activeFiltersCount > 0 && (
+        {/* First Row - Main Actions */}
+        <View style={styles.actionRow}>
           <Button
-            mode="text"
-            onPress={() => setFilters({})}
-            compact
+            mode="contained"
+            icon="plus"
+            onPress={() => setShowAddModal(true)}
+            style={styles.actionButton}
           >
-            Clear All
+            Add Transaction
           </Button>
-        )}
+          <ImportButton
+            onFileSelect={handleFileSelect}
+            loading={isImporting}
+            label="Import Bank"
+            icon="upload"
+            style={styles.actionButton}
+          />
+          <Button
+            mode="outlined"
+            icon="database"
+            onPress={handleAddSampleTransactions}
+            style={styles.actionButton}
+            disabled={true}
+          >
+            Add Samples
+          </Button>
+        </View>
+
+        {/* Second Row - Quick Actions */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={[styles.quickActionButton, styles.detailsButton]} activeOpacity={0.8}>
+            <View style={styles.buttonGradient}>
+              <Text style={styles.buttonIcon}>📊</Text>
+              <Text style={styles.buttonLabel}>Details</Text>
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={[styles.quickActionButton, styles.goalsButton]} activeOpacity={0.8}>
+            <View style={styles.buttonGradient}>
+              <Text style={styles.buttonIcon}>🎯</Text>
+              <Text style={styles.buttonLabel}>Goals</Text>
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={[styles.quickActionButton, styles.periodButton]} activeOpacity={0.8}>
+            <View style={styles.buttonGradient}>
+              <Text style={styles.buttonIcon}>📅</Text>
+              <Text style={styles.buttonLabel}>This Month</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Error Display */}
@@ -381,9 +547,40 @@ export const TransactionListScreen: React.FC = () => {
 
       {/* Transaction List */}
       <View style={styles.listContainer}>
-        <Text style={styles.sectionTitle}>
-          Transactions ({transactions.length})
-        </Text>
+        <View style={styles.transactionHeader}>
+          <Text style={styles.sectionTitle}>
+            Transactions ({filteredTransactions.length})
+          </Text>
+          
+          <TouchableOpacity 
+            style={[styles.headerFiltersButton, activeFiltersCount > 0 && styles.filtersButtonActive]}
+            onPress={() => setShowFiltersModal(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.buttonIcon}>🔍</Text>
+            <Text style={styles.headerFilterLabel}>
+              Filters{activeFiltersCount > 0 && ` (${activeFiltersCount})`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Active Filters Summary */}
+        {activeFiltersCount > 0 && (
+          <View style={styles.headerActiveFiltersRow}>
+            <View style={styles.filtersBadge}>
+              <Text style={styles.activeFiltersText}>
+                ✨ {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} applied
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setFilters({})}
+              style={styles.clearFiltersButton}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.clearFiltersText}>✕ Clear</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         
         {filteredTransactions.length === 0 ? (
           <Card style={styles.emptyCard}>
@@ -419,7 +616,11 @@ export const TransactionListScreen: React.FC = () => {
             </Card.Content>
           </Card>
         ) : (
-          <View style={styles.transactionList}>
+          <ScrollView 
+            style={styles.transactionList}
+            contentContainerStyle={styles.transactionListContent}
+            showsVerticalScrollIndicator={true}
+          >
             {filteredTransactions.map((transaction) => (
               <TransactionCard
                 key={transaction.id}
@@ -427,7 +628,7 @@ export const TransactionListScreen: React.FC = () => {
                 onLongPress={() => handleTransactionPress(transaction.id)}
               />
             ))}
-          </View>
+          </ScrollView>
         )}
       </View>
 
@@ -488,84 +689,260 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
   },
   header: {
-    padding: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     ...theme.shadows.sm,
   },
   title: {
-    ...theme.typography.h1,
+    ...theme.typography.h2,
     color: theme.colors.text.primary,
     textAlign: 'center',
+    fontSize: 22,
   },
   subtitle: {
-    ...theme.typography.body,
+    ...theme.typography.caption,
     color: theme.colors.text.secondary,
     textAlign: 'center',
     marginTop: theme.spacing.xs,
   },
   balanceCard: {
     backgroundColor: theme.colors.surface,
-    margin: theme.spacing.md,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.lg,
-    ...theme.shadows.md,
+    marginHorizontal: theme.spacing.md,
+    marginVertical: 6,
+    borderRadius: theme.borderRadius.md,
+    ...theme.shadows.sm,
+    elevation: 3,
+    borderWidth: 0.5,
+    borderColor: '#E0E0E0',
   },
-  balanceTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
+  balanceContent: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  balanceAmount: {
-    ...theme.typography.h1,
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: theme.spacing.md,
+  balanceHeader: {
+    marginBottom: 10,
   },
-  balanceBreakdown: {
+  balanceMainRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  balanceItem: {
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   balanceLabel: {
+    ...theme.typography.body,
+    color: theme.colors.text.primary,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  balanceAmount: {
+    ...theme.typography.h2,
+    fontSize: 24,
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  trendIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  trendIcon: {
+    fontSize: 14,
+    marginRight: 3,
+  },
+  trendText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  metricCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    ...theme.shadows.sm,
+    elevation: 1,
+  },
+  incomeCard: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#F8FFF8',
+  },
+  expenseCard: {
+    borderColor: '#FF5722',
+    backgroundColor: '#FFFAFA',
+  },
+  metricIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  metricContent: {
+    flex: 1,
+  },
+  metricLabel: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xs,
+    fontSize: 11,
+    marginBottom: 2,
+    fontWeight: '500',
   },
-  balanceValue: {
-    ...theme.typography.bodyLarge,
+  metricValue: {
+    ...theme.typography.body,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  insightsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  insightText: {
+    fontSize: 11,
+    color: theme.colors.text.secondary,
+    fontStyle: 'italic',
+  },
+  quickActionsCard: {
+    backgroundColor: theme.colors.surface,
+    marginHorizontal: theme.spacing.md,
+    marginVertical: 6,
+    borderRadius: theme.borderRadius.md,
+    ...theme.shadows.sm,
+    elevation: 3,
+    borderWidth: 0.5,
+    borderColor: '#E0E0E0',
+  },
+  quickActionsContent: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  detailsButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    ...theme.shadows.sm,
+  },
+  goalsButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    ...theme.shadows.sm,
+  },
+  periodButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    ...theme.shadows.sm,
+  },
+  filtersButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    ...theme.shadows.sm,
+  },
+  filtersButtonActive: {
+    backgroundColor: '#E8F5E8',
+    borderColor: '#4CAF50',
+  },
+  buttonGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+  },
+  buttonIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  buttonLabel: {
+    fontSize: 12,
+    color: theme.colors.text.primary,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  headerActiveFiltersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#E8F5E8',
+    marginHorizontal: theme.spacing.md,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+    marginTop: 8,
+  },
+  filtersBadge: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  activeFiltersText: {
+    fontSize: 11,
+    color: '#2E7D32',
+    fontWeight: '500',
+  },
+  clearFiltersButton: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  clearFiltersText: {
+    fontSize: 10,
+    color: '#2E7D32',
     fontWeight: '600',
   },
   actionButtons: {
-    flexDirection: 'row',
     marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
     gap: theme.spacing.sm,
   },
   actionButton: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 44,
     justifyContent: 'center',
     borderRadius: theme.borderRadius.md,
     ...theme.shadows.sm,
-  },
-  filterControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  filterButton: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
   },
   errorContainer: {
     backgroundColor: theme.colors.error,
@@ -580,10 +957,12 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flex: 1,
+    minHeight: '75%',
   },
   sectionTitle: {
     ...theme.typography.h3,
     color: theme.colors.text.primary,
+    fontSize: 18,
     marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
@@ -623,5 +1002,39 @@ const styles = StyleSheet.create({
   },
   transactionList: {
     flex: 1,
+    minHeight: '100%',
+  },
+  transactionListContent: {
+    paddingBottom: theme.spacing.lg,
+  },
+  transactionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: theme.spacing.md,
+  },
+  headerFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+  },
+  headerFilterLabel: {
+    fontSize: 12,
+    color: theme.colors.text.primary,
+    fontWeight: '500',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  quickActionButton: {
+    flex: 1,
+    minHeight: 44,
+    justifyContent: 'center',
+    borderRadius: theme.borderRadius.md,
+    ...theme.shadows.sm,
   },
 }); 
