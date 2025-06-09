@@ -9,9 +9,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
-    "fix-paths": "sed -i '' 's|href=\"/|href=\"./|g' dist/index.html && sed -i '' 's|src=\"/|src=\"./|g' dist/index.html",
+    "fix-paths": "sed -i '' 's|href=\"/|href=\"./|g' dist/index.html && sed -i '' 's|src=\"/|src=\"./|g' dist/index.html && sed -i '' 's|\"/assets/|\"./assets/|g' dist/_expo/static/js/web/index-*.js && touch dist/.nojekyll",
     "predeploy": "npm run build:web && npm run fix-paths",
-    "deploy": "npx gh-pages -d dist"
+    "deploy": "npx gh-pages -d dist --dotfiles"
   },
   "dependencies": {
     "@expo/cli": "^0.24.14",
