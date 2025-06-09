@@ -32,7 +32,7 @@ export const TransactionListScreen: React.FC = () => {
     error, 
     filters,
     loadTransactions, 
-    addTransaction,
+    addTransaction, 
     setFilters,
     clearFilters,
     getBalance
@@ -51,7 +51,7 @@ export const TransactionListScreen: React.FC = () => {
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   
   const scrollViewRef = useRef<ScrollView>(null);
-
+  
   const balance = getBalance();
   const { filteredTransactions, activeFiltersCount } = useTransactionFilters(transactions, filters);
   const {
@@ -159,7 +159,7 @@ export const TransactionListScreen: React.FC = () => {
 
   const handleScroll = (event: any) => {
     const scrollY = event.nativeEvent.contentOffset.y;
-    
+      
     // Show/hide scroll to top button
     setShowScrollToTop(scrollY > 300);
   };
@@ -207,11 +207,11 @@ export const TransactionListScreen: React.FC = () => {
       >
         {/* Top Content */}
         <View>
-          {/* Header */}
-          <View style={styles.header}>
+      {/* Header */}
+      <View style={styles.header}>
             <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">💰 LedgerVault</Text>
             <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">Phase 2 Prototype</Text>
-          </View>
+      </View>
 
           {/* Balance Summary - always visible */}
           <BalanceCard 
@@ -220,62 +220,62 @@ export const TransactionListScreen: React.FC = () => {
             currency={transactions.length > 0 ? transactions[0].currency : 'USD'}
           />
 
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            {/* First Row - Main Actions */}
-            <View style={styles.actionRow}>
-              <Button
-                mode="contained"
-                icon="plus"
-                onPress={() => setShowAddModal(true)}
-                style={styles.actionButton}
-                labelStyle={styles.actionButtonLabel}
-                contentStyle={styles.actionButtonContent}
-              >
-                Add Transaction
-              </Button>
-              <ImportButton
-                onFileSelect={handleFileSelect}
-                loading={isImporting}
-                label="Import Bank"
-                icon="upload"
-                style={styles.actionButton}
-                contentStyle={styles.actionButtonContent}
-                labelStyle={styles.actionButtonLabel}
-              />
-            </View>
+      {/* Action Buttons */}
+      <View style={styles.actionButtons}>
+        {/* First Row - Main Actions */}
+        <View style={styles.actionRow}>
+          <Button
+            mode="contained"
+            icon="plus"
+            onPress={() => setShowAddModal(true)}
+            style={styles.actionButton}
+            labelStyle={styles.actionButtonLabel}
+            contentStyle={styles.actionButtonContent}
+          >
+            Add Transaction
+          </Button>
+          <ImportButton
+            onFileSelect={handleFileSelect}
+            loading={isImporting}
+            label="Import Bank"
+            icon="upload"
+            style={styles.actionButton}
+            contentStyle={styles.actionButtonContent}
+            labelStyle={styles.actionButtonLabel}
+          />
+        </View>
 
             {/* Second Row - Quick Actions - always visible */}
-            <View style={styles.actionRow}>
-              <TouchableOpacity style={[styles.quickActionButton, styles.detailsButton]} activeOpacity={0.8}>
-                <View style={styles.buttonGradient}>
-                  <Text style={styles.buttonIcon}>📊</Text>
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={[styles.quickActionButton, styles.detailsButton]} activeOpacity={0.8}>
+            <View style={styles.buttonGradient}>
+              <Text style={styles.buttonIcon}>📊</Text>
                   <Text style={styles.buttonLabel} numberOfLines={1} ellipsizeMode="tail">Details</Text>
-                </View>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={[styles.quickActionButton, styles.goalsButton]} activeOpacity={0.8}>
-                <View style={styles.buttonGradient}>
-                  <Text style={styles.buttonIcon}>🎯</Text>
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={[styles.quickActionButton, styles.goalsButton]} activeOpacity={0.8}>
+            <View style={styles.buttonGradient}>
+              <Text style={styles.buttonIcon}>🎯</Text>
                   <Text style={styles.buttonLabel} numberOfLines={1} ellipsizeMode="tail">Goals</Text>
-                </View>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={[styles.quickActionButton, styles.periodButton]} activeOpacity={0.8}>
-                <View style={styles.buttonGradient}>
-                  <Text style={styles.buttonIcon}>📅</Text>
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={[styles.quickActionButton, styles.periodButton]} activeOpacity={0.8}>
+            <View style={styles.buttonGradient}>
+              <Text style={styles.buttonIcon}>📅</Text>
                   <Text style={styles.buttonLabel} numberOfLines={1} ellipsizeMode="tail">This Month</Text>
-                </View>
-              </TouchableOpacity>
             </View>
-          </View>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-          {/* Error Display */}
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText} numberOfLines={3} ellipsizeMode="tail">❌ {error}</Text>
-            </View>
-          )}
+      {/* Error Display */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText} numberOfLines={3} ellipsizeMode="tail">❌ {error}</Text>
+        </View>
+      )}
         </View>
 
         {/* Sticky Transaction Header with Filters */}
@@ -325,9 +325,9 @@ export const TransactionListScreen: React.FC = () => {
               </Text>
               
               <View style={styles.emptyStateActions}>
-                <Button 
-                  mode="contained" 
-                  icon="plus"
+                  <Button 
+                    mode="contained" 
+                    icon="plus"
                   onPress={() => {
                     console.log('🔘 Add Transaction button pressed');
                     setShowAddModal(true);
@@ -336,19 +336,19 @@ export const TransactionListScreen: React.FC = () => {
                   style={styles.emptyStateButton}
                   labelStyle={styles.emptyStateButtonLabel}
                   contentStyle={styles.emptyStateButtonContent}
-                >
-                  Add Transaction
-                </Button>
-                <ImportButton
-                  onFileSelect={handleFileSelect}
-                  loading={isImporting}
-                  label="Import Bank File"
-                  icon="upload"
+                  >
+                    Add Transaction
+                  </Button>
+                  <ImportButton
+                    onFileSelect={handleFileSelect}
+                    loading={isImporting}
+                    label="Import Bank File"
+                    icon="upload"
                   style={styles.emptyStateButton}
                   contentStyle={styles.emptyStateButtonContent}
                   labelStyle={styles.emptyStateButtonLabel}
-                />
-              </View>
+                  />
+                </View>
             </View>
           </View>
         ) : !hasFilteredTransactions ? (
@@ -388,13 +388,13 @@ export const TransactionListScreen: React.FC = () => {
         ) : (
           // Show filtered transactions
           <View style={styles.transactionListContainer}>
-            {filteredTransactions.map((transaction) => (
-              <TransactionCard
-                key={transaction.id}
-                transaction={transaction}
-                onLongPress={() => handleTransactionPress(transaction.id)}
-              />
-            ))}
+              {filteredTransactions.map((transaction) => (
+                <TransactionCard
+                  key={transaction.id}
+                  transaction={transaction}
+                  onLongPress={() => handleTransactionPress(transaction.id)}
+                />
+              ))}
           </View>
         )}
       </ScrollView>
@@ -590,98 +590,102 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   transactionListContainer: {
-    marginHorizontal: theme.spacing.md,
-    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.xs,
     paddingBottom: theme.spacing.md,
     paddingTop: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
   },
   stickyTransactionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     marginTop: 0,
     borderTopLeftRadius: theme.borderRadius.lg,
     borderTopRightRadius: theme.borderRadius.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    ...theme.shadows.md,
+    boxShadow: '0 5px 10px 0px #0000001c',
   },
   headerFiltersButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.sm,
-    borderWidth: 1,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    borderWidth: 1.5,
     borderColor: '#E0E0E0',
-    borderRadius: 8,
-    minWidth: 70,
+    borderRadius: theme.borderRadius.md,
+    minWidth: 80,
+    backgroundColor: '#FAFAFA',
   },
   headerFilterLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.text.primary,
-    fontWeight: '500',
+    fontWeight: '600',
     marginLeft: 4,
   },
   actionRow: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
     alignItems: 'center',
+    marginBottom: theme.spacing.sm,
   },
   quickActionButton: {
     flex: 1,
-    minHeight: 44,
-    borderRadius: theme.borderRadius.md,
-    ...theme.shadows.sm,
+    minHeight: 50,
+    borderRadius: theme.borderRadius.lg,
+    ...theme.shadows.md,
+    overflow: 'hidden',
   },
   detailsButton: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    backgroundColor: '#F8F9FA',
+    borderRadius: theme.borderRadius.lg,
+    minHeight: 50,
+    borderWidth: 1.5,
+    borderColor: '#E9ECEF',
     ...theme.shadows.sm,
   },
   goalsButton: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    backgroundColor: '#F8F9FA',
+    borderRadius: theme.borderRadius.lg,
+    minHeight: 50,
+    borderWidth: 1.5,
+    borderColor: '#E9ECEF',
     ...theme.shadows.sm,
   },
   periodButton: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    backgroundColor: '#F8F9FA',
+    borderRadius: theme.borderRadius.lg,
+    minHeight: 50,
+    borderWidth: 1.5,
+    borderColor: '#E9ECEF',
     ...theme.shadows.sm,
   },
   filtersButtonActive: {
     backgroundColor: '#E8F5E8',
     borderColor: '#4CAF50',
+    borderWidth: 2,
   },
   buttonGradient: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
+    gap: 6,
   },
   buttonIcon: {
-    fontSize: 16,
-    marginRight: 6,
+    fontSize: 18,
   },
   buttonLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.text.primary,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
   },
   headerActiveFiltersRow: {

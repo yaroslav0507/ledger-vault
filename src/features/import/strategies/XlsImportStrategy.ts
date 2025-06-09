@@ -174,7 +174,7 @@ export class XlsImportStrategy implements ImportStrategy {
       // Check for valid column structure
       if (this.hasValidColumnStructure(row)) {
         header = this.extractColumnNames(row);
-        headerRowIndex = i;
+          headerRowIndex = i;
         
         // If we found multiple potential header rows, choose the most comprehensive one
         if (header.length >= 4) {
@@ -625,7 +625,7 @@ export class XlsImportStrategy implements ImportStrategy {
           continue;
         }
         
-        // Parse amount 
+        // Parse amount
         const parsedAmount = this.parseAmount(rawAmount);
         if (parsedAmount === null || isNaN(parsedAmount)) {
           errors.push({
@@ -642,7 +642,7 @@ export class XlsImportStrategy implements ImportStrategy {
         const comment = this.extractComment(rawComment, rawDescription, description);
         
         // Determine transaction type and amount
-        const isIncome = this.determineTransactionType(rawAmount, parsedAmount);
+        const isIncome = this.determineTransactionType(rawAmount, parsedAmount, description, rawCategory);
         const absoluteAmount = Math.abs(parsedAmount);
         
         // Use mapped card/category or defaults
@@ -747,21 +747,60 @@ export class XlsImportStrategy implements ImportStrategy {
     return null;
   }
 
-  private determineTransactionType(rawAmount: any, parsedAmount: number): boolean {
+  private determineTransactionType(rawAmount: any, parsedAmount: number, description?: string, category?: string): boolean {
     const rawText = String(rawAmount).toLowerCase();
+    const descText = String(description || '').toLowerCase();
+    const catText = String(category || '').toLowerCase();
+    const combinedText = `${rawText} ${descText} ${catText}`;
     
-    // Check for explicit negative indicators
+    // Check for explicit negative indicators (definitely expenses)
     if (rawText.includes('-') || rawText.includes('debit') || rawText.includes('дебет')) {
       return false; // Expense
     }
     
-    // Check for explicit positive indicators
+    // Check for explicit positive indicators (definitely income)
     if (rawText.includes('+') || rawText.includes('credit') || rawText.includes('кредит')) {
       return true; // Income
     }
     
-    // Default to the sign of the parsed amount
-    return parsedAmount >= 0;
+    // If the amount is negative, it's definitely an expense
+    if (parsedAmount < 0) {
+      return false; // Expense
+    }
+    
+    // For positive amounts, check if it's likely income based on description/category
+    const incomePatterns = [
+      // Transfers and deposits that indicate income
+      /transfer.*from.*my.*card/i,
+      /transfer.*from/i,
+      /transfer.*to.*me/i,
+      /deposit/i,
+      /refund/i,
+      /return/i,
+      /cashback/i,
+      /salary/i,
+      /зарплата/i,
+      /повернення/i,
+      /переказ.*від/i,
+      /переказ.*на.*карт/i,
+      /поповнення/i,
+      /відшкодування/i,
+      /кешбек/i,
+      /зачислення/i,
+      // Income categories
+      /income/i,
+      /доход/i,
+      /прибуток/i
+    ];
+    
+    // If any income pattern matches, treat as income
+    if (incomePatterns.some(pattern => pattern.test(combinedText))) {
+      return true; // Income
+    }
+    
+    // Otherwise, for positive amounts in Ukrainian bank statements, default to expense
+    // This matches the convention where most transactions are expenses
+    return false; // Default to expense for positive amounts
   }
   
   private getColumnIndex(header: string[], columnName: string): number {
@@ -817,7 +856,7 @@ export class XlsImportStrategy implements ImportStrategy {
         // Excel date serial number (handle both 1900 and 1904 date systems)
         if (value > 59) {
           // 1900 date system
-          date = new Date((value - 25569) * 86400 * 1000);
+        date = new Date((value - 25569) * 86400 * 1000);
         } else {
           // Handle edge cases for very early dates
           date = new Date(1900, 0, value);
@@ -889,8 +928,8 @@ export class XlsImportStrategy implements ImportStrategy {
             date.getFullYear() === year && 
             date.getMonth() === month && 
             date.getDate() === day) {
-          return date;
-        }
+        return date;
+      }
       }
     }
     
@@ -1118,7 +1157,7 @@ export class XlsImportStrategy implements ImportStrategy {
     }
     
     const cleaned = cardName.trim();
-    
+      
     // Handle masked card numbers like "**** 5460" - these are valid and should be kept as-is
     if (/\*{4,}\s*\d{4}/.test(cleaned)) {
       console.log(`✅ Found masked card number: "${cleaned}"`);

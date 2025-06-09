@@ -18,6 +18,8 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
 }) => {
   const amountColor = transaction.isIncome ? theme.colors.income : theme.colors.expense;
   const amountPrefix = transaction.isIncome ? '+' : '-';
+  const cardBackgroundColor = transaction.isIncome ? '#F0FDF4' : '#F8FAFC';
+  const leftBorderColor = transaction.isIncome ? theme.colors.income : '#94A3B8';
 
   // Check if we have an original description that differs from the cleaned description
   const hasOriginalDescription = transaction.originalDescription && 
@@ -26,45 +28,67 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={[styles.container, { backgroundColor: cardBackgroundColor, borderLeftColor: leftBorderColor }]}
       onPress={onPress}
       onLongPress={onLongPress}
       activeOpacity={0.7}
     >
-      <View style={styles.content}>
+      {/* Main Content */}
+      <View style={styles.mainContent}>
+        {/* Left Section - Transaction Info */}
         <View style={styles.leftSection}>
-          <Text style={styles.description} numberOfLines={2} ellipsizeMode="tail">
-            {transaction.category}
+          {/* Primary Line - Description */}
+          <Text style={styles.description} numberOfLines={1} ellipsizeMode="tail">
+            {transaction.description}
           </Text>
-          <View style={styles.metaInfo}>
-            <Text style={styles.date} numberOfLines={1} ellipsizeMode="tail">
-              {formatDateShort(transaction.date)}
+          
+          {/* Secondary Line - Metadata */}
+          <View style={styles.metaRow}>
+            <Text style={styles.date}>{formatDateShort(transaction.date)}</Text>
+            <View style={styles.metaDivider} />
+            <Text style={styles.card} numberOfLines={1} ellipsizeMode="tail">
+              {transaction.card.slice(-9)}
             </Text>
-            <Text style={styles.separator}>•</Text>
-            <Text style={styles.card} numberOfLines={1} ellipsizeMode="tail">{transaction.card}</Text>
+            <View style={styles.metaDivider} />
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText} numberOfLines={1} ellipsizeMode="tail">
+                {transaction.category}
+              </Text>
+            </View>
           </View>
         </View>
         
+        {/* Right Section - Amount */}
         <View style={styles.rightSection}>
-          <Text style={[styles.amount, { color: amountColor }]} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.amount, { color: amountColor }]} numberOfLines={1}>
             {amountPrefix}{formatCurrency(transaction.amount, transaction.currency)}
           </Text>
-          <Text style={styles.category}>{transaction.description}</Text>
+          <View style={[styles.incomeIndicator, { backgroundColor: amountColor }]}>
+            <Text style={styles.incomeText}>
+              {transaction.isIncome ? 'Income' : 'Expense'}
+            </Text>
+          </View>
         </View>
       </View>
       
-      {/* Display comments - either user comment or original description */}
+      {/* Comments Section */}
       {(transaction.comment || hasOriginalDescription) && (
         <View style={styles.commentSection}>
           {transaction.comment && (
-            <Text style={styles.comment} numberOfLines={2} ellipsizeMode="tail">
-            💬 {transaction.comment}
-          </Text>
+            <View style={styles.commentRow}>
+              <Text style={styles.commentIcon}>💬</Text>
+              <Text style={styles.comment} numberOfLines={2} ellipsizeMode="tail">
+                {transaction.comment}
+              </Text>
+            </View>
           )}
           {hasOriginalDescription && (
-            <Text style={styles.originalDescription} numberOfLines={2} ellipsizeMode="tail">
-              📄 {transaction.originalDescription}
-            </Text>
+            <View style={styles.originalDescRow}>
+              <Text style={styles.originalDescIcon}>📝</Text>
+              <Text style={styles.originalDescription} numberOfLines={1} ellipsizeMode="tail">
+                {transaction.originalDescription}
+              </Text>
+            </View>
           )}
         </View>
       )}
@@ -75,102 +99,148 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
     marginVertical: theme.spacing.xs,
+    marginHorizontal: 2,
+    borderLeftWidth: 4,
+    borderRightWidth: 1,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderRightColor: '#F0F0F0',
+    borderTopColor: '#F0F0F0',
+    borderBottomColor: '#F0F0F0',
     ...theme.shadows.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    minHeight: 40,
+    overflow: 'hidden',
   },
-  content: {
+  mainContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    minHeight: 32,
-    flex: 1,
+    padding: theme.spacing.md,
+    minHeight: 70,
   },
   leftSection: {
     flex: 1,
     marginRight: theme.spacing.md,
-    minWidth: 0,
-    maxWidth: '70%',
+    justifyContent: 'space-between',
+    minHeight: 42,
   },
   rightSection: {
     alignItems: 'flex-end',
-    justifyContent: 'flex-start',
-    flexShrink: 0,
-    minWidth: 80,
-    maxWidth: '30%',
+    justifyContent: 'space-between',
+    minWidth: 90,
+    minHeight: 42,
+    height: '100%',
   },
   description: {
     ...theme.typography.bodyLarge,
     color: theme.colors.text.primary,
     fontWeight: '600',
     marginBottom: theme.spacing.xs,
-    lineHeight: 20,
-    flexShrink: 1,
+    lineHeight: 22,
   },
-  metaInfo: {
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'nowrap',
-    minHeight: 16,
-    overflow: 'hidden',
+    flexWrap: 'wrap',
+    gap: theme.spacing.xs,
   },
   date: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
+    fontWeight: '500',
     fontSize: 11,
-    flexShrink: 0,
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  separator: {
-    ...theme.typography.caption,
-    color: theme.colors.text.disabled,
-    marginHorizontal: theme.spacing.xs,
-    fontSize: 11,
-    flexShrink: 0,
+  metaDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: theme.colors.border,
   },
   card: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
-    fontWeight: '600',
+    fontWeight: '500',
     fontSize: 11,
-    flex: 1,
-    minWidth: 0,
+    maxWidth: 80,
   },
-  category: {
+  categoryBadge: {
+    backgroundColor: '#E8F4FD',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#B3D9FF',
+  },
+  categoryText: {
     ...theme.typography.caption,
-    color: theme.colors.secondary,
-    marginTop: 2,
-    textAlign: 'right',
+    color: '#1976D2',
+    fontWeight: '500',
+    fontSize: 10,
   },
   amount: {
     ...theme.typography.h3,
-    fontWeight: 'bold',
-    fontSize: 16,
+    fontWeight: '700',
+    fontSize: 18,
     textAlign: 'right',
-    flexShrink: 0,
+    marginBottom: theme.spacing.xs,
+    letterSpacing: 0.3,
+  },
+  incomeIndicator: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    minWidth: 50,
+  },
+  incomeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '600',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   commentSection: {
-    marginTop: theme.spacing.sm,
-    paddingTop: theme.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: '#F0F0F0',
+    backgroundColor: '#FAFAFA',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     gap: theme.spacing.xs,
+  },
+  commentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.xs,
+  },
+  commentIcon: {
+    fontSize: 12,
+    marginTop: 2,
   },
   comment: {
     ...theme.typography.body,
     color: theme.colors.text.secondary,
-    fontStyle: 'italic',
     fontSize: 12,
     lineHeight: 16,
+    flex: 1,
+  },
+  originalDescRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.xs,
+  },
+  originalDescIcon: {
+    fontSize: 10,
+    marginTop: 2,
   },
   originalDescription: {
-    ...theme.typography.body,
+    ...theme.typography.caption,
     color: theme.colors.text.disabled,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 10,
+    lineHeight: 14,
     fontFamily: 'monospace',
+    flex: 1,
   },
 }); 

@@ -45,11 +45,11 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
         <View style={styles.balanceHeader}>
           <View style={styles.balanceMainRow}>
             <Text variant="bodyMedium" style={styles.balanceLabel}>
-              💰 Balance
+              💰 Cash Flow
             </Text>
             <Text variant="headlineMedium" style={[
               styles.balanceAmount, 
-              { color: balance.total >= 0 ? '#2E7D32' : '#D32F2F' },
+              { color: balance.total >= 0 ? '#2E7D32' : '#64748B' },
               isBalanceMasked && styles.balanceAmountMasked
             ]}>
               {isBalanceMasked ? maskAmount(Math.abs(balance.total), currency) : formatCurrency(Math.abs(balance.total), currency)}
@@ -62,7 +62,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
               <Text style={styles.trendIcon}>
                 {isBalanceMasked ? '👁️' : (balance.total >= 0 ? '📈' : '📉')}
               </Text>
-              <Text style={[styles.trendText, { color: balance.total >= 0 ? '#2E7D32' : '#D32F2F' }]}>
+              <Text style={[styles.trendText, { color: balance.total >= 0 ? '#2E7D32' : '#64748B' }]}>
                 {isBalanceMasked ? '***' : (
                   <>
                     {balance.total >= 0 ? '+' : ''}
@@ -96,7 +96,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
               <Text variant="bodySmall" style={styles.metricLabel}>Expenses</Text>
               <Text variant="bodyMedium" style={[
                 styles.metricValue, 
-                { color: balance.expenses === 0 ? '#666' : '#D32F2F' },
+                { color: balance.expenses === 0 ? '#666' : '#64748B' },
                 isBalanceMasked && styles.metricValueMasked
               ]}>
                 {isBalanceMasked ? 
@@ -133,96 +133,106 @@ const styles = StyleSheet.create({
   balanceCard: {
     backgroundColor: theme.colors.surface,
     marginHorizontal: theme.spacing.md,
-    marginVertical: 6,
-    borderRadius: theme.borderRadius.md,
-    ...theme.shadows.sm,
-    elevation: 3,
-    borderWidth: 0.5,
-    borderColor: '#E0E0E0',
+    marginVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.lg,
+    ...theme.shadows.md,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    overflow: 'hidden',
   },
   balanceContent: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
   },
   balanceHeader: {
-    marginBottom: 10,
+    marginBottom: theme.spacing.md,
   },
   balanceMainRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: theme.spacing.sm,
   },
   balanceLabel: {
     ...theme.typography.body,
     color: theme.colors.text.primary,
     fontWeight: '600',
-    fontSize: 15,
+    fontSize: 16,
+    letterSpacing: 0.3,
   },
   balanceAmount: {
     ...theme.typography.h2,
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
     flex: 1,
     textAlign: 'center',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    marginHorizontal: theme.spacing.md,
   },
   balanceAmountMasked: {
-    fontSize: 26,
-    letterSpacing: 0.3,
+    fontSize: 30,
+    letterSpacing: 0.5,
   },
   trendIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    backgroundColor: '#F8F9FA',
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: '#E9ECEF',
+    minWidth: 70,
   },
   trendIndicatorMasked: {
-    backgroundColor: '#E8F4FD',
+    backgroundColor: '#E3F2FD',
     borderColor: '#2196F3',
   },
   trendIcon: {
-    fontSize: 14,
-    marginRight: 3,
+    fontSize: 16,
+    marginRight: 4,
   },
   trendText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   metricsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
   },
   metricCard: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     backgroundColor: '#FAFAFA',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 2,
     ...theme.shadows.sm,
-    elevation: 1,
+    elevation: 2,
+    minHeight: 70,
+    justifyContent: 'center',
   },
   incomeCard: {
     borderColor: '#4CAF50',
-    backgroundColor: '#F8FFF8',
+    backgroundColor: '#F1F8E9',
   },
   expenseCard: {
-    borderColor: '#FF5722',
-    backgroundColor: '#FFFAFA',
+    borderColor: '#94A3B8',
+    backgroundColor: '#F8FAFC',
   },
   metricIcon: {
-    fontSize: 18,
-    marginRight: 8,
+    fontSize: 20,
+    marginBottom: 4,
   },
   metricContent: {
-    flex: 1,
+    alignItems: 'center',
+    gap: 2,
   },
   metricLabel: {
     ...theme.typography.caption,

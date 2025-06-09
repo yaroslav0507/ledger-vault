@@ -7,7 +7,7 @@ export const theme = {
     warning: '#F59E0B',        // Amber-500
     error: '#EF4444',          // Red-500
     income: '#10B981',         // Green for income
-    expense: '#EF4444',        // Red for expenses
+    expense: '#64748B',        // Slate-500 - Much more neutral than red
     
     background: '#FFFFFF',
     backgroundSecondary: '#F9FAFB',  // Gray-50
