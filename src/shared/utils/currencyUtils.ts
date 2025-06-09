@@ -12,13 +12,13 @@ export function formatCurrency(amount: number, currency: string = 'USD'): string
   }
   
   try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency,
       currencyDisplay: 'symbol',
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits
-    }).format(mainAmount);
+  }).format(mainAmount);
   } catch (error) {
     // Fallback for unsupported currencies - consistent format with code after amount
     const multiplier = fractionDigits === 0 ? 1 : 100;

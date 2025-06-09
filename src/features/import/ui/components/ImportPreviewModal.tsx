@@ -182,11 +182,11 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                           numberOfLines={2}
                           ellipsizeMode="tail"
                         >
-                          {transaction.description}
-                        </Text>
+                        {transaction.description}
+                      </Text>
                         <View style={styles.transactionMeta}>
                           <Text variant="bodySmall" style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
-                            {formatDate(transaction.date)} • {transaction.card} • {transaction.category}
+                            {formatDate(transaction.date)} • {transaction.card} • {transaction.category} • {transaction.comment || 'No comment'}
                           </Text>
                           {transaction.isDuplicate && (
                             <Chip mode="outlined" compact textStyle={{ fontSize: 10 }}>
@@ -196,19 +196,19 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                         </View>
                       </View>
                       <View style={styles.transactionAmountSection}>
-                        <Text
-                          variant="bodyMedium"
-                          style={[
-                            styles.transactionAmount,
-                            { color: transaction.isIncome ? '#4CAF50' : '#F44336' }
-                          ]}
+                      <Text
+                        variant="bodyMedium"
+                        style={[
+                          styles.transactionAmount,
+                          { color: transaction.isIncome ? '#4CAF50' : '#F44336' }
+                        ]}
                           numberOfLines={1}
                           ellipsizeMode="tail"
-                        >
-                          {transaction.isIncome ? '+' : '-'}
-                          {formatCurrency(transaction.amount, transaction.currency)}
-                        </Text>
-                      </View>
+                      >
+                        {transaction.isIncome ? '+' : '-'}
+                        {formatCurrency(transaction.amount, transaction.currency)}
+                      </Text>
+                    </View>
                     </View>
                     {transaction.originalDescription && transaction.originalDescription !== transaction.description && (
                       <View style={styles.originalDescriptionContainer}>

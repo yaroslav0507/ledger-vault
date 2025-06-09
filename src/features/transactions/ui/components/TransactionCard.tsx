@@ -34,7 +34,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
       <View style={styles.content}>
         <View style={styles.leftSection}>
           <Text style={styles.description} numberOfLines={2} ellipsizeMode="tail">
-            {transaction.description}
+            {transaction.category}
           </Text>
           <View style={styles.metaInfo}>
             <Text style={styles.date} numberOfLines={1} ellipsizeMode="tail">
@@ -42,8 +42,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
             </Text>
             <Text style={styles.separator}>•</Text>
             <Text style={styles.card} numberOfLines={1} ellipsizeMode="tail">{transaction.card}</Text>
-            <Text style={styles.separator}>•</Text>
-            <Text style={styles.category} numberOfLines={1} ellipsizeMode="tail">{transaction.category}</Text>
           </View>
         </View>
         
@@ -51,6 +49,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
           <Text style={[styles.amount, { color: amountColor }]} numberOfLines={1} ellipsizeMode="tail">
             {amountPrefix}{formatCurrency(transaction.amount, transaction.currency)}
           </Text>
+          <Text style={styles.category}>{transaction.description}</Text>
         </View>
       </View>
       
@@ -59,8 +58,8 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
         <View style={styles.commentSection}>
           {transaction.comment && (
             <Text style={styles.comment} numberOfLines={2} ellipsizeMode="tail">
-              💬 {transaction.comment}
-            </Text>
+            💬 {transaction.comment}
+          </Text>
           )}
           {hasOriginalDescription && (
             <Text style={styles.originalDescription} numberOfLines={2} ellipsizeMode="tail">
@@ -82,24 +81,27 @@ const styles = StyleSheet.create({
     ...theme.shadows.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    minHeight: 80,
+    minHeight: 40,
   },
   content: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    minHeight: 44,
+    minHeight: 32,
+    flex: 1,
   },
   leftSection: {
     flex: 1,
     marginRight: theme.spacing.md,
-    minWidth: 0, // Allow flex shrinking
+    minWidth: 0,
+    maxWidth: '70%',
   },
   rightSection: {
     alignItems: 'flex-end',
     justifyContent: 'flex-start',
     flexShrink: 0,
     minWidth: 80,
+    maxWidth: '30%',
   },
   description: {
     ...theme.typography.bodyLarge,
@@ -107,43 +109,48 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: theme.spacing.xs,
     lineHeight: 20,
+    flexShrink: 1,
   },
   metaInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     minHeight: 16,
+    overflow: 'hidden',
   },
   date: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
     fontSize: 11,
+    flexShrink: 0,
   },
   separator: {
     ...theme.typography.caption,
     color: theme.colors.text.disabled,
     marginHorizontal: theme.spacing.xs,
     fontSize: 11,
+    flexShrink: 0,
   },
   card: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
     fontWeight: '600',
     fontSize: 11,
-    maxWidth: 80,
+    flex: 1,
+    minWidth: 0,
   },
   category: {
     ...theme.typography.caption,
-    color: theme.colors.primary,
-    fontWeight: '600',
-    fontSize: 11,
-    maxWidth: 100,
+    color: theme.colors.secondary,
+    marginTop: 2,
+    textAlign: 'right',
   },
   amount: {
     ...theme.typography.h3,
     fontWeight: 'bold',
     fontSize: 16,
     textAlign: 'right',
+    flexShrink: 0,
   },
   commentSection: {
     marginTop: theme.spacing.sm,

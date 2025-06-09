@@ -17,9 +17,6 @@ import { BalanceCard } from '../components/BalanceCard';
 import { useTransactionActions } from '../hooks/useTransactionActions';
 import { useTransactionFilters } from '../hooks/useTransactionFilters';
 import { initializeDatabase } from '../../storage/TransactionDatabase';
-import { CreateTransactionRequest, DEFAULT_CATEGORIES } from '../../model/Transaction';
-import { getCurrentDateISO } from '@/shared/utils/dateUtils';
-import { parseCurrencyToSmallestUnit } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
 import { ImportButton } from '@/features/import/ui/components/ImportButton';
 import { ImportPreviewModal } from '@/features/import/ui/components/ImportPreviewModal';
@@ -243,6 +240,8 @@ export const TransactionListScreen: React.FC = () => {
                 label="Import Bank"
                 icon="upload"
                 style={styles.actionButton}
+                contentStyle={styles.actionButtonContent}
+                labelStyle={styles.actionButtonLabel}
               />
             </View>
 
@@ -346,6 +345,8 @@ export const TransactionListScreen: React.FC = () => {
                   label="Import Bank File"
                   icon="upload"
                   style={styles.emptyStateButton}
+                  contentStyle={styles.emptyStateButtonContent}
+                  labelStyle={styles.emptyStateButtonLabel}
                 />
               </View>
             </View>
@@ -404,7 +405,7 @@ export const TransactionListScreen: React.FC = () => {
           icon="arrow-up"
           style={styles.scrollToTopFab}
           onPress={scrollToTop}
-          size="medium"
+          size="small"
           color="white"
         />
       )}
@@ -626,6 +627,7 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
+    alignItems: 'center',
   },
   quickActionButton: {
     flex: 1,
@@ -773,7 +775,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     margin: theme.spacing.md,
     right: 0,
-    bottom: 80,
+    bottom: 0,
     backgroundColor: theme.colors.primary,
+    opacity: 0.7,
+    elevation: 2,
+    shadowOpacity: 0.2,
   },
 }); 

@@ -48,12 +48,6 @@ const FIELD_MAPPINGS: FieldMapping[] = [
     description: 'Transaction amount (positive or negative)'
   },
   {
-    field: 'descriptionColumn',
-    label: 'Description',
-    required: true,
-    description: 'Transaction description or merchant name'
-  },
-  {
     field: 'cardColumn',
     label: 'Card/Account',
     required: false,

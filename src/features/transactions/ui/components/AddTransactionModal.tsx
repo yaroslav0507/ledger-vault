@@ -75,7 +75,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
 
     console.log('✅ Validation passed, creating transaction...');
-    
+
     setLoading(true);
     try {
       const validatedData = validation.data as TransactionFormData;

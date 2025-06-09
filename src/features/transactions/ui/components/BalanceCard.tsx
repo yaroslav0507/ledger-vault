@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Card, Text } from 'react-native-paper';
 import { formatCurrency } from '@/shared/utils/currencyUtils';
@@ -21,6 +21,23 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   transactionCount, 
   currency = 'USD' 
 }) => {
+  const [isBalanceMasked, setIsBalanceMasked] = useState(false);
+
+  const toggleBalanceMask = () => {
+    setIsBalanceMasked(!isBalanceMasked);
+  };
+
+  const maskAmount = (amount: number, currency: string) => {
+    const formatted = formatCurrency(amount, currency);
+    // Create a masked version that preserves the structure but hides the actual digits
+    // Replace digits with asterisks but keep formatting characters like commas, periods, currency symbols
+    return formatted.replace(/\d/g, '●');
+  };
+
+  const getDisplayAmount = (amount: number, currency: string) => {
+    return isBalanceMasked ? maskAmount(amount, currency) : formatCurrency(amount, currency);
+  };
+
   return (
     <Card style={styles.balanceCard}>
       <Card.Content style={styles.balanceContent}>
@@ -30,18 +47,30 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
             <Text variant="bodyMedium" style={styles.balanceLabel}>
               💰 Balance
             </Text>
-            <Text variant="headlineMedium" style={[styles.balanceAmount, { color: balance.total >= 0 ? '#2E7D32' : '#D32F2F' }]}>
-              {formatCurrency(Math.abs(balance.total), currency)}
+            <Text variant="headlineMedium" style={[
+              styles.balanceAmount, 
+              { color: balance.total >= 0 ? '#2E7D32' : '#D32F2F' },
+              isBalanceMasked && styles.balanceAmountMasked
+            ]}>
+              {isBalanceMasked ? maskAmount(Math.abs(balance.total), currency) : formatCurrency(Math.abs(balance.total), currency)}
             </Text>
-            <View style={styles.trendIndicator}>
+            <TouchableOpacity 
+              style={[styles.trendIndicator, isBalanceMasked && styles.trendIndicatorMasked]} 
+              onPress={toggleBalanceMask}
+              activeOpacity={0.7}
+            >
               <Text style={styles.trendIcon}>
-                {balance.total >= 0 ? '📈' : '📉'}
+                {isBalanceMasked ? '👁️' : (balance.total >= 0 ? '📈' : '📉')}
               </Text>
               <Text style={[styles.trendText, { color: balance.total >= 0 ? '#2E7D32' : '#D32F2F' }]}>
-                {balance.total >= 0 ? '+' : ''}
-                {balance.income > 0 ? Math.round(((balance.total / balance.income) * 100)) : 0}%
+                {isBalanceMasked ? '***' : (
+                  <>
+                    {balance.total >= 0 ? '+' : ''}
+                    {balance.income > 0 ? Math.round(((balance.total / balance.income) * 100)) : 0}%
+                  </>
+                )}
               </Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -51,8 +80,12 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
             <Text style={styles.metricIcon}>📈</Text>
             <View style={styles.metricContent}>
               <Text variant="bodySmall" style={styles.metricLabel}>Income</Text>
-              <Text variant="bodyMedium" style={[styles.metricValue, { color: '#2E7D32' }]}>
-                +{formatCurrency(balance.income, currency)}
+              <Text variant="bodyMedium" style={[
+                styles.metricValue, 
+                { color: '#2E7D32' },
+                isBalanceMasked && styles.metricValueMasked
+              ]}>
+                {isBalanceMasked ? `+${maskAmount(balance.income, currency)}` : `+${formatCurrency(balance.income, currency)}`}
               </Text>
             </View>
           </TouchableOpacity>
@@ -61,8 +94,15 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
             <Text style={styles.metricIcon}>📉</Text>
             <View style={styles.metricContent}>
               <Text variant="bodySmall" style={styles.metricLabel}>Expenses</Text>
-              <Text variant="bodyMedium" style={[styles.metricValue, { color: balance.expenses === 0 ? '#666' : '#D32F2F' }]}>
-                {balance.expenses === 0 ? 'None yet 🎉' : `-${formatCurrency(balance.expenses, currency)}`}
+              <Text variant="bodyMedium" style={[
+                styles.metricValue, 
+                { color: balance.expenses === 0 ? '#666' : '#D32F2F' },
+                isBalanceMasked && styles.metricValueMasked
+              ]}>
+                {isBalanceMasked ? 
+                  (balance.expenses === 0 ? 'None yet 🎉' : `-${maskAmount(balance.expenses, currency)}`) :
+                  (balance.expenses === 0 ? 'None yet 🎉' : `-${formatCurrency(balance.expenses, currency)}`)
+                }
               </Text>
             </View>
           </TouchableOpacity>
@@ -76,6 +116,11 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
           {balance.expenses === 0 && transactionCount > 0 && (
             <Text style={styles.insightText}>
               • All income transactions ✨
+            </Text>
+          )}
+          {isBalanceMasked && (
+            <Text style={styles.insightText}>
+              • Tap 👁️ to show amounts
             </Text>
           )}
         </View>
@@ -121,6 +166,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.5,
   },
+  balanceAmountMasked: {
+    fontSize: 26,
+    letterSpacing: 0.3,
+  },
   trendIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -130,6 +179,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E0E0E0',
+  },
+  trendIndicatorMasked: {
+    backgroundColor: '#E8F4FD',
+    borderColor: '#2196F3',
   },
   trendIcon: {
     fontSize: 14,
@@ -182,6 +235,10 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     fontWeight: '600',
     fontSize: 14,
+  },
+  metricValueMasked: {
+    fontSize: 15,
+    letterSpacing: 0.2,
   },
   insightsRow: {
     flexDirection: 'row',

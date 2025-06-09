@@ -33,6 +33,10 @@ export class XlsImportStrategy implements ImportStrategy {
       throw new Error(`Unsupported file format: ${file.type}`);
     }
 
+    if (!mapping) {
+      throw new Error('Column mapping is required. Please use the import wizard to map columns.');
+    }
+
     try {
       const workbook: WorkBook = read(file.content, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
@@ -40,9 +44,8 @@ export class XlsImportStrategy implements ImportStrategy {
       
       const rawData = utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
-      const columnMapping = mapping || await this.detectColumnMapping(rawData);
-      
-      const result = await this.parseTransactions(rawData, columnMapping, file.name);
+      // Always use the user-provided mapping
+      const result = await this.parseTransactions(rawData, mapping, file.name);
       
       return result;
     } catch (error) {
@@ -63,25 +66,31 @@ export class XlsImportStrategy implements ImportStrategy {
       
       const rawData = utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
+      console.log('🔍 Raw Excel data (first 10 rows):', rawData.slice(0, 10));
+      
       if (rawData.length === 0) {
         throw new Error('Empty file');
       }
 
-      // Find potential header row
+      // Better header detection using existing logic
       let headerRowIndex = 0;
       let columns: string[] = [];
       
+      // First try to find a proper header row using validation
       for (let i = 0; i < Math.min(rawData.length, 10); i++) {
         const row = rawData[i] as string[];
+        console.log(`🔍 Checking row ${i} for headers:`, row);
         if (this.hasValidColumnStructure(row)) {
           columns = this.extractColumnNames(row).filter(col => col.trim());
           headerRowIndex = i;
+          console.log(`✅ Found valid header at row ${i}:`, columns);
           break;
         }
       }
 
-      // Fallback to first non-empty row
+      // Fallback to first non-empty row with meaningful content
       if (columns.length === 0) {
+        console.log('⚠️ No valid header found, using fallback logic');
         for (let i = 0; i < Math.min(rawData.length, 5); i++) {
           const row = rawData[i] as string[];
           if (row.some(cell => String(cell).trim())) {
@@ -89,6 +98,7 @@ export class XlsImportStrategy implements ImportStrategy {
               String(cell).trim() || `Column ${index + 1}`
             );
             headerRowIndex = i;
+            console.log(`🔄 Using fallback header at row ${i}:`, columns);
             break;
           }
         }
@@ -98,24 +108,27 @@ export class XlsImportStrategy implements ImportStrategy {
         throw new Error('Unable to detect columns in file');
       }
 
-      // Get sample data (excluding header)
+      // Get sample data (excluding the detected header)
       const sampleData: string[][] = [];
       const startRow = headerRowIndex + 1;
       const maxSamples = Math.min(5, rawData.length - startRow);
       
+      console.log(`📋 Extracting sample data from row ${startRow}, ${maxSamples} samples`);
+      
       for (let i = 0; i < maxSamples; i++) {
         const row = rawData[startRow + i] as any[];
         if (row && row.some(cell => String(cell).trim())) {
-          sampleData.push(
-            columns.map((_, colIndex) => 
-              String(row[colIndex] || '').trim()
-            )
+          const mappedRow = columns.map((_, colIndex) => 
+            String(row[colIndex] || '').trim()
           );
+          sampleData.push(mappedRow);
+          console.log(`📊 Sample row ${i}:`, mappedRow);
         }
       }
 
-      // Generate suggested mapping
+      // Generate smart suggested mapping based on column names
       const suggestedMapping = this.detectColumnTypes(columns);
+      console.log('🎯 Suggested mapping:', suggestedMapping);
 
       return {
         columns,
@@ -124,8 +137,8 @@ export class XlsImportStrategy implements ImportStrategy {
           dateColumn: suggestedMapping.dateColumn || undefined,
           amountColumn: suggestedMapping.amountColumn || undefined,
           descriptionColumn: suggestedMapping.descriptionColumn || undefined,
-          cardColumn: undefined,
-          categoryColumn: undefined,
+          cardColumn: suggestedMapping.cardColumn || undefined,
+          categoryColumn: suggestedMapping.categoryColumn || undefined,
           commentColumn: suggestedMapping.commentColumn,
           dateFormat: 'DD.MM.YYYY' as any,
           hasHeader: true,
@@ -264,6 +277,8 @@ export class XlsImportStrategy implements ImportStrategy {
     dateColumn: string | null;
     amountColumn: string | null;
     descriptionColumn: string | null;
+    cardColumn: string | null;
+    categoryColumn: string | null;
     commentColumn: string | undefined;
   } {
     const analysis = headers.map((header, index) => {
@@ -275,6 +290,8 @@ export class XlsImportStrategy implements ImportStrategy {
         dateScore: this.calculateDateScore(h),
         amountScore: this.calculateAmountScore(h),
         descriptionScore: this.calculateDescriptionScore(h),
+        cardScore: this.calculateCardScore(h),
+        categoryScore: this.calculateCategoryScore(h),
         commentScore: this.calculateCommentScore(h)
       };
     });
@@ -283,12 +300,16 @@ export class XlsImportStrategy implements ImportStrategy {
     const dateColumn = this.findBestMatch(analysis, 'dateScore', 0.4);
     const amountColumn = this.findBestMatch(analysis, 'amountScore', 0.4);
     const descriptionColumn = this.findBestMatch(analysis, 'descriptionScore', 0.3);
+    const cardColumn = this.findBestMatch(analysis, 'cardScore', 0.4);
+    const categoryColumn = this.findBestMatch(analysis, 'categoryScore', 0.4);
     const commentColumn = this.findBestMatch(analysis, 'commentScore', 0.3);
 
     return {
       dateColumn,
       amountColumn,
       descriptionColumn,
+      cardColumn,
+      categoryColumn,
       commentColumn: commentColumn || undefined
     };
   }
@@ -361,38 +382,9 @@ export class XlsImportStrategy implements ImportStrategy {
     return Math.min(score, 1.0);
   }
 
-  private calculateDescriptionScore(header: string): number {
-    const descriptionKeywords = [
-      { word: 'опис', score: 1.0 },
-      { word: 'описание', score: 1.0 },
-      { word: 'description', score: 1.0 },
-      { word: 'narrative', score: 0.9 },
-      { word: 'details', score: 0.9 },
-      { word: 'reference', score: 0.8 },
-      { word: 'memo', score: 0.9 },
-      { word: 'призначення', score: 0.9 },
-      { word: 'назначение', score: 0.9 },
-      { word: 'purpose', score: 0.9 },
-      { word: 'merchant', score: 0.8 },
-      { word: 'payee', score: 0.8 },
-      { word: 'beschreibung', score: 1.0 },
-      { word: 'libellé', score: 0.9 },
-      { word: 'descripción', score: 1.0 },
-      { word: 'transaction', score: 0.7 }
-    ];
-    
-    let score = 0;
-    for (const keyword of descriptionKeywords) {
-      if (header.includes(keyword.word)) {
-        score = Math.max(score, keyword.score);
-      }
-    }
-    
-    return Math.min(score, 1.0);
-  }
-
   private calculateCommentScore(header: string): number {
     const commentKeywords = [
+      { word: 'опис', score: 1.0 },     // Ukrainian description/comment
       { word: 'коментар', score: 1.0 },
       { word: 'комментарий', score: 1.0 },
       { word: 'comment', score: 1.0 },
@@ -402,7 +394,8 @@ export class XlsImportStrategy implements ImportStrategy {
       { word: 'примітк', score: 0.9 },
       { word: 'заметк', score: 0.9 },
       { word: 'additional', score: 0.7 },
-      { word: 'extra', score: 0.6 }
+      { word: 'extra', score: 0.6 },
+      { word: 'додатков', score: 0.7 }  // additional in Ukrainian
     ];
     
     let score = 0;
@@ -415,15 +408,169 @@ export class XlsImportStrategy implements ImportStrategy {
     return Math.min(score, 1.0);
   }
 
+  private calculateCardScore(header: string): number {
+    const headerLower = header.toLowerCase().trim();
+    
+    // First, exclude columns that are clearly amounts/sums
+    if (headerLower.includes('сума') || headerLower.includes('amount') || 
+        headerLower.includes('sum') || headerLower.includes('total') ||
+        headerLower.includes('баланс') || headerLower.includes('balance') ||
+        headerLower.includes('валют') || headerLower.includes('currency')) {
+      return 0; // These are amount/currency columns, not card columns
+    }
+    
+    const cardKeywords = [
+      // Exact card column names (highest priority)
+      { word: 'картка', score: 1.0 },
+      { word: 'card', score: 1.0 },
+      { word: 'account', score: 0.9 },
+      { word: 'рахунок', score: 0.9 },
+      
+      // Card identifiers
+      { word: 'номер картки', score: 1.0 },
+      { word: 'card number', score: 1.0 },
+      { word: 'card no', score: 0.9 },
+      { word: 'account no', score: 0.9 },
+      
+      // Bank/card types
+      { word: 'visa', score: 0.8 },
+      { word: 'mastercard', score: 0.8 },
+      { word: 'приватбанк', score: 0.7 },
+      { word: 'privatbank', score: 0.7 },
+      { word: 'моно', score: 0.7 },
+      { word: 'mono', score: 0.7 },
+      { word: 'ощад', score: 0.7 },
+      { word: 'oschadbank', score: 0.7 },
+      
+      // Generic identifiers (lower scores)
+      { word: 'джерело', score: 0.6 }, // source
+      { word: 'source', score: 0.6 },
+      { word: 'банк', score: 0.5 },
+      { word: 'bank', score: 0.5 }
+    ];
+    
+    let score = 0;
+    for (const keyword of cardKeywords) {
+      if (headerLower.includes(keyword.word)) {
+        score = Math.max(score, keyword.score);
+      }
+    }
+    
+    // Boost score for patterns that look like card identifiers
+    if (/\*+\s*\d+/.test(headerLower)) score += 0.4; // **** 1234 patterns
+    if (/card\s*\d+/i.test(headerLower)) score += 0.3; // card 1, card2, etc.
+    if (/\d{4}.*\d{4}/i.test(headerLower)) score += 0.3; // 1234...5678 patterns
+    
+    // Penalize if it looks like a date, amount, or description field
+    if (/дата|date|час|time/i.test(headerLower)) score *= 0.1;
+    if (/опис|description|операц|transaction/i.test(headerLower)) score *= 0.1;
+    
+    return Math.min(score, 1.0);
+  }
+
+  private calculateCategoryScore(header: string): number {
+    const categoryKeywords = [
+      { word: 'категор', score: 1.0 },  // категорія, категории
+      { word: 'category', score: 1.0 },
+    ];
+    
+    let score = 0;
+    for (const keyword of categoryKeywords) {
+      if (header.includes(keyword.word)) {
+        score = Math.max(score, keyword.score);
+      }
+    }
+    
+    // Boost score for MCC-like patterns
+    if (/mcc/i.test(header)) score += 0.3;
+    if (/\d{4}/.test(header) && header.length < 15) score += 0.2; // 4-digit codes
+    
+    return Math.min(score, 1.0);
+  }
+
+  private calculateDescriptionScore(header: string): number {
+    const headerLower = header.toLowerCase().trim();
+    
+    // Exclude columns that are clearly other types
+    if (headerLower.includes('сума') || headerLower.includes('amount') || 
+        headerLower.includes('sum') || headerLower.includes('total') ||
+        headerLower.includes('баланс') || headerLower.includes('balance') ||
+        headerLower.includes('валют') || headerLower.includes('currency') ||
+        headerLower.includes('дата') || headerLower.includes('date') ||
+        headerLower.includes('час') || headerLower.includes('time') ||
+        headerLower.includes('картк') || headerLower.includes('card') ||
+        headerLower.includes('категор') || headerLower.includes('category')) {
+      return 0; // These are other column types
+    }
+    
+    const descriptionKeywords = [
+      // Primary description keywords
+      { word: 'опис', score: 1.0 },        // Ukrainian description
+      { word: 'описание', score: 1.0 },    // Russian description  
+      { word: 'description', score: 1.0 },
+      { word: 'narrative', score: 0.9 },
+      { word: 'details', score: 0.8 },
+      { word: 'reference', score: 0.7 },
+      { word: 'memo', score: 0.8 },
+      { word: 'purpose', score: 0.7 },
+      { word: 'merchant', score: 0.8 },
+      { word: 'payee', score: 0.7 },
+      { word: 'transaction', score: 0.6 },
+      { word: 'операція', score: 0.8 },    // Ukrainian operation
+      { word: 'операция', score: 0.8 },    // Russian operation
+      { word: 'деталі', score: 0.7 },      // Ukrainian details
+      { word: 'детали', score: 0.7 },      // Russian details
+      { word: 'призначення', score: 0.7 }, // Ukrainian purpose
+      { word: 'назначение', score: 0.7 },  // Russian purpose
+      { word: 'примітка', score: 0.6 },    // Ukrainian note
+      { word: 'примечание', score: 0.6 }   // Russian note
+    ];
+    
+    let score = 0;
+    for (const keyword of descriptionKeywords) {
+      if (headerLower.includes(keyword.word)) {
+        score = Math.max(score, keyword.score);
+      }
+    }
+    
+    // Boost score if it looks like a general text field
+    if (headerLower.includes('text') || headerLower.includes('info')) {
+      score = Math.max(score, 0.5);
+    }
+    
+    return Math.min(score, 1.0);
+  }
+
   private async parseTransactions(data: any[][], mapping: ImportMapping, fileName: string): Promise<ImportResult> {
     const transactions: Transaction[] = [];
     const errors: ImportError[] = [];
     const duplicates: Transaction[] = [];
     
-    const dataRows = mapping.hasHeader ? data.slice(1) : data;
+    console.log('🚀 Starting parseTransactions with mapping:', mapping);
+    console.log('📁 File name:', fileName);
+    console.log('📊 Data rows to process:', data.length);
+    
+    if (data.length <= 1) {
+      throw new Error('File contains no data rows');
+    }
     
     let earliestDate = '';
     let latestDate = '';
+    
+    // Use user-provided mapping settings
+    const headerRow = mapping.hasHeader ? data[mapping.headerRowIndex || 0] || [] : [];
+    const dataStartRow = mapping.hasHeader ? (mapping.headerRowIndex || 0) + 1 : 0;
+    const dataRows = data.slice(dataStartRow);
+    
+    console.log('📋 Header row:', headerRow);
+    console.log('📋 Data starts at row:', dataStartRow);
+    console.log('📋 User mapping:');
+    console.log('  📅 Date column:', mapping.dateColumn);
+    console.log('  💰 Amount column:', mapping.amountColumn);
+    console.log('  📝 Description column:', mapping.descriptionColumn);
+    console.log('  💳 Card column:', mapping.cardColumn);
+    console.log('  🏷️ Category column:', mapping.categoryColumn);
+    console.log('  💬 Comment column:', mapping.commentColumn);
     
     // Improved currency detection with proper fallback
     const allText = data.flat().map(cell => String(cell || '')).join(' ');
@@ -431,24 +578,42 @@ export class XlsImportStrategy implements ImportStrategy {
 
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
-      const rowNumber = mapping.hasHeader ? i + 2 : i + 1;
+      const rowNumber = dataStartRow + i + 1;
       
       try {
-        // Skip non-transaction rows more effectively
-        if (this.isHeaderRow(row) || this.isDocumentInfoRow(row)) continue;
+        // Skip empty rows
+        if (!row || !row.some(cell => String(cell || '').trim())) {
+          continue;
+        }
         
-        // Extract values with better error handling
-        const headerRow = mapping.hasHeader ? data[0] || [] : [];
-        const rawDate = row[this.getColumnIndex(headerRow, mapping.dateColumn)];
-        const rawAmount = row[this.getColumnIndex(headerRow, mapping.amountColumn)];
-        const rawDescription = row[this.getColumnIndex(headerRow, mapping.descriptionColumn)];
-        const rawComment = mapping.commentColumn ? 
-          row[this.getColumnIndex(headerRow, mapping.commentColumn)] : null;
+        // Extract values using user mapping
+        const dateColumnIndex = this.getColumnIndex(headerRow, mapping.dateColumn);
+        const amountColumnIndex = this.getColumnIndex(headerRow, mapping.amountColumn);
+        const descriptionColumnIndex = this.getColumnIndex(headerRow, mapping.descriptionColumn);
+        const cardColumnIndex = mapping.cardColumn ? this.getColumnIndex(headerRow, mapping.cardColumn) : null;
+        const categoryColumnIndex = mapping.categoryColumn ? this.getColumnIndex(headerRow, mapping.categoryColumn) : null;
+        const commentColumnIndex = mapping.commentColumn ? this.getColumnIndex(headerRow, mapping.commentColumn) : null;
         
-        // Skip empty or invalid rows
+        const rawDate = row[dateColumnIndex];
+        const rawAmount = row[amountColumnIndex];
+        const rawDescription = row[descriptionColumnIndex];
+        const rawCard = cardColumnIndex !== null ? row[cardColumnIndex] : null;
+        const rawCategory = categoryColumnIndex !== null ? row[categoryColumnIndex] : null;
+        const rawComment = commentColumnIndex !== null ? row[commentColumnIndex] : null;
+        
+        console.log(`📊 Row ${rowNumber} data extraction:`, {
+          dateIndex: dateColumnIndex, rawDate,
+          amountIndex: amountColumnIndex, rawAmount,
+          descriptionIndex: descriptionColumnIndex, rawDescription,
+          cardIndex: cardColumnIndex, rawCard,
+          categoryIndex: categoryColumnIndex, rawCategory,
+          commentIndex: commentColumnIndex, rawComment
+        });
+        
+        // Skip if essential fields are missing
         if (!rawDate && !rawAmount && !rawDescription) continue;
         
-        // Parse date with enhanced validation
+        // Parse date
         const parsedDate = this.parseDate(rawDate);
         if (!parsedDate) {
           errors.push({
@@ -460,7 +625,7 @@ export class XlsImportStrategy implements ImportStrategy {
           continue;
         }
         
-        // Parse amount with better negative number handling
+        // Parse amount 
         const parsedAmount = this.parseAmount(rawAmount);
         if (parsedAmount === null || isNaN(parsedAmount)) {
           errors.push({
@@ -472,22 +637,23 @@ export class XlsImportStrategy implements ImportStrategy {
           continue;
         }
         
-        // Enhanced description and comment handling
+        // Extract description and other fields
         const description = this.extractDescription(rawDescription);
         const comment = this.extractComment(rawComment, rawDescription, description);
         
-        // Improved transaction type detection
+        // Determine transaction type and amount
         const isIncome = this.determineTransactionType(rawAmount, parsedAmount);
         const absoluteAmount = Math.abs(parsedAmount);
         
-        // Use default category instead of guessing - let users categorize themselves
-        const category = DEFAULT_CATEGORIES[8]; // 'Other' - don't guess, use existing data
+        // Use mapped card/category or defaults
+        const card = this.cleanCardName(String(rawCard).trim());
+        const category = rawCategory ? String(rawCategory).trim() : DEFAULT_CATEGORIES[8]; // 'Other'
         
-        // Create transaction with validation
+        // Create transaction
         const transaction: Transaction = {
           id: uuidv4(),
           date: parsedDate,
-          card: this.extractCardFromFileName(fileName),
+          card: card || 'Imported',
           amount: parseCurrencyToSmallestUnit(absoluteAmount, detectedCurrency),
           currency: detectedCurrency,
           originalDescription: String(rawDescription || '').trim(),
@@ -507,7 +673,7 @@ export class XlsImportStrategy implements ImportStrategy {
           }
         };
         
-        // Enhanced duplicate detection
+        // Check for duplicates
         const potentialDuplicates = await transactionRepository.findPotentialDuplicates(transaction);
         if (potentialDuplicates.length > 0) {
           transaction.isDuplicate = true;
@@ -599,9 +765,41 @@ export class XlsImportStrategy implements ImportStrategy {
   }
   
   private getColumnIndex(header: string[], columnName: string): number {
-    if (!header.length || !columnName) return 0;
-    const index = header.findIndex(h => String(h).trim() === columnName);
-    return index >= 0 ? index : 0;
+    if (!header.length || !columnName) {
+      console.warn('⚠️ getColumnIndex called with empty header or columnName:', { header, columnName });
+      return 0;
+    }
+    
+    // First try exact match
+    let index = header.findIndex(h => String(h).trim() === columnName);
+    
+    if (index >= 0) {
+      console.log(`✅ Found exact column match for "${columnName}" at index ${index}`);
+      return index;
+    }
+    
+    // Try case-insensitive match
+    index = header.findIndex(h => String(h).trim().toLowerCase() === columnName.toLowerCase());
+    
+    if (index >= 0) {
+      console.log(`✅ Found case-insensitive column match for "${columnName}" at index ${index}`);
+      return index;
+    }
+    
+    // Try partial match (contains)
+    index = header.findIndex(h => 
+      String(h).trim().toLowerCase().includes(columnName.toLowerCase()) ||
+      columnName.toLowerCase().includes(String(h).trim().toLowerCase())
+    );
+    
+    if (index >= 0) {
+      console.log(`✅ Found partial column match for "${columnName}" at index ${index}`);
+      return index;
+    }
+    
+    console.error(`❌ Could not find column "${columnName}" in headers:`, header);
+    console.error(`❌ This will cause incorrect data mapping! Using index 0 as fallback.`);
+    return 0;
   }
   
   private parseDate(value: any): string | null {
@@ -744,35 +942,6 @@ export class XlsImportStrategy implements ImportStrategy {
     }
     
     return null;
-  }
-  
-  private extractCardFromFileName(fileName: string): string {
-    const name = fileName.replace(/\.(xlsx?|csv)$/i, '');
-    const parts = name.split(/[-_\s]/);
-    
-    // Enhanced bank names including Ukrainian banks
-    const bankNames = [
-      'monzo', 'santander', 'chase', 'amex', 'barclays', 'hsbc', 'natwest', 'lloyds',
-      'приват', 'приватбанк', 'privatbank', 'mono', 'monobank', 'ощад', 'ощадбанк',
-      'укрсиббанк', 'укргазбанк', 'альфа', 'альфабанк', 'райффайзен', 'raiffeisen',
-      'креди агриколь', 'credit', 'agricole', 'ubs', 'ing', 'dkb'
-    ];
-    
-    for (const part of parts) {
-      const lowerPart = part.toLowerCase();
-      if (bankNames.some(bank => lowerPart.includes(bank))) {
-        return part;
-      }
-    }
-    
-    // Try to extract meaningful card/account identifier
-    const meaningfulPart = parts.find(part => 
-      part.length >= 3 && 
-      part.length <= 20 && 
-      !/^\d+$/.test(part) // Not just numbers
-    );
-    
-    return meaningfulPart || parts[0] || 'Imported';
   }
   
   private cleanDescription(description: string): string {
@@ -941,5 +1110,81 @@ export class XlsImportStrategy implements ImportStrategy {
     
     // Default to UAH (primary currency for Ukrainian market)
     return 'UAH';
+  }
+
+  private cleanCardName(cardName: string): string {
+    if (!cardName || cardName.trim().length === 0) {
+      return 'Imported Card';
+    }
+    
+    const cleaned = cardName.trim();
+    
+    // Handle masked card numbers like "**** 5460" - these are valid and should be kept as-is
+    if (/\*{4,}\s*\d{4}/.test(cleaned)) {
+      console.log(`✅ Found masked card number: "${cleaned}"`);
+      return cleaned;
+    }
+    
+    // Handle other card masking patterns
+    if (/\*+.*\d+/.test(cleaned) && cleaned.length >= 7) {
+      console.log(`✅ Found card masking pattern: "${cleaned}"`);
+      return cleaned;
+    }
+    
+    // Reject pure numbers (likely account IDs or transaction IDs) but allow if it has asterisks
+    if (/^-?\d+$/.test(cleaned)) {
+      console.log(`❌ Rejecting pure number: "${cleaned}"`);
+      return 'Imported Card';
+    }
+    
+    // Reject very short values (likely codes) unless they contain card patterns
+    if (cleaned.length < 3 && !/\*/.test(cleaned)) {
+      console.log(`❌ Rejecting short value: "${cleaned}"`);
+      return 'Imported Card';
+    }
+    
+    // Reject negative values that don't look like card names
+    if (cleaned.startsWith('-') && !/card|карт|visa|master|\*/.test(cleaned)) {
+      console.log(`❌ Rejecting negative value: "${cleaned}"`);
+      return 'Imported Card';
+    }
+    
+    // Reject common non-card values
+    const rejectPatterns = [
+      /^(null|undefined|n\/a|none|#ref|#error)$/i,
+      /^\d{4}-\d{2}-\d{2}$/, // dates
+      /^[0-9.,\-+\s]+$/, // pure numbers/amounts (without asterisks)
+    ];
+    
+    for (const pattern of rejectPatterns) {
+      if (pattern.test(cleaned)) {
+        console.log(`❌ Rejecting pattern match: "${cleaned}"`);
+        return 'Imported Card';
+      }
+    }
+    
+    // If it looks like a valid card name, clean it up
+    let result = cleaned;
+    
+    // Keep masked card numbers as-is
+    if (/\*/.test(result)) {
+      console.log(`✅ Keeping masked card as-is: "${result}"`);
+      return result;
+    }
+    
+    // Capitalize first letter for named cards
+    result = result.charAt(0).toUpperCase() + result.slice(1).toLowerCase();
+    
+    // Handle common card patterns
+    result = result
+      .replace(/\bvisa\b/gi, 'Visa')
+      .replace(/\bmastercard\b/gi, 'Mastercard')
+      .replace(/\bmaster\b/gi, 'Master')
+      .replace(/\bприват\b/gi, 'ПриватБанк')
+      .replace(/\bmono\b/gi, 'Monobank')
+      .replace(/\bощад\b/gi, 'Ощадбанк');
+    
+    console.log(`✅ Cleaned card name: "${cleaned}" -> "${result}"`);
+    return result;
   }
 } 
