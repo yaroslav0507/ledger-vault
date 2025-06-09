@@ -367,17 +367,6 @@ export const TransactionListScreen: React.FC = () => {
           Add Transaction
         </Button>
 
-        <Button
-          mode="contained"
-          icon="filter"
-          onPress={() => setShowFiltersModal(true)}
-          style={[styles.actionButton, styles.filterButton]}
-          labelStyle={styles.actionButtonLabel}
-          contentStyle={styles.actionButtonContent}
-        >
-          Filter ({activeFiltersCount})
-        </Button>
-
         <ImportButton 
           onFileSelect={handleFileSelect} 
           style={styles.actionButton}
