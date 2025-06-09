@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Transaction } from '../../model/Transaction';
 import { formatCurrency } from '@/shared/utils/currencyUtils';
-import { formatDateShort } from '@/shared/utils/dateUtils';
+import { formatDateTime } from '@/shared/utils/dateUtils';
 import { theme } from '@/shared/ui/theme/theme';
 
 interface TransactionCardProps {
@@ -11,7 +11,7 @@ interface TransactionCardProps {
   onLongPress?: () => void;
 }
 
-export const TransactionCard: React.FC<TransactionCardProps> = ({
+export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
   transaction,
   onPress,
   onLongPress
@@ -44,7 +44,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
           
           {/* Secondary Line - Metadata */}
           <View style={styles.metaRow}>
-            <Text style={styles.date}>{formatDateShort(transaction.date)}</Text>
+            <Text style={styles.date}>{formatDateTime(transaction.date)}</Text>
             <View style={styles.metaDivider} />
             <Text style={styles.card} numberOfLines={1} ellipsizeMode="tail">
               {transaction.card.slice(-9)}
@@ -94,14 +94,14 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
       )}
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.lg,
     marginVertical: theme.spacing.xs,
-    marginHorizontal: 2,
+    marginHorizontal: theme.spacing.sm,
     borderLeftWidth: 4,
     borderRightWidth: 1,
     borderTopWidth: 1,

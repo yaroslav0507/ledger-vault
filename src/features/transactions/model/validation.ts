@@ -23,7 +23,7 @@ export const transactionFormSchema = z.object({
     .trim(),
   
   category: z
-    .enum(DEFAULT_CATEGORIES as [string, ...string[]])
+    .enum([...DEFAULT_CATEGORIES] as [string, ...string[]])
     .default(DEFAULT_CATEGORIES[0]),
   
   comment: z

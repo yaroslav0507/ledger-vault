@@ -123,6 +123,11 @@ export class TransactionRepository {
     console.log('✅ Transaction deleted:', id);
   }
 
+  async clearAll(): Promise<void> {
+    await db.transactions.clear();
+    console.log('✅ All transactions cleared from database');
+  }
+
   async getTotalCount(): Promise<number> {
     return await db.transactions.count();
   }

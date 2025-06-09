@@ -33,7 +33,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
   return (
     <View style={containerStyle}>
       {/* Left Action */}
-      <View style={styles.actionContainer}>
+      <View style={styles.leftActionContainer}>
         {leftAction && (
           <Button
             mode="text"
@@ -56,7 +56,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
       </View>
 
       {/* Right Action */}
-      <View style={styles.actionContainer}>
+      <View style={styles.rightActionContainer}>
         {rightAction && (
           <Button
             mode="text"
@@ -94,9 +94,13 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
     ...theme.shadows.sm,
   },
-  actionContainer: {
+  leftActionContainer: {
     flex: 1,
     alignItems: 'flex-start',
+  },
+  rightActionContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
   },
   titleContainer: {
     flex: 2,

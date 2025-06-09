@@ -3,6 +3,8 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Card, Text } from 'react-native-paper';
 import { formatCurrency } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
+import { TransactionFilters } from '../../model/Transaction';
+import { getCurrentTimePeriod, getTimePeriodLabel } from '@/shared/utils/dateUtils';
 
 interface BalanceInfo {
   total: number;
@@ -14,12 +16,18 @@ interface BalanceCardProps {
   balance: BalanceInfo;
   transactionCount: number;
   currency?: string;
+  currentFilters?: TransactionFilters;
+  onIncomeFilter?: () => void;
+  onExpenseFilter?: () => void;
 }
 
 export const BalanceCard: React.FC<BalanceCardProps> = ({ 
   balance, 
   transactionCount, 
-  currency = 'USD' 
+  currency = 'USD', 
+  currentFilters,
+  onIncomeFilter,
+  onExpenseFilter
 }) => {
   const [isBalanceMasked, setIsBalanceMasked] = useState(false);
 
@@ -28,14 +36,44 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   };
 
   const maskAmount = (amount: number, currency: string) => {
-    const formatted = formatCurrency(amount, currency);
-    // Create a masked version that preserves the structure but hides the actual digits
-    // Replace digits with asterisks but keep formatting characters like commas, periods, currency symbols
-    return formatted.replace(/\d/g, '●');
+    // Simply return asterisks instead of preserving structure
+    return '*****';
   };
 
   const getDisplayAmount = (amount: number, currency: string) => {
     return isBalanceMasked ? maskAmount(amount, currency) : formatCurrency(amount, currency);
+  };
+
+  const getTimePeriodText = () => {
+    if (!currentFilters || !currentFilters.dateRange) {
+      return 'in total';
+    }
+    
+    const currentPeriod = getCurrentTimePeriod(currentFilters.dateRange);
+    const label = getTimePeriodLabel(currentPeriod, currentFilters.dateRange);
+    
+    // Convert to lowercase and add appropriate preposition
+    switch (currentPeriod) {
+      case 'today':
+        return 'today';
+      case 'week':
+        return 'this week';
+      case 'month':
+        return 'this month';
+      case 'quarter':
+        return 'this quarter';
+      case 'year':
+        return 'this year';
+      case 'spring':
+      case 'summer':
+      case 'autumn':
+      case 'winter':
+        return `in ${label.toLowerCase()}`;
+      case 'custom':
+        return `in selected period`;
+      default:
+        return 'in total';
+    }
   };
 
   return (
@@ -52,7 +90,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
               { color: balance.total >= 0 ? '#2E7D32' : '#64748B' },
               isBalanceMasked && styles.balanceAmountMasked
             ]}>
-              {isBalanceMasked ? maskAmount(Math.abs(balance.total), currency) : formatCurrency(Math.abs(balance.total), currency)}
+              {isBalanceMasked ? maskAmount(Math.abs(balance.total), currency) : formatCurrency(Math.abs(balance.total), currency, 0)}
             </Text>
             <TouchableOpacity 
               style={[styles.trendIndicator, isBalanceMasked && styles.trendIndicatorMasked]} 
@@ -76,7 +114,15 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
 
         {/* Compact Metrics Row */}
         <View style={styles.metricsRow}>
-          <TouchableOpacity style={[styles.metricCard, styles.incomeCard]} activeOpacity={0.8}>
+          <TouchableOpacity 
+            style={[
+              styles.metricCard, 
+              styles.incomeCard,
+              currentFilters?.isIncome === true && styles.metricCardActive
+            ]} 
+            activeOpacity={0.8}
+            onPress={onIncomeFilter}
+          >
             <Text style={styles.metricIcon}>📈</Text>
             <View style={styles.metricContent}>
               <Text variant="bodySmall" style={styles.metricLabel}>Income</Text>
@@ -85,12 +131,20 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
                 { color: '#2E7D32' },
                 isBalanceMasked && styles.metricValueMasked
               ]}>
-                {isBalanceMasked ? `+${maskAmount(balance.income, currency)}` : `+${formatCurrency(balance.income, currency)}`}
+                {isBalanceMasked ? `+${maskAmount(balance.income, currency)}` : `+${formatCurrency(balance.income, currency, 0)}`}
               </Text>
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.metricCard, styles.expenseCard]} activeOpacity={0.8}>
+          <TouchableOpacity 
+            style={[
+              styles.metricCard, 
+              styles.expenseCard,
+              currentFilters?.isIncome === false && styles.metricCardActive
+            ]} 
+            activeOpacity={0.8}
+            onPress={onExpenseFilter}
+          >
             <Text style={styles.metricIcon}>📉</Text>
             <View style={styles.metricContent}>
               <Text variant="bodySmall" style={styles.metricLabel}>Expenses</Text>
@@ -101,7 +155,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
               ]}>
                 {isBalanceMasked ? 
                   (balance.expenses === 0 ? 'None yet 🎉' : `-${maskAmount(balance.expenses, currency)}`) :
-                  (balance.expenses === 0 ? 'None yet 🎉' : `-${formatCurrency(balance.expenses, currency)}`)
+                  (balance.expenses === 0 ? 'None yet 🎉' : `-${formatCurrency(balance.expenses, currency, 0)}`)
                 }
               </Text>
             </View>
@@ -111,7 +165,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
         {/* Enhanced Insights Row */}
         <View style={styles.insightsRow}>
           <Text style={styles.insightText}>
-            💡 {transactionCount} transaction{transactionCount !== 1 ? 's' : ''} this month
+            💡 {transactionCount} transaction{transactionCount !== 1 ? 's' : ''} {getTimePeriodText()}
           </Text>
           {balance.expenses === 0 && transactionCount > 0 && (
             <Text style={styles.insightText}>
@@ -146,13 +200,12 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.md,
   },
   balanceHeader: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   balanceMainRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing.sm,
   },
   balanceLabel: {
     ...theme.typography.body,
@@ -163,12 +216,11 @@ const styles = StyleSheet.create({
   },
   balanceAmount: {
     ...theme.typography.h2,
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '800',
     flex: 1,
     textAlign: 'center',
     letterSpacing: 0.8,
-    marginHorizontal: theme.spacing.md,
   },
   balanceAmountMasked: {
     fontSize: 30,
@@ -226,6 +278,11 @@ const styles = StyleSheet.create({
     borderColor: '#94A3B8',
     backgroundColor: '#F8FAFC',
   },
+  metricCardActive: {
+    borderColor: '#2196F3',
+    backgroundColor: '#E3F2FD',
+    borderWidth: 3,
+  },
   metricIcon: {
     fontSize: 20,
     marginBottom: 4,
@@ -253,7 +310,6 @@ const styles = StyleSheet.create({
   insightsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
     flexWrap: 'wrap',
     gap: 4,
   },

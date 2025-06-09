@@ -20,8 +20,13 @@ const theme = {
 
 const Tab = createBottomTabNavigator();
 
-function SettingsWrapper() {
-  return <SettingsScreen onClose={() => {}} />;
+function SettingsWrapper({ navigation }: any) {
+  const handleClose = () => {
+    // Navigate back to the Transactions tab
+    navigation.navigate('Transactions');
+  };
+  
+  return <SettingsScreen onClose={handleClose} />;
 }
 
 export default function App() {

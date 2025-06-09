@@ -5,9 +5,15 @@ import {
   CreateTransactionRequest, 
   TransactionFilters 
 } from '../model/Transaction';
+import { getDateRangeForPeriod } from '@/shared/utils/dateUtils';
 
 // Export the type for use in other files
 export type { TransactionFilters };
+
+// Get default "this month" filter
+const getDefaultFilters = (): TransactionFilters => ({
+  dateRange: getDateRangeForPeriod('month')
+});
 
 interface TransactionStore {
   // State
@@ -21,6 +27,7 @@ interface TransactionStore {
   addTransaction: (request: CreateTransactionRequest) => Promise<void>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  clearAllTransactions: () => Promise<void>;
   setFilters: (filters: Partial<TransactionFilters>) => void;
   clearFilters: () => void;
   refreshTransactions: () => Promise<void>;
@@ -38,7 +45,7 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
   transactions: [],
   loading: false,
   error: null,
-  filters: {},
+  filters: getDefaultFilters(),
 
   // Actions
   loadTransactions: async () => {
@@ -117,6 +124,21 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
     }
   },
 
+  clearAllTransactions: async () => {
+    set({ loading: true, error: null });
+    
+    try {
+      await transactionRepository.clearAll();
+      set({ transactions: [], loading: false });
+      console.log('✅ All transactions deleted successfully');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete all transactions';
+      set({ error: errorMessage, loading: false });
+      console.error('❌ Failed to delete all transactions:', error);
+      throw error;
+    }
+  },
+
   setFilters: (newFilters: Partial<TransactionFilters>) => {
     const currentFilters = get().filters;
     const updatedFilters = { ...currentFilters, ...newFilters };
@@ -127,7 +149,7 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
   },
 
   clearFilters: () => {
-    set({ filters: {} });
+    set({ filters: getDefaultFilters() });
     get().loadTransactions();
   },
 

@@ -100,6 +100,28 @@ interface TransactionMetadata {
 }
 ```
 
+### Time Period Filtering Interfaces
+```typescript
+type TimePeriod = 'today' | 'week' | 'month' | 'year' | 'custom';
+
+interface DateRange {
+  start: string;                // ISO date (YYYY-MM-DD)
+  end: string;                  // ISO date (YYYY-MM-DD)
+}
+
+interface TransactionFilters {
+  dateRange?: DateRange;        // Time period filter
+  categories?: string[];        // Selected categories
+  cards?: string[];            // Selected cards/accounts
+  amountRange?: {
+    min: number;
+    max: number;
+  };
+  isIncome?: boolean;          // Income/expense filter
+  searchQuery?: string;        // Text search filter
+}
+```
+
 ### Import System Interfaces
 ```typescript
 interface ImportFile {
@@ -175,5 +197,14 @@ interface ImportMapping {
 - **Automatic currency fallback** with UAH as primary
 - **Extended currency support** (UAH, USD, EUR, GBP, ILS, JPY, CHF, CAD, AUD, RUB)
 - **Intelligent currency parsing** from various formats and symbols
+
+### Time Period Filtering
+- **Quick time period selection** with predefined periods (Today, This Week, This Month, This Year)
+- **Custom date range picker** for arbitrary time periods
+- **Intelligent period detection** that recognizes current filter state
+- **Seamless filter integration** with existing transaction filters
+- **Dynamic date range calculation** using date-fns for accurate period boundaries
+- **User-friendly time period display** with localized date formatting (DD.MM.YYYY)
+- **Horizontal scrollable interface** optimized for mobile devices
 
 This technical specification provides the detailed implementation guidance needed to build LedgerVault according to the architectural blueprint. 

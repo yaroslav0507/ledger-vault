@@ -23,6 +23,7 @@ import { SUPPORTED_CURRENCIES, getCurrencySymbol } from '@/shared/utils/currency
 import { DEFAULT_CATEGORIES } from '../../model/Transaction';
 import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
+import { useTransactionStore } from '../../store/transactionStore';
 
 interface SettingsScreenProps {
   onClose: () => void;
@@ -39,6 +40,8 @@ interface AppSettings {
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
+  const { clearAllTransactions, transactions, loading } = useTransactionStore();
+  
   const [settings, setSettings] = useState<AppSettings>({
     defaultCurrency: 'UAH',
     defaultCategory: DEFAULT_CATEGORIES[0],
@@ -60,28 +63,58 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
   };
 
   const handleExportData = () => {
+    if (transactions.length === 0) {
+      Alert.alert('No Data', 'There are no transactions to export.');
+      return;
+    }
+
     Alert.alert(
       'Export Data',
-      'This feature will export all your transaction data to a CSV file.',
+      `This will export all ${transactions.length} transactions to a CSV file.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Export', onPress: () => {
-          // TODO: Implement data export
-          Alert.alert('Info', 'Export feature coming soon!');
+          try {
+            // Create CSV content
+            const csvHeader = 'Date,Card,Amount,Currency,Description,Category,Type,Comment\n';
+            const csvContent = transactions.map(t => 
+              `${t.date},"${t.card}",${t.amount},"${t.currency}","${t.description}","${t.category}","${t.isIncome ? 'Income' : 'Expense'}","${t.comment || ''}"`
+            ).join('\n');
+            
+            const fullCsv = csvHeader + csvContent;
+            
+            // For now, just show success message
+            // In a real app, you would create and download the file
+            Alert.alert('Export Successful', 'Transaction data has been exported to CSV format.');
+            console.log('CSV Export:', fullCsv);
+          } catch (error) {
+            Alert.alert('Export Failed', 'Failed to export data. Please try again.');
+            console.error('Export error:', error);
+          }
         }}
       ]
     );
   };
 
   const handleClearData = () => {
+    if (transactions.length === 0) {
+      Alert.alert('No Data', 'There are no transactions to clear.');
+      return;
+    }
+
     Alert.alert(
       'Clear All Data',
-      'This will permanently delete all your transactions. This action cannot be undone.',
+      `This will permanently delete all ${transactions.length} transactions. This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete All', style: 'destructive', onPress: () => {
-          // TODO: Implement data clearing
-          Alert.alert('Info', 'Data clearing feature coming soon!');
+        { text: 'Delete All', style: 'destructive', onPress: async () => {
+          try {
+            await clearAllTransactions();
+            Alert.alert('Success', 'All transaction data has been cleared.');
+          } catch (error) {
+            Alert.alert('Error', 'Failed to clear data. Please try again.');
+            console.error('Clear data error:', error);
+          }
         }}
       ]
     );

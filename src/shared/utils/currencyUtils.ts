@@ -1,29 +1,40 @@
-export function formatCurrency(amount: number, currency: string = 'USD'): string {
+export function formatCurrency(amount: number, currency: string = 'USD', digits?: number): string {
   // Convert from smallest unit (cents) to main currency unit
   const mainAmount = amount / 100;
   
   // Handle currencies that don't have fractional units
   const currencyConfig = SUPPORTED_CURRENCIES.find(c => c.code === currency);
-  const fractionDigits = currencyConfig?.fractionDigits ?? 2;
+  const fractionDigits = digits !== undefined ? digits : (currencyConfig?.fractionDigits ?? 2);
   
   // Special formatting for UAH - Ukrainian convention places ₴ after amount
   if (currency === 'UAH') {
-    return `${mainAmount.toFixed(fractionDigits)}₴`;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits
+    }).format(mainAmount).replace('UAH', '') + ' ₴';
   }
   
   try {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
       currencyDisplay: 'symbol',
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits
-  }).format(mainAmount);
+    }).format(mainAmount);
   } catch (error) {
-    // Fallback for unsupported currencies - consistent format with code after amount
+    // Fallback for unsupported currencies - consistent format with proper number formatting
     const multiplier = fractionDigits === 0 ? 1 : 100;
     const displayAmount = amount / multiplier;
-    return `${displayAmount.toFixed(fractionDigits)} ${currency}`;
+    const formattedNumber = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits
+    }).format(displayAmount);
+    
+    const symbol = getCurrencySymbol(currency);
+    return `${formattedNumber} ${symbol}`;
   }
 }
 
