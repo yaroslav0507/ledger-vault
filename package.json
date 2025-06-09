@@ -9,8 +9,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
-    "predeploy": "npm run build:web",
-    "deploy": "gh-pages -d dist"
+    "fix-paths": "sed -i '' 's|href=\"/|href=\"./|g' dist/index.html && sed -i '' 's|src=\"/|src=\"./|g' dist/index.html",
+    "predeploy": "npm run build:web && npm run fix-paths",
+    "deploy": "npx gh-pages -d dist"
   },
   "dependencies": {
     "@expo/cli": "^0.24.14",

@@ -11,4 +11,9 @@ config.resolver.alias = {
   '@/app': path.resolve(__dirname, 'src/app'),
 };
 
+// GitHub Pages configuration
+if (process.env.NODE_ENV === 'production') {
+  config.resolver.platforms = ['web', 'native'];
+}
+
 module.exports = config; 
