@@ -2,9 +2,21 @@ import { read, utils, WorkBook } from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 import { Transaction, DEFAULT_CATEGORIES } from '@/features/transactions/model/Transaction';
 import { transactionRepository } from '@/features/transactions/storage/TransactionRepository';
-import { parseCurrencyToSmallestUnit, detectCurrencyFromText, SUPPORTED_CURRENCIES } from '@/shared/utils/currencyUtils';
+import { 
+  parseCurrencyToSmallestUnit, 
+  detectCurrencyFromText, 
+  addCurrencySupport,
+  isSupportedCurrency,
+  SUPPORTED_CURRENCIES 
+} from '@/shared/utils/currencyUtils';
 import { format } from 'date-fns';
 import { ImportStrategy, ImportFile, ImportResult, ImportMapping, ImportError } from './ImportStrategy';
+
+export interface FilePreview {
+  columns: string[];
+  sampleData: string[][];
+  suggestedMapping?: Partial<ImportMapping>;
+}
 
 export class XlsImportStrategy implements ImportStrategy {
   
@@ -39,41 +51,149 @@ export class XlsImportStrategy implements ImportStrategy {
     }
   }
 
+  async extractPreview(file: ImportFile): Promise<FilePreview> {
+    if (!this.validateFile(file)) {
+      throw new Error(`Unsupported file format: ${file.type}`);
+    }
+
+    try {
+      const workbook: WorkBook = read(file.content, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      const rawData = utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      
+      if (rawData.length === 0) {
+        throw new Error('Empty file');
+      }
+
+      // Find potential header row
+      let headerRowIndex = 0;
+      let columns: string[] = [];
+      
+      for (let i = 0; i < Math.min(rawData.length, 10); i++) {
+        const row = rawData[i] as string[];
+        if (this.hasValidColumnStructure(row)) {
+          columns = this.extractColumnNames(row).filter(col => col.trim());
+          headerRowIndex = i;
+          break;
+        }
+      }
+
+      // Fallback to first non-empty row
+      if (columns.length === 0) {
+        for (let i = 0; i < Math.min(rawData.length, 5); i++) {
+          const row = rawData[i] as string[];
+          if (row.some(cell => String(cell).trim())) {
+            columns = row.map((cell, index) => 
+              String(cell).trim() || `Column ${index + 1}`
+            );
+            headerRowIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (columns.length === 0) {
+        throw new Error('Unable to detect columns in file');
+      }
+
+      // Get sample data (excluding header)
+      const sampleData: string[][] = [];
+      const startRow = headerRowIndex + 1;
+      const maxSamples = Math.min(5, rawData.length - startRow);
+      
+      for (let i = 0; i < maxSamples; i++) {
+        const row = rawData[startRow + i] as any[];
+        if (row && row.some(cell => String(cell).trim())) {
+          sampleData.push(
+            columns.map((_, colIndex) => 
+              String(row[colIndex] || '').trim()
+            )
+          );
+        }
+      }
+
+      // Generate suggested mapping
+      const suggestedMapping = this.detectColumnTypes(columns);
+
+      return {
+        columns,
+        sampleData,
+        suggestedMapping: {
+          dateColumn: suggestedMapping.dateColumn || undefined,
+          amountColumn: suggestedMapping.amountColumn || undefined,
+          descriptionColumn: suggestedMapping.descriptionColumn || undefined,
+          cardColumn: undefined,
+          categoryColumn: undefined,
+          commentColumn: suggestedMapping.commentColumn,
+          dateFormat: 'DD.MM.YYYY' as any,
+          hasHeader: true,
+          headerRowIndex
+        }
+      };
+    } catch (error) {
+      console.error('Failed to extract preview from Excel file:', error);
+      throw new Error(`Failed to extract preview: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   private async detectColumnMapping(data: any[][]): Promise<ImportMapping> {
     if (data.length === 0) {
       throw new Error('Empty file');
     }
 
-    // Find the header row by skipping document info and metadata rows
+    // Find the header row by analyzing document structure
     let headerRowIndex = 0;
     let header: string[] = [];
+    let skippedRows: string[] = [];
     
-    for (let i = 0; i < Math.min(data.length, 15); i++) {
+    // Enhanced header detection - scan more rows and identify patterns
+    for (let i = 0; i < Math.min(data.length, 20); i++) {
       const row = data[i] as string[];
-      if (!this.isDocumentInfoRow(row) && this.hasValidColumnStructure(row)) {
+      
+      // Skip clearly non-header rows
+      if (this.isDocumentInfoRow(row)) {
+        skippedRows.push(`Row ${i + 1}: Document info/metadata`);
+        continue;
+      }
+      
+      // Check for valid column structure
+      if (this.hasValidColumnStructure(row)) {
         header = this.extractColumnNames(row);
         headerRowIndex = i;
-        break;
+        
+        // If we found multiple potential header rows, choose the most comprehensive one
+        if (header.length >= 4) {
+          break;
+        }
+      } else if (row.some(cell => String(cell).trim())) {
+        skippedRows.push(`Row ${i + 1}: Insufficient column structure`);
       }
     }
     
-    // Enhanced fallback logic with validation
+    // Enhanced fallback logic with better validation
     if (header.length === 0) {
-      for (let i = 0; i < Math.min(data.length, 10); i++) {
+      for (let i = 0; i < Math.min(data.length, 15); i++) {
         const row = data[i] as string[];
         if (row.some(cell => String(cell).trim()) && row.length >= 3) {
           header = this.extractColumnNames(row);
           headerRowIndex = i;
+          skippedRows.push(`Row ${i + 1}: Used as fallback header`);
           break;
         }
       }
     }
     
     if (header.length < 2) {
-      throw new Error('Unable to detect valid columns. Please ensure the file has proper headers.');
+      const skipInfo = skippedRows.length > 0 ? ` (Skipped: ${skippedRows.join(', ')})` : '';
+      throw new Error(`Unable to detect valid columns. Please ensure the file has proper headers.${skipInfo}`);
     }
     
     console.log(`📋 Found header row at index ${headerRowIndex}:`, header);
+    if (skippedRows.length > 0) {
+      console.log(`📋 Skipped rows: ${skippedRows.join(', ')}`);
+    }
     
     // Detect column mappings using improved heuristics
     const mapping = this.detectColumnTypes(header);
@@ -84,12 +204,14 @@ export class XlsImportStrategy implements ImportStrategy {
     }
     
     return {
-      dateColumn: mapping.dateColumn || this.findFallbackColumn(header, ['date', 'дата']),
-      amountColumn: mapping.amountColumn || this.findFallbackColumn(header, ['amount', 'сума', 'balance']),
-      descriptionColumn: mapping.descriptionColumn || this.findFallbackColumn(header, ['description', 'опис', 'details']),
+      dateColumn: mapping.dateColumn || this.findFallbackColumn(header, ['date', 'дата', 'datum', 'fecha', 'data']),
+      amountColumn: mapping.amountColumn || this.findFallbackColumn(header, ['amount', 'сума', 'сумма', 'balance', 'betrag', 'montant']),
+      descriptionColumn: mapping.descriptionColumn || this.findFallbackColumn(header, ['description', 'опис', 'описание', 'details', 'narrative']),
       commentColumn: mapping.commentColumn,
       dateFormat: 'auto',
-      hasHeader: true
+      hasHeader: true,
+      headerRowIndex,
+      skippedInfo: skippedRows
     };
   }
 
@@ -358,8 +480,8 @@ export class XlsImportStrategy implements ImportStrategy {
         const isIncome = this.determineTransactionType(rawAmount, parsedAmount);
         const absoluteAmount = Math.abs(parsedAmount);
         
-        // Enhanced category detection
-        const category = this.guessCategory(description, comment);
+        // Use default category instead of guessing - let users categorize themselves
+        const category = DEFAULT_CATEGORIES[8]; // 'Other' - don't guess, use existing data
         
         // Create transaction with validation
         const transaction: Transaction = {
@@ -684,86 +806,6 @@ export class XlsImportStrategy implements ImportStrategy {
     return cleaned || 'Imported transaction';
   }
   
-  private guessCategory(description: string, comment?: string | null): string {
-    const text = `${description} ${comment || ''}`.toLowerCase();
-    
-    // Enhanced category mapping with better patterns and Ukrainian keywords
-    const categoryPatterns: { [key: string]: RegExp[] } = {
-      'food & dining': [
-        /\b(restaurant|cafe|coffee|pizza|burger|food|dining|starbucks|mcdonalds|kfc|subway|dominos)\b/,
-        /\b(ресторан|кафе|їжа|піца|кава|макдональдс|кфс|subway|домінос)\b/,
-        /\b(bistro|bakery|deli|canteen|buffet|grill|kitchen|eatery)\b/,
-        /\b(wolt|glovo|uber\s*eats|bolt\s*food|delivery)\b/
-      ],
-      'transportation': [
-        /\b(uber|lyft|taxi|bus|train|metro|parking|fuel|petrol|gas|transport|bolt)\b/,
-        /\b(таксі|автобус|метро|паливо|транспорт|bolt|укрзалізниця|маршрутка)\b/,
-        /\b(station|railway|subway|tram|trolley|airport|airline|flight)\b/,
-        /\b(shell|bp|esso|total|okko|wog|автозаправка|азс)\b/
-      ],
-      'shopping': [
-        /\b(amazon|ebay|store|shop|retail|mall|target|walmart|costco|ikea)\b/,
-        /\b(магазин|покупки|торговий|центр|супермаркет|silpo|атб|novus|fora)\b/,
-        /\b(clothing|fashion|shoes|electronics|furniture|grocery|supermarket)\b/,
-        /\b(zara|h&m|nike|adidas|apple|samsung|rozetka|eldorado)\b/
-      ],
-      'bills & utilities': [
-        /\b(electric|electricity|gas|water|internet|phone|utility|bill|payment|insurance)\b/,
-        /\b(комунальні|електро|газ|вода|інтернет|телефон|страхування|платіж|kyivstar|vodafone|lifecell)\b/,
-        /\b(heating|sewage|garbage|mobile|broadband|cable|satellite)\b/,
-        /\b(укртелеком|київстар|vodafone|lifecell|тріолан|volia)\b/
-      ],
-      'healthcare': [
-        /\b(hospital|doctor|pharmacy|medical|health|dentist|clinic|medicine)\b/,
-        /\b(лікар|аптека|медичний|здоров'я|стоматолог|клініка|ліки|медицина)\b/,
-        /\b(therapy|surgery|treatment|examination|prescription|vaccine)\b/,
-        /\b(bayer|pfizer|johnson|abbott|медична|допомога)\b/
-      ],
-      'entertainment': [
-        /\b(cinema|movie|netflix|spotify|game|entertainment|theatre|concert|music)\b/,
-        /\b(кіно|розваги|театр|концерт|музика|гра|ігри|мультиплекс|планета)\b/,
-        /\b(youtube|twitch|steam|playstation|xbox|nintendo|epic|blizzard)\b/,
-        /\b(ticket|booking|reservation|event|festival|party)\b/
-      ],
-      'income': [
-        /\b(salary|wage|payment|refund|cashback|interest|dividend|bonus)\b/,
-        /\b(зарплата|доходи|повернення|відсотки|бонус|премія|винагорода)\b/,
-        /\b(freelance|commission|royalty|pension|benefit|grant)\b/,
-        /\b(employer|payroll|compensation|earning|revenue)\b/
-      ],
-      'transfer': [
-        /\b(transfer|sent|received|p2p|peer|friend|family|relative)\b/,
-        /\b(переказ|відправлено|отримано|друг|сім'я|родич|близькі)\b/,
-        /\b(western\s*union|moneygram|wise|revolut|paypal|venmo)\b/
-      ],
-      'cash & atm': [
-        /\b(atm|cash|withdrawal|deposit|банкомат|готівка|зняття|внесення)\b/,
-        /\b(cashback|cash\s*back|готівковий|відкат)\b/
-      ]
-    };
-    
-    // Find best matching category
-    let bestMatch = '';
-    let highestMatches = 0;
-    
-    for (const [category, patterns] of Object.entries(categoryPatterns)) {
-      let matches = 0;
-      for (const pattern of patterns) {
-        if (pattern.test(text)) {
-          matches++;
-        }
-      }
-      
-      if (matches > highestMatches) {
-        highestMatches = matches;
-        bestMatch = category;
-      }
-    }
-    
-    // Return best match or default category
-    return bestMatch || DEFAULT_CATEGORIES[8]; // 'Other'
-  }
-
   private isDocumentInfoRow(row: any[]): boolean {
     if (!row || row.length === 0) return true;
     
@@ -793,15 +835,40 @@ export class XlsImportStrategy implements ImportStrategy {
     return documentPatterns.some(pattern => pattern.test(rowText));
   }
 
+  private isDataRow(row: any[]): boolean {
+    if (!row || row.length === 0) return false;
+    
+    const rowText = row.map(cell => String(cell || '').trim()).join(' ').toLowerCase();
+    
+    // Skip empty rows
+    if (rowText.replace(/\s/g, '').length < 3) return false;
+    
+    // Check for data patterns that indicate this is a transaction row
+    const hasDatePattern = /\d{1,2}[.\/-]\d{1,2}[.\/-]\d{4}/.test(rowText);
+    const hasAmountPattern = /[-+]?\d+[.,]?\d*/.test(rowText);
+    const hasDescriptiveText = row.some(cell => {
+      const str = String(cell || '').trim();
+      return str.length > 5 && !/^(дата|date|сума|amount|опис|description|баланс|balance)$/i.test(str);
+    });
+    
+    // A data row should have at least a date pattern and an amount pattern
+    return hasDatePattern && hasAmountPattern && hasDescriptiveText;
+  }
+
   private isHeaderRow(row: any[]): boolean {
     if (!row || row.length === 0) return true;
+    
+    // Use negation: if it's not a data row and not a document info row, it might be a header
+    if (this.isDataRow(row) || this.isDocumentInfoRow(row)) {
+      return false;
+    }
     
     const rowText = row.map(cell => String(cell || '').trim()).join(' ').toLowerCase();
     
     // Skip empty rows
     if (rowText.replace(/\s/g, '').length < 3) return true;
     
-    // Enhanced header patterns
+    // Enhanced header patterns - look for column names
     const headerPatterns = [
       /^(дата|date|fecha|datum|data)$/,
       /^(сума|сумма|amount|betrag|montant|importe|kwota)$/,
@@ -819,52 +886,60 @@ export class XlsImportStrategy implements ImportStrategy {
       return headerPatterns.some(pattern => pattern.test(str));
     });
     
-    // Check for obvious data pattern (excludes headers)
-    const hasDataPattern = /\d{1,2}[.\/-]\d{1,2}[.\/-]\d{4}.*[-+]?\d+[.,]?\d*/.test(rowText);
-    
-    return headerCells.length >= Math.min(2, row.filter(c => String(c).trim()).length) && !hasDataPattern;
+    // If we have header-like content and it's not a data row, consider it a header
+    return headerCells.length >= Math.min(2, row.filter(c => String(c).trim()).length);
   }
 
   private detectDocumentCurrency(content: string, fileName: string): string {
-    // First, try to detect from content
+    // First, try to detect from content using existing utility
     const detectedFromContent = detectCurrencyFromText(content);
-    if (detectedFromContent && SUPPORTED_CURRENCIES.some(c => c.code === detectedFromContent)) {
+    if (detectedFromContent) {
+      if (!isSupportedCurrency(detectedFromContent)) {
+        addCurrencySupport(detectedFromContent);
+      }
       return detectedFromContent;
     }
     
-    // Try to detect from filename
+    // Try to detect from filename using existing utility
     const detectedFromFilename = detectCurrencyFromText(fileName);
-    if (detectedFromFilename && SUPPORTED_CURRENCIES.some(c => c.code === detectedFromFilename)) {
+    if (detectedFromFilename) {
+      if (!isSupportedCurrency(detectedFromFilename)) {
+        addCurrencySupport(detectedFromFilename);
+      }
       return detectedFromFilename;
     }
     
-    // Enhanced Ukrainian bank pattern detection
+    // Enhanced pattern-based detection using SUPPORTED_CURRENCIES
     const contentLower = content.toLowerCase();
-    if (contentLower.includes('гривн') || contentLower.includes('uah') || 
-        contentLower.includes('виписка') || contentLower.includes('картк') ||
+    
+    // Check for currency symbols and codes from our supported list
+    for (const currency of SUPPORTED_CURRENCIES) {
+      // Check for currency code
+      if (contentLower.includes(currency.code.toLowerCase())) {
+        return currency.code;
+      }
+      
+      // Check for currency symbol (handle special characters properly)
+      if (currency.symbol !== currency.code && content.includes(currency.symbol)) {
+        return currency.code;
+      }
+      
+      // Check for currency names
+      for (const name of currency.names) {
+        if (contentLower.includes(name.toLowerCase())) {
+          return currency.code;
+        }
+      }
+    }
+    
+    // Ukrainian bank pattern detection (still useful for context)
+    if (contentLower.includes('виписка') || contentLower.includes('картк') ||
         contentLower.includes('приват') || contentLower.includes('mono') ||
         contentLower.includes('ощад') || contentLower.includes('укр')) {
       return 'UAH';
     }
     
-    // Check for other supported currencies
-    if (contentLower.includes('dollar') || contentLower.includes('usd') || /\$\d/.test(content)) {
-      return 'USD';
-    }
-    
-    if (contentLower.includes('euro') || contentLower.includes('eur') || /€\d/.test(content)) {
-      return 'EUR';
-    }
-    
-    if (contentLower.includes('pound') || contentLower.includes('gbp') || /£\d/.test(content)) {
-      return 'GBP';
-    }
-    
-    if (contentLower.includes('shekel') || contentLower.includes('ils') || /₪\d/.test(content)) {
-      return 'ILS';
-    }
-    
-    // Default to UAH (primary currency) instead of USD
+    // Default to UAH (primary currency for Ukrainian market)
     return 'UAH';
   }
 } 

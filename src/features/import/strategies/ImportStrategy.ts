@@ -41,6 +41,8 @@ export interface ImportMapping {
   commentColumn?: string;
   dateFormat: string;
   hasHeader: boolean;
+  headerRowIndex?: number;
+  skippedInfo?: string[];
 }
 
 export interface ImportStrategy {

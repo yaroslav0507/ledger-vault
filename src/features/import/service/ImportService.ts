@@ -1,7 +1,9 @@
 import { ImportStrategy, ImportFile, ImportResult, ImportMapping } from '../strategies/ImportStrategy';
-import { XlsImportStrategy } from '../strategies/XlsImportStrategy';
+import { XlsImportStrategy, FilePreview } from '../strategies/XlsImportStrategy';
 import { transactionRepository } from '@/features/transactions/storage/TransactionRepository';
 import { Transaction } from '@/features/transactions/model/Transaction';
+
+export { FilePreview };
 
 export class ImportService {
   private strategies: Map<string, ImportStrategy> = new Map();
@@ -21,6 +23,20 @@ export class ImportService {
   validateFile(file: ImportFile): boolean {
     const strategy = this.strategies.get(file.type);
     return strategy ? strategy.validateFile(file) : false;
+  }
+
+  async extractFilePreview(file: ImportFile): Promise<FilePreview> {
+    const strategy = this.strategies.get(file.type);
+    if (!strategy) {
+      throw new Error(`Unsupported file format: ${file.type}`);
+    }
+
+    // Get the XLS strategy to access its parsing methods
+    if (strategy instanceof XlsImportStrategy) {
+      return await strategy.extractPreview(file);
+    }
+
+    throw new Error('Preview extraction not supported for this file type');
   }
 
   async importFile(file: ImportFile, mapping?: ImportMapping): Promise<ImportResult> {

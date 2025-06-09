@@ -19,6 +19,11 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
   const amountColor = transaction.isIncome ? theme.colors.income : theme.colors.expense;
   const amountPrefix = transaction.isIncome ? '+' : '-';
 
+  // Check if we have an original description that differs from the cleaned description
+  const hasOriginalDescription = transaction.originalDescription && 
+    transaction.originalDescription !== transaction.description &&
+    transaction.originalDescription.length > 0;
+
   return (
     <TouchableOpacity
       style={styles.container}
@@ -28,32 +33,40 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({
     >
       <View style={styles.content}>
         <View style={styles.leftSection}>
-          <Text style={styles.description} numberOfLines={1}>
+          <Text style={styles.description} numberOfLines={2} ellipsizeMode="tail">
             {transaction.description}
           </Text>
           <View style={styles.metaInfo}>
-            <Text style={styles.date}>
+            <Text style={styles.date} numberOfLines={1} ellipsizeMode="tail">
               {formatDateShort(transaction.date)}
             </Text>
             <Text style={styles.separator}>•</Text>
-            <Text style={styles.card}>{transaction.card}</Text>
+            <Text style={styles.card} numberOfLines={1} ellipsizeMode="tail">{transaction.card}</Text>
             <Text style={styles.separator}>•</Text>
-            <Text style={styles.category}>{transaction.category}</Text>
+            <Text style={styles.category} numberOfLines={1} ellipsizeMode="tail">{transaction.category}</Text>
           </View>
         </View>
         
         <View style={styles.rightSection}>
-          <Text style={[styles.amount, { color: amountColor }]}>
+          <Text style={[styles.amount, { color: amountColor }]} numberOfLines={1} ellipsizeMode="tail">
             {amountPrefix}{formatCurrency(transaction.amount, transaction.currency)}
           </Text>
         </View>
       </View>
       
-      {transaction.comment && (
+      {/* Display comments - either user comment or original description */}
+      {(transaction.comment || hasOriginalDescription) && (
         <View style={styles.commentSection}>
-          <Text style={styles.comment} numberOfLines={2}>
-            💬 {transaction.comment}
-          </Text>
+          {transaction.comment && (
+            <Text style={styles.comment} numberOfLines={2} ellipsizeMode="tail">
+              💬 {transaction.comment}
+            </Text>
+          )}
+          {hasOriginalDescription && (
+            <Text style={styles.originalDescription} numberOfLines={2} ellipsizeMode="tail">
+              📄 {transaction.originalDescription}
+            </Text>
+          )}
         </View>
       )}
     </TouchableOpacity>
@@ -66,65 +79,91 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
     marginVertical: theme.spacing.xs,
-    marginHorizontal: theme.spacing.md,
     ...theme.shadows.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    minHeight: 80,
   },
   content: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    minHeight: 44,
   },
   leftSection: {
     flex: 1,
     marginRight: theme.spacing.md,
+    minWidth: 0, // Allow flex shrinking
   },
   rightSection: {
     alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    flexShrink: 0,
+    minWidth: 80,
   },
   description: {
     ...theme.typography.bodyLarge,
     color: theme.colors.text.primary,
     fontWeight: '600',
     marginBottom: theme.spacing.xs,
+    lineHeight: 20,
   },
   metaInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    minHeight: 16,
   },
   date: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
+    fontSize: 11,
   },
   separator: {
     ...theme.typography.caption,
     color: theme.colors.text.disabled,
     marginHorizontal: theme.spacing.xs,
+    fontSize: 11,
   },
   card: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
     fontWeight: '600',
+    fontSize: 11,
+    maxWidth: 80,
   },
   category: {
     ...theme.typography.caption,
     color: theme.colors.primary,
     fontWeight: '600',
+    fontSize: 11,
+    maxWidth: 100,
   },
   amount: {
     ...theme.typography.h3,
     fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'right',
   },
   commentSection: {
     marginTop: theme.spacing.sm,
     paddingTop: theme.spacing.sm,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
+    gap: theme.spacing.xs,
   },
   comment: {
     ...theme.typography.body,
     color: theme.colors.text.secondary,
     fontStyle: 'italic',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  originalDescription: {
+    ...theme.typography.body,
+    color: theme.colors.text.disabled,
+    fontSize: 11,
+    lineHeight: 15,
+    fontFamily: 'monospace',
   },
 }); 

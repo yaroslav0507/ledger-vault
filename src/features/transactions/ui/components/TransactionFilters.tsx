@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { TransactionFilters, DEFAULT_CATEGORIES } from '../../model/Transaction';
 import { theme } from '@/shared/ui/theme/theme';
+import { ModalHeader } from '@/shared/ui/components/ModalHeader';
 
 interface TransactionFiltersProps {
   visible: boolean;
@@ -79,15 +80,17 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.cancelButton}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Filter Transactions</Text>
-          <TouchableOpacity onPress={handleApply}>
-            <Text style={styles.applyButton}>Apply</Text>
-          </TouchableOpacity>
-        </View>
+        <ModalHeader
+          title="Filter Transactions"
+          leftAction={{
+            label: "Cancel",
+            onPress: onClose
+          }}
+          rightAction={{
+            label: "Apply",
+            onPress: handleApply
+          }}
+        />
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Transaction Type Filter */}
@@ -257,27 +260,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  title: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-  },
-  cancelButton: {
-    ...theme.typography.button,
-    color: theme.colors.text.secondary,
-  },
-  applyButton: {
-    ...theme.typography.button,
-    color: theme.colors.primary,
   },
   content: {
     flex: 1,

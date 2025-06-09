@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Always check if there is a /docs folder in project.
+- If exists, look for the corresponding documentation file, based on the context of changes;
+- Update the documentation file with new changes;
+- Keep the document clean, well structured and professional;

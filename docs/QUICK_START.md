@@ -1,325 +1,258 @@
 # 🚀 LedgerVault Quick Start Guide
 
-## 🎯 Immediate Next Steps
+## 📱 What is LedgerVault?
 
-Based on your comprehensive blueprint, here's how to get started with LedgerVault development right now:
+LedgerVault is a modern React Native financial transaction management app designed for the Ukrainian market with international currency support. It features comprehensive bank statement import capabilities, intelligent transaction categorization, and a responsive interface that works on both web and mobile platforms.
 
 ---
 
-## ⚡ Phase 1 Quick Start (Start Today!)
+## ✨ **Current Features**
 
-### Step 1: Project Initialization (15 minutes)
+### 🏦 **Transaction Management**
+- ✅ **Manual transaction entry** with real-time validation
+- ✅ **Transaction list** with filtering and search
+- ✅ **Multi-currency support** (UAH, USD, EUR, GBP, ILS, JPY, etc.)
+- ✅ **Transaction categories** with smart detection
+- ✅ **Comments and descriptions** with original data preservation
+- ✅ **Duplicate detection** and prevention
 
+### 📂 **File Import System**
+- ✅ **Excel import** (XLS/XLSX) with advanced parsing
+- ✅ **Ukrainian bank support** (PrivatBank, Monobank, OschadBank)
+- ✅ **Multi-row header detection** (up to 20 rows analyzed)
+- ✅ **Intelligent column mapping** (Ukrainian/English/European languages)
+- ✅ **Currency auto-detection** from file content
+- ✅ **Import preview** with error reporting
+- ✅ **Comprehensive validation** with row-level feedback
+
+### 🎨 **User Interface**
+- ✅ **Responsive design** supporting long content
+- ✅ **Sticky header** with smooth scrolling
+- ✅ **Scroll-to-top** floating action button
+- ✅ **Dynamic filters** with real-time updates
+- ✅ **Empty states** for better UX
+- ✅ **Modern Material Design** with React Native Paper
+
+---
+
+## 🚀 **Getting Started**
+
+### Prerequisites
+- **Node.js** 18+ installed
+- **npm** or **yarn** package manager
+- **Web browser** for testing (Chrome recommended)
+
+### 1. **Clone and Setup**
 ```bash
-# Create the Expo project
-npx create-expo-app ledger-vault --template blank-typescript
-
-# Navigate to project
+# Clone the repository
+git clone https://github.com/your-username/ledger-vault.git
 cd ledger-vault
 
-# Install core dependencies
-npm install \
-  @react-navigation/native \
-  @react-navigation/stack \
-  @react-navigation/bottom-tabs \
-  react-native-screens \
-  react-native-safe-area-context \
-  zustand \
-  dexie \
-  xlsx \
-  react-native-paper \
-  react-native-vector-icons \
-  @expo/crypto \
-  uuid \
-  date-fns
+# Install dependencies
+npm install
 
-# Install dev dependencies
-npm install --dev \
-  @types/uuid \
-  @typescript-eslint/eslint-plugin \
-  @typescript-eslint/parser \
-  eslint \
-  prettier \
-  jest \
-  @testing-library/react-native \
-  @testing-library/jest-native
-
-# For Expo development
-npx expo install expo-document-picker expo-file-system
+# Start development server
+npm run web
 ```
 
-### Step 2: Project Structure Setup (10 minutes)
+### 2. **Open the App**
+- Navigate to **http://localhost:8081** in your browser
+- The app will automatically load with the transaction management interface
 
-```bash
-# Create the folder structure
-mkdir -p src/{app,features,shared}
-mkdir -p src/app/{navigation,providers}
-mkdir -p src/features/{transactions,import,export,dashboard,ai,auth,settings}
-mkdir -p src/features/transactions/{model,storage,service,store,ui}
-mkdir -p src/features/transactions/ui/{screens,components,hooks}
-mkdir -p src/shared/{ui,hooks,utils,constants,types}
-mkdir -p src/shared/ui/{components,theme,styles}
-mkdir -p src/tests/{__mocks__,fixtures,utils}
-mkdir -p assets docs expo-config
-```
-
-### Step 3: Configuration Files (5 minutes)
-
-Create essential configuration files to establish development standards.
+### 3. **Add Your First Transaction**
+1. Click the **"Add Transaction"** button
+2. Fill in the transaction details:
+   - **Description**: What was purchased/paid for
+   - **Amount**: Transaction amount (positive for income, negative for expenses)
+   - **Card**: Card or account name
+   - **Category**: Select from predefined categories
+   - **Date**: Transaction date (defaults to today)
+   - **Currency**: Auto-detected or manually selected
+3. Click **"Add Transaction"** to save
 
 ---
 
-## 📋 Development Workflow for Week 1
+## 📂 **Importing Bank Statements**
 
-### Day 1-2: Core Setup
-- [x] ✅ Project initialization (completed above)
-- [ ] 🔄 Set up TypeScript configurations
-- [ ] 🔄 Configure ESLint and Prettier
-- [ ] 🔄 Set up basic navigation structure
-- [ ] 🔄 Create theme system
+### Supported Formats
+- **Excel files** (.xls, .xlsx)
+- **Ukrainian banks** (PrivatBank, Monobank, OschadBank, others)
+- **International banks** (with proper column structure)
 
-### Day 3-4: Data Models
-- [ ] 🔄 Implement Transaction interface
-- [ ] 🔄 Set up Dexie database
-- [ ] 🔄 Create TransactionRepository
-- [ ] 🔄 Write basic tests
+### Import Process
+1. **Prepare your file**: Ensure your Excel file contains transaction data with columns for date, amount, and description
+2. **Click "Import Bank"** button on the main screen
+3. **Select your file**: Choose the XLS/XLSX file from your device
+4. **Review preview**: The app will analyze your file and show:
+   - Detected columns and mappings
+   - Sample transactions
+   - Any errors or warnings
+   - Currency detection results
+5. **Confirm import**: Review duplicates and click "Import" to proceed
+6. **Success**: Your transactions will appear in the main list
 
-### Day 5-7: Basic UI
-- [ ] 🔄 Create reusable components
-- [ ] 🔄 Set up screen layouts
-- [ ] 🔄 Implement basic navigation
-- [ ] 🔄 Test on device/simulator
+### File Format Requirements
+Your Excel file should contain columns for:
+- **Date** (DD.MM.YYYY, YYYY-MM-DD, or similar formats)
+- **Amount** (numeric values, can include currency symbols)
+- **Description** (transaction details)
+- **Optional**: Card/Account, Category, Comments
 
----
-
-## 🛠️ Essential Files to Create First
-
-### 1. TypeScript Configuration
-```bash
-# Create tsconfig.json
-cat > tsconfig.json << 'EOF'
-{
-  "extends": "expo/tsconfig.base",
-  "compilerOptions": {
-    "strict": true,
-    "baseUrl": "./src",
-    "paths": {
-      "@/*": ["*"],
-      "@/shared/*": ["shared/*"],
-      "@/features/*": ["features/*"]
-    }
-  },
-  "include": ["src/**/*", "App.tsx"],
-  "exclude": ["node_modules"]
-}
-EOF
+### Example Data Structure
 ```
-
-### 2. ESLint Configuration
-```bash
-# Create .eslintrc.js
-cat > .eslintrc.js << 'EOF'
-module.exports = {
-  extends: [
-    'expo',
-    '@typescript-eslint/recommended',
-    'prettier'
-  ],
-  plugins: ['@typescript-eslint'],
-  rules: {
-    '@typescript-eslint/no-unused-vars': 'warn',
-    '@typescript-eslint/explicit-function-return-type': 'off',
-    '@typescript-eslint/explicit-module-boundary-types': 'off',
-    'react-hooks/exhaustive-deps': 'warn'
-  }
-};
-EOF
-```
-
-### 3. Prettier Configuration
-```bash
-# Create .prettierrc
-cat > .prettierrc << 'EOF'
-{
-  "semi": true,
-  "trailingComma": "es5",
-  "singleQuote": true,
-  "printWidth": 80,
-  "tabWidth": 2
-}
-EOF
+Date          | Amount    | Description              | Card
+01.06.2025   | -500.00   | Сільпо                  | ****1234
+02.06.2025   | +1000.00  | Salary                  | ****1234
+03.06.2025   | -75.50    | Coffee Shop             | ****1234
 ```
 
 ---
 
-## 🎨 Priority Code Files to Create
+## 🔍 **Using Filters and Search**
 
-### 1. Transaction Model (Start Here!)
+### Filter Options
+- **Date Range**: Filter transactions by specific periods
+- **Categories**: Show only specific transaction types
+- **Cards**: Filter by specific cards or accounts
+- **Amount Range**: Set minimum and maximum amounts
+- **Income/Expense**: Show only income or expense transactions
 
-```typescript
-// src/features/transactions/model/Transaction.ts
-export interface Transaction {
-  id: string;
-  date: string;
-  card: string;
-  amount: number;
-  currency: string;
-  originalDescription: string;
-  description: string;
-  category: string;
-  comment?: string;
-  isDuplicate: boolean;
-  isIncome: boolean;
-  metadata: TransactionMetadata;
-}
-
-export interface TransactionMetadata {
-  createdAt: string;
-  updatedAt: string;
-  importedAt?: string;
-  importBatchId?: string;
-  aiEnriched: boolean;
-  version: number;
-  source: 'manual' | 'import' | 'api';
-}
-```
-
-### 2. Database Setup
-
-```typescript
-// src/features/transactions/storage/TransactionDatabase.ts
-import Dexie, { Table } from 'dexie';
-import { Transaction } from '../model/Transaction';
-
-export class LedgerVaultDatabase extends Dexie {
-  transactions!: Table<Transaction>;
-
-  constructor() {
-    super('LedgerVaultDB');
-    
-    this.version(1).stores({
-      transactions: '++id, date, card, category, amount, isIncome, createdAt'
-    });
-  }
-}
-
-export const db = new LedgerVaultDatabase();
-```
-
-### 3. Basic Store
-
-```typescript
-// src/features/transactions/store/transactionStore.ts
-import { create } from 'zustand';
-import { Transaction } from '../model/Transaction';
-
-interface TransactionStore {
-  transactions: Transaction[];
-  loading: boolean;
-  error: string | null;
-  
-  loadTransactions: () => Promise<void>;
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
-}
-
-export const useTransactionStore = create<TransactionStore>()((set, get) => ({
-  transactions: [],
-  loading: false,
-  error: null,
-  
-  loadTransactions: async () => {
-    // Implementation coming in Phase 2
-  },
-  
-  addTransaction: async (transaction) => {
-    // Implementation coming in Phase 2
-  }
-}));
-```
+### Search Functionality
+- **Text search**: Search transaction descriptions
+- **Real-time filtering**: Results update as you type
+- **Clear filters**: Reset all filters with one click
 
 ---
 
-## 🚦 Verification Checklist
+## 💰 **Currency Support**
 
-After completing the quick start setup, verify everything works:
+### Supported Currencies
+LedgerVault supports **any ISO currency** with special optimization for:
+- **UAH** (Ukrainian Hryvnia) - Primary currency
+- **USD** (US Dollar)
+- **EUR** (Euro)
+- **GBP** (British Pound)
+- **ILS** (Israeli Shekel)
+- **JPY** (Japanese Yen)
+- **And many more...**
 
-### ✅ Development Environment
-- [ ] Expo CLI installed and working
-- [ ] Project runs with `npx expo start`
-- [ ] TypeScript compilation works
-- [ ] ESLint shows no errors
-- [ ] Can navigate between basic screens
-
-### ✅ Dependencies
-- [ ] All packages installed without conflicts
-- [ ] React Navigation working
-- [ ] Zustand store accessible
-- [ ] Dexie database initializes
-
-### ✅ Project Structure
-- [ ] Folder structure matches specification
-- [ ] Path aliases work in TypeScript
-- [ ] Basic imports resolve correctly
+### Currency Detection
+- **Auto-detection** from imported files
+- **Symbol recognition** (₴, $, €, £, ₪, ¥, etc.)
+- **Dynamic support** for new currencies
+- **Fallback to UAH** for Ukrainian market
 
 ---
 
-## 🎯 Week 1 Goals
+## 🎯 **Best Practices**
 
-By the end of week 1, you should have:
+### Transaction Entry
+- **Use descriptive names**: "Coffee at Starbucks" vs "Coffee"
+- **Consistent card names**: Use the same identifier for each card
+- **Regular categorization**: Keep categories consistent for better analysis
+- **Add comments**: Use comments for additional context
 
-1. **✅ Working Development Environment**
-   - Expo app running on web and mobile
-   - All development tools configured
-   - CI/CD pipeline basics (optional)
+### File Import
+- **Clean your data**: Remove header rows with bank info
+- **Check dates**: Ensure date formats are consistent
+- **Verify amounts**: Confirm positive/negative values are correct
+- **Review duplicates**: Always check duplicate detection results
 
-2. **✅ Core Architecture**
-   - Feature-based folder structure
-   - TypeScript interfaces defined
-   - Database schema implemented
-   - Basic navigation working
-
-3. **✅ Foundation Components**
-   - Theme system implemented
-   - Basic UI components created
-   - Navigation between screens
-   - Data models validated
+### Organization
+- **Regular imports**: Import statements monthly for best results
+- **Category consistency**: Use the same categories across imports
+- **Backup data**: Regular exports for data safety (coming soon)
 
 ---
 
-## 🚀 Ready to Begin?
+## 🔧 **Troubleshooting**
 
-Run these commands to start your development journey:
+### Common Issues
 
-```bash
-# Initialize the project (run this first!)
-npx create-expo-app ledger-vault --template blank-typescript
-cd ledger-vault
+#### Import Problems
+**Problem**: "Unable to detect valid columns"
+**Solution**: Ensure your Excel file has clear headers like "Date", "Amount", "Description"
 
-# Install all dependencies
-npm install @react-navigation/native @react-navigation/stack @react-navigation/bottom-tabs react-native-screens react-native-safe-area-context zustand dexie xlsx react-native-paper react-native-vector-icons @expo/crypto uuid date-fns
+**Problem**: "Invalid date format"
+**Solution**: Use standard date formats (DD.MM.YYYY, YYYY-MM-DD, DD/MM/YYYY)
 
-# Install dev dependencies
-npm install --dev @types/uuid @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint prettier jest @testing-library/react-native @testing-library/jest-native
+**Problem**: "Currency not detected"
+**Solution**: Include currency symbols in your data or manually specify after import
 
-# Expo specific packages
-npx expo install expo-document-picker expo-file-system
+#### Performance Issues
+**Problem**: App slow with many transactions
+**Solution**: Use filters to limit displayed transactions; pagination coming soon
 
-# Create folder structure
-mkdir -p src/{app/{navigation,providers},features/{transactions/{model,storage,service,store,ui/{screens,components,hooks}},import,export,dashboard,ai,auth,settings},shared/{ui/{components,theme,styles},hooks,utils,constants,types},tests/{__mocks__,fixtures,utils}} assets docs expo-config
+**Problem**: Large file import fails
+**Solution**: Split large files into smaller chunks (< 5000 transactions per file)
 
-# Start development
-npx expo start
-```
-
-After running these commands, you'll have a solid foundation to begin implementing LedgerVault according to the comprehensive plan!
+### Getting Help
+1. **Check console errors**: Open browser developer tools for error details
+2. **Verify file format**: Ensure Excel file structure matches expected format
+3. **Try sample data**: Test with a smaller file first
+4. **Contact support**: Report issues with specific error messages
 
 ---
 
-## 📞 Next Steps After Quick Start
+## 📊 **Data Privacy & Security**
 
-1. **Follow the Implementation Plan**: Refer to `IMPLEMENTATION_PLAN.md` for detailed phase-by-phase development
-2. **Use Technical Specs**: Check `TECHNICAL_SPECS.md` for exact implementation details
-3. **Start with Phase 1**: Focus on completing the foundation before moving to transaction features
-4. **Test Early**: Set up testing from the beginning to maintain code quality
+### Local Storage
+- **All data stored locally** in your browser (IndexedDB)
+- **No cloud sync** - your data stays on your device
+- **No tracking** - no analytics or user tracking
+- **Private by design** - transactions never leave your device
 
-**Happy coding! 🎉** You now have everything needed to build LedgerVault from the ground up. 
+### File Handling
+- **Local processing** - files processed entirely in browser
+- **No uploads** - files never sent to external servers
+- **Memory cleanup** - temporary data cleared after import
+- **Original preservation** - original descriptions kept for audit
+
+---
+
+## 🚧 **Coming Soon**
+
+### Planned Features
+- **📊 Dashboard**: Spending analytics and visual charts
+- **📈 Trends**: Monthly/weekly spending patterns
+- **📤 Export**: CSV/Excel export functionality
+- **🔍 Advanced Search**: More sophisticated filtering options
+- **📱 Mobile App**: Native iOS/Android applications
+- **🤖 AI Integration**: Smart categorization and insights
+
+### Current Status
+LedgerVault is **production-ready** for:
+- ✅ Daily transaction management
+- ✅ Bank statement imports
+- ✅ Multi-currency tracking
+- ✅ Transaction organization and filtering
+
+---
+
+## 💡 **Tips for Ukrainian Users**
+
+### Bank-Specific Notes
+- **PrivatBank**: Exports work directly without modification
+- **Monobank**: Use Excel export feature in mobile app
+- **OschadBank**: May require header row cleanup
+- **Other banks**: Should work with standard export formats
+
+### Ukrainian Features
+- **UAH default currency**: Automatically detected for Ukrainian files
+- **Ukrainian keywords**: Category detection includes Ukrainian terms
+- **Date formats**: Supports DD.MM.YYYY format common in Ukraine
+- **Bank names**: Recognizes Ukrainian bank identifiers
+
+---
+
+## 🎉 **Ready to Start?**
+
+1. **Run the app**: `npm run web`
+2. **Open browser**: Navigate to http://localhost:8081
+3. **Add a transaction**: Click "Add Transaction" and fill in details
+4. **Try importing**: Use "Import Bank" with an Excel file
+5. **Explore filters**: Use the Filters button to organize your data
+
+**Welcome to LedgerVault!** 🎯
+
+Your personal financial data stays private and organized. Start managing your transactions today! 

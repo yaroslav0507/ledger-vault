@@ -15,6 +15,7 @@ import { validateTransactionForm, ValidationErrors, TransactionFormData } from '
 import { getCurrentDateISO } from '@/shared/utils/dateUtils';
 import { parseCurrencyToSmallestUnit, SUPPORTED_CURRENCIES, getCurrencySymbol } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
+import { ModalHeader } from '@/shared/ui/components/ModalHeader';
 
 interface AddTransactionModalProps {
   visible: boolean;
@@ -133,17 +134,19 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       onRequestClose={handleClose}
     >
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose}>
-            <Text style={styles.cancelButton}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Add Transaction</Text>
-          <TouchableOpacity onPress={handleSubmit} disabled={loading}>
-            <Text style={[styles.saveButton, loading && styles.disabledButton]}>
-              {loading ? 'Saving...' : 'Save'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <ModalHeader
+          title="Add Transaction"
+          leftAction={{
+            label: "Cancel",
+            onPress: handleClose
+          }}
+          rightAction={{
+            label: loading ? "Saving..." : "Save",
+            onPress: handleSubmit,
+            disabled: loading,
+            loading: loading
+          }}
+        />
 
         <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
           {/* Income/Expense Toggle */}
@@ -313,30 +316,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  title: {
-    ...theme.typography.h2,
-    color: theme.colors.text.primary,
-  },
-  cancelButton: {
-    ...theme.typography.button,
-    color: theme.colors.text.secondary,
-  },
-  saveButton: {
-    ...theme.typography.button,
-    color: theme.colors.primary,
-  },
-  disabledButton: {
-    color: theme.colors.text.disabled,
   },
   form: {
     flex: 1,

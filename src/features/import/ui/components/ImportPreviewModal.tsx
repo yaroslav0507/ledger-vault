@@ -36,7 +36,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
   isLoading = false
 }) => {
   const [ignoreDuplicates, setIgnoreDuplicates] = React.useState(true);
-  const [showErrors, setShowErrors] = React.useState(false);
+  const [showDetails, setShowDetails] = React.useState(false);
 
   if (!result) return null;
 
@@ -130,34 +130,34 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
               </Card>
             )}
 
-            {/* Errors */}
+            {/* Details */}
             {errors.length > 0 && (
-              <Card style={styles.errorsCard}>
+              <Card style={styles.detailsCard}>
                 <Card.Content>
-                  <View style={styles.errorHeader}>
+                  <View style={styles.detailsHeader}>
                     <Text variant="titleMedium" style={styles.sectionTitle}>
                       Import Errors ({errors.length})
                     </Text>
                     <Button
                       mode="outlined"
                       compact
-                      onPress={() => setShowErrors(!showErrors)}
+                      onPress={() => setShowDetails(!showDetails)}
                     >
-                      {showErrors ? 'Hide' : 'Show'} Details
+                      {showDetails ? 'Hide' : 'Show'} Details
                     </Button>
                   </View>
-                  {showErrors && (
-                    <View style={styles.errorsList}>
+                  {showDetails && (
+                    <View style={styles.detailsList}>
                       {errors.slice(0, 5).map((error, index) => (
-                        <View key={index} style={styles.errorItem}>
-                          <Text variant="bodySmall" style={styles.errorText}>
+                        <View key={index} style={styles.detailItem}>
+                          <Text variant="bodySmall" style={styles.detailText}>
                             Row {error.row}, Column "{error.column}": {error.error}
                           </Text>
                         </View>
                       ))}
                       {errors.length > 5 && (
-                        <Text variant="bodySmall" style={styles.moreErrors}>
-                          ...and {errors.length - 5} more errors
+                        <Text variant="bodySmall" style={styles.moreDetails}>
+                          ...and {errors.length - 5} more details
                         </Text>
                       )}
                     </View>
@@ -175,30 +175,48 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                 {validTransactions.slice(0, 10).map((transaction, index) => (
                   <View key={transaction.id} style={styles.transactionItem}>
                     <View style={styles.transactionHeader}>
-                      <Text variant="bodyMedium" style={styles.transactionDescription}>
-                        {transaction.description}
-                      </Text>
-                      <Text
-                        variant="bodyMedium"
-                        style={[
-                          styles.transactionAmount,
-                          { color: transaction.isIncome ? '#4CAF50' : '#F44336' }
-                        ]}
-                      >
-                        {transaction.isIncome ? '+' : '-'}
-                        {formatCurrency(transaction.amount, transaction.currency)}
-                      </Text>
+                      <View style={styles.transactionMainInfo}>
+                        <Text 
+                          variant="bodyMedium" 
+                          style={styles.transactionDescription}
+                          numberOfLines={2}
+                          ellipsizeMode="tail"
+                        >
+                          {transaction.description}
+                        </Text>
+                        <View style={styles.transactionMeta}>
+                          <Text variant="bodySmall" style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
+                            {formatDate(transaction.date)} • {transaction.card} • {transaction.category}
+                          </Text>
+                          {transaction.isDuplicate && (
+                            <Chip mode="outlined" compact textStyle={{ fontSize: 10 }}>
+                              Duplicate
+                            </Chip>
+                          )}
+                        </View>
+                      </View>
+                      <View style={styles.transactionAmountSection}>
+                        <Text
+                          variant="bodyMedium"
+                          style={[
+                            styles.transactionAmount,
+                            { color: transaction.isIncome ? '#4CAF50' : '#F44336' }
+                          ]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {transaction.isIncome ? '+' : '-'}
+                          {formatCurrency(transaction.amount, transaction.currency)}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.transactionMeta}>
-                      <Text variant="bodySmall" style={styles.metaText}>
-                        {formatDate(transaction.date)} • {transaction.card} • {transaction.category}
-                      </Text>
-                      {transaction.isDuplicate && (
-                        <Chip mode="outlined" compact textStyle={{ fontSize: 10 }}>
-                          Duplicate
-                        </Chip>
-                      )}
-                    </View>
+                    {transaction.originalDescription && transaction.originalDescription !== transaction.description && (
+                      <View style={styles.originalDescriptionContainer}>
+                        <Text variant="bodySmall" style={styles.originalDescription} numberOfLines={1} ellipsizeMode="tail">
+                          📄 {transaction.originalDescription}
+                        </Text>
+                      </View>
+                    )}
                     {index < validTransactions.slice(0, 10).length - 1 && (
                       <Divider style={styles.transactionDivider} />
                     )}
@@ -263,7 +281,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: '#FFF3E0',
   },
-  errorsCard: {
+  detailsCard: {
     marginBottom: 16,
     backgroundColor: '#FFEBEE',
   },
@@ -280,25 +298,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  errorHeader: {
+  detailsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
-  errorsList: {
+  detailsList: {
     marginTop: 8,
   },
-  errorItem: {
+  detailItem: {
     backgroundColor: '#FFCDD2',
     padding: 8,
     borderRadius: 4,
     marginBottom: 4,
   },
-  errorText: {
+  detailText: {
     color: '#C62828',
   },
-  moreErrors: {
+  moreDetails: {
     color: '#666',
     fontStyle: 'italic',
     marginTop: 4,
@@ -309,16 +327,25 @@ const styles = StyleSheet.create({
   transactionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 4,
   },
-  transactionDescription: {
+  transactionMainInfo: {
     flex: 1,
+    marginRight: 8,
+  },
+  transactionDescription: {
     fontWeight: '500',
+    marginBottom: 4,
+  },
+  transactionAmountSection: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    minWidth: 80,
   },
   transactionAmount: {
     fontWeight: '600',
-    marginLeft: 8,
+    textAlign: 'right',
   },
   transactionMeta: {
     flexDirection: 'row',
@@ -337,6 +364,13 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 8,
+  },
+  originalDescriptionContainer: {
+    marginTop: 4,
+  },
+  originalDescription: {
+    color: '#666',
+    fontStyle: 'italic',
   },
   actions: {
     flexDirection: 'row',
