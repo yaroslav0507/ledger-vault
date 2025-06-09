@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { 
   View, 
-  Text, 
   FlatList, 
   TouchableOpacity, 
   StyleSheet, 
@@ -10,6 +9,7 @@ import {
   StatusBar,
   ScrollView
 } from 'react-native';
+import { Card, Button, Portal, Snackbar, Text } from 'react-native-paper';
 import { useTransactionStore } from '../../store/transactionStore';
 import { TransactionCard } from '../components/TransactionCard';
 import { AddTransactionModal } from '../components/AddTransactionModal';
@@ -19,10 +19,9 @@ import { CreateTransactionRequest, DEFAULT_CATEGORIES } from '../../model/Transa
 import { getCurrentDateISO } from '@/shared/utils/dateUtils';
 import { parseCurrencyToSmallestUnit, formatCurrency } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
-import { Card, Button, Portal, Snackbar } from 'react-native-paper';
 import { ImportButton } from '@/features/import/ui/components/ImportButton';
 import { ImportPreviewModal } from '@/features/import/ui/components/ImportPreviewModal';
-import { generateSampleTransactions } from '../../../tests/fixtures/transactionFixtures';
+// import { generateSampleTransactions } from '../../../../../tests/fixtures/transactionFixtures';
 import { importService } from '@/features/import/service/ImportService';
 import { ImportResult } from '@/features/import/strategies/ImportStrategy';
 import { Transaction } from '../../model/Transaction';
@@ -151,7 +150,8 @@ export const TransactionListScreen: React.FC = () => {
   const handleDeleteTransaction = async (transactionId: string) => {
     try {
       await deleteTransaction(transactionId);
-      Alert.alert('Success', 'Transaction deleted!');
+      setSnackbarMessage('Transaction deleted successfully');
+      setShowSnackbar(true);
     } catch (error) {
       Alert.alert('Error', 'Failed to delete transaction');
     }
@@ -215,10 +215,10 @@ export const TransactionListScreen: React.FC = () => {
   }, [filters]);
 
   const handleAddSampleTransactions = async () => {
-    const samples = generateSampleTransactions(5);
-    for (const transaction of samples) {
-      await addTransaction(transaction);
-    }
+    // const samples = generateSampleTransactions(5);
+    // for (const transaction of samples) {
+    //   await addTransaction(transaction);
+    // }
   };
 
   const handleFileSelect = async (file: File) => {
@@ -337,12 +337,14 @@ export const TransactionListScreen: React.FC = () => {
           loading={isImporting}
           label="Import Bank"
           icon="upload"
+          style={styles.actionButton}
         />
         <Button
           mode="outlined"
           icon="database"
           onPress={handleAddSampleTransactions}
           style={styles.actionButton}
+          disabled={true}
         >
           Add Samples
         </Button>
@@ -410,6 +412,7 @@ export const TransactionListScreen: React.FC = () => {
                     loading={isImporting}
                     label="Import Bank File"
                     icon="upload"
+                    style={styles.emptyButton}
                   />
                 </View>
               )}
@@ -421,7 +424,7 @@ export const TransactionListScreen: React.FC = () => {
               <TransactionCard
                 key={transaction.id}
                 transaction={transaction}
-                onDelete={() => deleteTransaction(transaction.id)}
+                onLongPress={() => handleTransactionPress(transaction.id)}
               />
             ))}
           </View>
@@ -543,9 +546,9 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    padding: theme.spacing.md,
+    minHeight: 48,
+    justifyContent: 'center',
     borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
     ...theme.shadows.sm,
   },
   filterControls: {
@@ -613,9 +616,9 @@ const styles = StyleSheet.create({
   },
   emptyButton: {
     flex: 1,
-    padding: theme.spacing.md,
+    minHeight: 48,
+    justifyContent: 'center',
     borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
     ...theme.shadows.sm,
   },
   transactionList: {

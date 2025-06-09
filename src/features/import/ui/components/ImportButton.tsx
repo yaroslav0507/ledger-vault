@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Button, FAB } from 'react-native-paper';
-import { Platform } from 'react-native';
+import { Platform, ViewStyle } from 'react-native';
 
 interface ImportButtonProps {
   onFileSelect: (file: File) => void;
@@ -9,6 +9,7 @@ interface ImportButtonProps {
   loading?: boolean;
   label?: string;
   icon?: string;
+  style?: ViewStyle;
 }
 
 export const ImportButton: React.FC<ImportButtonProps> = ({
@@ -17,7 +18,8 @@ export const ImportButton: React.FC<ImportButtonProps> = ({
   disabled = false,
   loading = false,
   label = 'Import File',
-  icon = 'upload'
+  icon = 'upload',
+  style
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,6 +69,7 @@ export const ImportButton: React.FC<ImportButtonProps> = ({
         onPress={handlePress}
         disabled={disabled || loading}
         loading={loading}
+        style={style}
       >
         {label}
       </Button>
