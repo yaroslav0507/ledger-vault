@@ -6,6 +6,9 @@ import {
   TransactionFilters 
 } from '../model/Transaction';
 
+// Export the type for use in other files
+export type { TransactionFilters };
+
 interface TransactionStore {
   // State
   transactions: Transaction[];

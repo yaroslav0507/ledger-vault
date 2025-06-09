@@ -186,7 +186,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                         ]}
                       >
                         {transaction.isIncome ? '+' : '-'}
-                        {formatCurrency(transaction.amount)}
+                        {formatCurrency(transaction.amount, transaction.currency)}
                       </Text>
                     </View>
                     <View style={styles.transactionMeta}>

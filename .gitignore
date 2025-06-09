@@ -35,3 +35,11 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+*.xlsx
+*.xls
+
+.yarn
+.vscode
+
+.pnp.cjs
+.pnp.loader.mjs

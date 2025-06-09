@@ -2,7 +2,7 @@ import { read, utils, WorkBook } from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 import { Transaction, DEFAULT_CATEGORIES } from '@/features/transactions/model/Transaction';
 import { transactionRepository } from '@/features/transactions/storage/TransactionRepository';
-import { parseCurrencyToSmallestUnit } from '@/shared/utils/currencyUtils';
+import { parseCurrencyToSmallestUnit, detectCurrencyFromText, SUPPORTED_CURRENCIES } from '@/shared/utils/currencyUtils';
 import { format } from 'date-fns';
 import { ImportStrategy, ImportFile, ImportResult, ImportMapping, ImportError } from './ImportStrategy';
 
@@ -22,18 +22,14 @@ export class XlsImportStrategy implements ImportStrategy {
     }
 
     try {
-      // Parse the Excel file
       const workbook: WorkBook = read(file.content, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       
-      // Convert to JSON
       const rawData = utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
-      // Use default mapping or provided mapping
       const columnMapping = mapping || await this.detectColumnMapping(rawData);
       
-      // Parse transactions
       const result = await this.parseTransactions(rawData, columnMapping, file.name);
       
       return result;
@@ -48,28 +44,24 @@ export class XlsImportStrategy implements ImportStrategy {
       throw new Error('Empty file');
     }
 
-    // Find the actual header row (skip document info rows)
+    // Find the header row by skipping document info and metadata rows
     let headerRowIndex = 0;
     let header: string[] = [];
     
-    for (let i = 0; i < Math.min(data.length, 10); i++) {
+    for (let i = 0; i < Math.min(data.length, 15); i++) {
       const row = data[i] as string[];
-      if (!this.isHeaderRow(row) && row.some(cell => String(cell).trim())) {
-        // This might be our header row, check if it contains recognizable column names
-        const cleanedRow = this.extractColumnNames(row);
-        if (this.hasValidColumnStructure(cleanedRow)) {
-          header = cleanedRow;
-          headerRowIndex = i;
-          break;
-        }
+      if (!this.isDocumentInfoRow(row) && this.hasValidColumnStructure(row)) {
+        header = this.extractColumnNames(row);
+        headerRowIndex = i;
+        break;
       }
     }
     
-    // If no good header found, use the first non-empty row
+    // Enhanced fallback logic with validation
     if (header.length === 0) {
-      for (let i = 0; i < data.length; i++) {
+      for (let i = 0; i < Math.min(data.length, 10); i++) {
         const row = data[i] as string[];
-        if (row.some(cell => String(cell).trim())) {
+        if (row.some(cell => String(cell).trim()) && row.length >= 3) {
           header = this.extractColumnNames(row);
           headerRowIndex = i;
           break;
@@ -77,38 +69,54 @@ export class XlsImportStrategy implements ImportStrategy {
       }
     }
     
+    if (header.length < 2) {
+      throw new Error('Unable to detect valid columns. Please ensure the file has proper headers.');
+    }
+    
     console.log(`📋 Found header row at index ${headerRowIndex}:`, header);
     
-    // Use AI to detect column types
-    const aiMapping = await this.detectColumnsWithAI(header);
+    // Detect column mappings using improved heuristics
+    const mapping = this.detectColumnTypes(header);
+    
+    // Validate required columns are found
+    if (!mapping.dateColumn && !mapping.amountColumn) {
+      throw new Error('Unable to detect date and amount columns. Please check file format.');
+    }
     
     return {
-      dateColumn: aiMapping.dateColumn || header[0] || '',
-      amountColumn: aiMapping.amountColumn || header[1] || '',
-      descriptionColumn: aiMapping.descriptionColumn || header[2] || '',
+      dateColumn: mapping.dateColumn || this.findFallbackColumn(header, ['date', 'дата']),
+      amountColumn: mapping.amountColumn || this.findFallbackColumn(header, ['amount', 'сума', 'balance']),
+      descriptionColumn: mapping.descriptionColumn || this.findFallbackColumn(header, ['description', 'опис', 'details']),
+      commentColumn: mapping.commentColumn,
       dateFormat: 'auto',
       hasHeader: true
     };
+  }
+
+  private findFallbackColumn(headers: string[], keywords: string[]): string {
+    for (const keyword of keywords) {
+      const found = headers.find(h => h.toLowerCase().includes(keyword.toLowerCase()));
+      if (found) return found;
+    }
+    return headers[0] || '';
   }
 
   private extractColumnNames(row: any[]): string[] {
     return row.map(cell => {
       const str = String(cell || '').trim();
       
-      // If it's a long Ukrainian document title, try to extract the column name
-      if (str.includes('Виписка з Ваших карток')) {
-        // This is likely a document title, not a column header
+      // Skip document titles and very long text
+      if (str.length > 60 || str.includes('Виписка з Ваших карток')) {
         return '';
       }
       
-      // Extract meaningful parts from complex headers
-      if (str.includes('період')) {
-        // Extract just the meaningful part
-        const parts = str.split(/\s+/);
-        for (const part of parts) {
-          if (/^(дата|сума|опис|баланс)$/i.test(part)) {
-            return part;
-          }
+      // Clean up complex headers but preserve meaningful content
+      if (str.includes('період') || str.includes('операці')) {
+        const meaningfulWords = str.split(/\s+/).filter(word => 
+          /^(дата|сума|опис|баланс|валюта|date|amount|description|balance|currency)$/i.test(word)
+        );
+        if (meaningfulWords.length > 0) {
+          return meaningfulWords[0];
         }
       }
       
@@ -117,153 +125,71 @@ export class XlsImportStrategy implements ImportStrategy {
   }
 
   private hasValidColumnStructure(headers: string[]): boolean {
-    // Check if this row looks like actual column headers
-    const nonEmpty = headers.filter(h => h.trim()).length;
+    const nonEmpty = headers.filter(h => String(h).trim()).length;
     if (nonEmpty < 2) return false;
     
-    // Look for typical column patterns
     const headerText = headers.join(' ').toLowerCase();
-    const hasDateColumn = /дата|date|time|час/.test(headerText);
-    const hasAmountColumn = /сума|сумма|amount|value|баланс/.test(headerText);
-    const hasDescColumn = /опис|описание|description|details/.test(headerText);
+    const hasDateColumn = /дата|date|time|час|posting|datum|fecha|data/i.test(headerText);
+    const hasAmountColumn = /сума|сумма|amount|value|баланс|betrag|montant|importe|kwota/i.test(headerText);
+    const hasDescColumn = /опис|описание|description|details|narrative|memo|reference/i.test(headerText);
     
-    // Need at least 2 out of 3 typical columns
-    return [hasDateColumn, hasAmountColumn, hasDescColumn].filter(Boolean).length >= 2;
+    // Require at least date + amount or all three main columns
+    return (hasDateColumn && hasAmountColumn) || 
+           [hasDateColumn, hasAmountColumn, hasDescColumn].filter(Boolean).length >= 2;
   }
 
-  private async detectColumnsWithAI(headers: string[]): Promise<{
+  private detectColumnTypes(headers: string[]): {
     dateColumn: string | null;
     amountColumn: string | null;
     descriptionColumn: string | null;
-  }> {
-    try {
-      console.log('🤖 AI Column Detection - Analyzing headers:', headers);
-      
-      // Create a prompt for AI to analyze the headers
-      const prompt = `Analyze these bank statement column headers and identify which column contains:
-1. DATE/TIME information (transaction date, posting date, etc.)
-2. AMOUNT/VALUE information (transaction amount, debit, credit, balance, etc.)  
-3. DESCRIPTION information (transaction description, narrative, details, etc.)
-
-Headers: ${headers.map((h, i) => `${i}: "${h}"`).join(', ')}
-
-Please respond in JSON format:
-{
-  "dateColumn": "exact_header_name_or_null",
-  "amountColumn": "exact_header_name_or_null", 
-  "descriptionColumn": "exact_header_name_or_null",
-  "reasoning": "brief explanation"
-}
-
-Use the exact header names from the list above. If a type is not found, use null.`;
-
-      // Use a simple AI detection method (you can replace this with actual AI service)
-      const result = await this.simpleAIColumnDetection(headers);
-      
-      console.log('🎯 AI Detection Result:', {
-        dateColumn: result.dateColumn,
-        amountColumn: result.amountColumn,
-        descriptionColumn: result.descriptionColumn
-      });
-      
-      return result;
-    } catch (error) {
-      console.warn('AI column detection failed, falling back to heuristics:', error);
-      return this.fallbackColumnDetection(headers);
-    }
-  }
-
-  private async simpleAIColumnDetection(headers: string[]): Promise<{
-    dateColumn: string | null;
-    amountColumn: string | null;
-    descriptionColumn: string | null;
-  }> {
-    // For now, implement a sophisticated heuristic-based AI simulation
-    // In production, this would call an actual AI service like OpenAI
-    
-    const headerAnalysis = headers.map((header, index) => {
+    commentColumn: string | undefined;
+  } {
+    const analysis = headers.map((header, index) => {
       const h = header.toLowerCase().trim();
       
-      // Analyze each header for its likely content type
-      const dateScore = this.calculateDateScore(h);
-      const amountScore = this.calculateAmountScore(h);
-      const descriptionScore = this.calculateDescriptionScore(h);
-      
-      const analysis = {
+      return {
         index,
         header: header,
-        dateScore,
-        amountScore,
-        descriptionScore
+        dateScore: this.calculateDateScore(h),
+        amountScore: this.calculateAmountScore(h),
+        descriptionScore: this.calculateDescriptionScore(h),
+        commentScore: this.calculateCommentScore(h)
       };
-      
-      console.log(`📊 Header "${header}":`, {
-        date: dateScore.toFixed(2),
-        amount: amountScore.toFixed(2), 
-        description: descriptionScore.toFixed(2)
-      });
-      
-      return analysis;
     });
     
-    // Find the best match for each column type
-    const dateColumn = headerAnalysis
-      .sort((a, b) => b.dateScore - a.dateScore)[0]
-      ?.dateScore > 0.3 ? headerAnalysis.sort((a, b) => b.dateScore - a.dateScore)[0].header : null;
-      
-    const amountColumn = headerAnalysis
-      .sort((a, b) => b.amountScore - a.amountScore)[0]
-      ?.amountScore > 0.3 ? headerAnalysis.sort((a, b) => b.amountScore - a.amountScore)[0].header : null;
-      
-    const descriptionColumn = headerAnalysis
-      .sort((a, b) => b.descriptionScore - a.descriptionScore)[0]
-      ?.descriptionScore > 0.3 ? headerAnalysis.sort((a, b) => b.descriptionScore - a.descriptionScore)[0].header : null;
+    // Find best matches with improved thresholds
+    const dateColumn = this.findBestMatch(analysis, 'dateScore', 0.4);
+    const amountColumn = this.findBestMatch(analysis, 'amountScore', 0.4);
+    const descriptionColumn = this.findBestMatch(analysis, 'descriptionScore', 0.3);
+    const commentColumn = this.findBestMatch(analysis, 'commentScore', 0.3);
 
     return {
       dateColumn,
       amountColumn,
-      descriptionColumn
+      descriptionColumn,
+      commentColumn: commentColumn || undefined
     };
+  }
+
+  private findBestMatch(analysis: any[], scoreKey: string, minScore: number): string | null {
+    const sorted = analysis.sort((a, b) => b[scoreKey] - a[scoreKey]);
+    return sorted[0]?.[scoreKey] > minScore ? sorted[0].header : null;
   }
 
   private calculateDateScore(header: string): number {
     const dateKeywords = [
-      // English
+      { word: 'дата', score: 1.0 },
       { word: 'date', score: 1.0 },
       { word: 'time', score: 0.8 },
-      { word: 'when', score: 0.7 },
-      { word: 'posting', score: 0.9 },
-      { word: 'transaction', score: 0.8 },
-      { word: 'value date', score: 1.0 },
-      
-      // Ukrainian
-      { word: 'дата', score: 1.0 },
       { word: 'час', score: 0.8 },
+      { word: 'posting', score: 0.9 },
       { word: 'операції', score: 0.8 },
-      { word: 'транзакції', score: 0.8 },
-      
-      // Russian
-      { word: 'дата', score: 1.0 },
-      { word: 'время', score: 0.8 },
       { word: 'проведения', score: 0.9 },
-      
-      // German
+      { word: 'transaction', score: 0.9 },
       { word: 'datum', score: 1.0 },
-      { word: 'zeit', score: 0.8 },
-      { word: 'buchung', score: 0.9 },
-      
-      // French
-      { word: 'date', score: 1.0 },
-      { word: 'heure', score: 0.8 },
-      { word: 'opération', score: 0.8 },
-      
-      // Spanish
       { word: 'fecha', score: 1.0 },
-      { word: 'hora', score: 0.8 },
-      
-      // Polish
-      { word: 'data', score: 1.0 },
-      { word: 'czas', score: 0.8 },
+      { word: 'data', score: 0.9 },
+      { word: 'when', score: 0.7 }
     ];
     
     let score = 0;
@@ -273,56 +199,30 @@ Use the exact header names from the list above. If a type is not found, use null
       }
     }
     
-    // Boost score if it contains date-like patterns
+    // Boost score for date-like patterns
     if (/\d{2}[\/\.-]\d{2}[\/\.-]\d{4}/.test(header)) score += 0.5;
+    if (/^(created|posted|processed)/.test(header)) score += 0.3;
     
     return Math.min(score, 1.0);
   }
 
   private calculateAmountScore(header: string): number {
     const amountKeywords = [
-      // English
+      { word: 'сума', score: 1.0 },
+      { word: 'сумма', score: 1.0 },
       { word: 'amount', score: 1.0 },
       { word: 'value', score: 0.9 },
-      { word: 'sum', score: 0.9 },
-      { word: 'total', score: 0.8 },
-      { word: 'balance', score: 0.8 },
-      { word: 'debit', score: 0.9 },
-      { word: 'credit', score: 0.9 },
-      { word: 'money', score: 0.8 },
-      { word: 'cost', score: 0.7 },
-      { word: 'price', score: 0.7 },
-      
-      // Ukrainian
-      { word: 'сума', score: 1.0 },
-      { word: 'кількість', score: 0.9 },
       { word: 'баланс', score: 0.8 },
       { word: 'дебет', score: 0.9 },
       { word: 'кредит', score: 0.9 },
-      
-      // Russian
-      { word: 'сумма', score: 1.0 },
-      { word: 'количество', score: 0.9 },
-      { word: 'баланс', score: 0.8 },
-      
-      // German
+      { word: 'credit', score: 0.9 },
+      { word: 'debit', score: 0.9 },
       { word: 'betrag', score: 1.0 },
-      { word: 'summe', score: 0.9 },
-      { word: 'wert', score: 0.8 },
-      
-      // French
       { word: 'montant', score: 1.0 },
-      { word: 'somme', score: 0.9 },
-      { word: 'valeur', score: 0.8 },
-      
-      // Spanish
       { word: 'importe', score: 1.0 },
-      { word: 'cantidad', score: 0.9 },
-      { word: 'valor', score: 0.8 },
-      
-      // Polish
       { word: 'kwota', score: 1.0 },
-      { word: 'suma', score: 0.9 },
+      { word: 'total', score: 0.8 },
+      { word: 'sum', score: 0.8 }
     ];
     
     let score = 0;
@@ -332,55 +232,31 @@ Use the exact header names from the list above. If a type is not found, use null
       }
     }
     
-    // Boost score if it contains currency symbols
+    // Boost score for currency symbols and patterns
     if (/[$€£¥₽₴]/.test(header)) score += 0.3;
+    if (/\d+[.,]\d{2}/.test(header)) score += 0.2;
     
     return Math.min(score, 1.0);
   }
 
   private calculateDescriptionScore(header: string): number {
     const descriptionKeywords = [
-      // English
+      { word: 'опис', score: 1.0 },
+      { word: 'описание', score: 1.0 },
       { word: 'description', score: 1.0 },
       { word: 'narrative', score: 0.9 },
       { word: 'details', score: 0.9 },
       { word: 'reference', score: 0.8 },
       { word: 'memo', score: 0.9 },
-      { word: 'note', score: 0.8 },
-      { word: 'comment', score: 0.8 },
-      { word: 'purpose', score: 0.7 },
-      { word: 'reason', score: 0.7 },
-      
-      // Ukrainian
-      { word: 'опис', score: 1.0 },
       { word: 'призначення', score: 0.9 },
-      { word: 'деталі', score: 0.9 },
-      { word: 'коментар', score: 0.8 },
-      
-      // Russian
-      { word: 'описание', score: 1.0 },
       { word: 'назначение', score: 0.9 },
-      { word: 'детали', score: 0.9 },
-      { word: 'комментарий', score: 0.8 },
-      
-      // German
+      { word: 'purpose', score: 0.9 },
+      { word: 'merchant', score: 0.8 },
+      { word: 'payee', score: 0.8 },
       { word: 'beschreibung', score: 1.0 },
-      { word: 'verwendungszweck', score: 0.9 },
-      { word: 'details', score: 0.9 },
-      
-      // French
-      { word: 'description', score: 1.0 },
       { word: 'libellé', score: 0.9 },
-      { word: 'détails', score: 0.9 },
-      
-      // Spanish
-      { word: 'descripcion', score: 1.0 },
       { word: 'descripción', score: 1.0 },
-      { word: 'detalles', score: 0.9 },
-      
-      // Polish
-      { word: 'opis', score: 1.0 },
-      { word: 'szczegóły', score: 0.9 },
+      { word: 'transaction', score: 0.7 }
     ];
     
     let score = 0;
@@ -393,17 +269,28 @@ Use the exact header names from the list above. If a type is not found, use null
     return Math.min(score, 1.0);
   }
 
-  private fallbackColumnDetection(headers: string[]): {
-    dateColumn: string | null;
-    amountColumn: string | null;
-    descriptionColumn: string | null;
-  } {
-    // Simple fallback - assume first 3 columns are date, amount, description
-    return {
-      dateColumn: headers[0] || null,
-      amountColumn: headers[1] || null,
-      descriptionColumn: headers[2] || null
-    };
+  private calculateCommentScore(header: string): number {
+    const commentKeywords = [
+      { word: 'коментар', score: 1.0 },
+      { word: 'комментарий', score: 1.0 },
+      { word: 'comment', score: 1.0 },
+      { word: 'note', score: 0.9 },
+      { word: 'notes', score: 0.9 },
+      { word: 'remarks', score: 0.8 },
+      { word: 'примітк', score: 0.9 },
+      { word: 'заметк', score: 0.9 },
+      { word: 'additional', score: 0.7 },
+      { word: 'extra', score: 0.6 }
+    ];
+    
+    let score = 0;
+    for (const keyword of commentKeywords) {
+      if (header.includes(keyword.word)) {
+        score = Math.max(score, keyword.score);
+      }
+    }
+    
+    return Math.min(score, 1.0);
   }
 
   private async parseTransactions(data: any[][], mapping: ImportMapping, fileName: string): Promise<ImportResult> {
@@ -411,76 +298,80 @@ Use the exact header names from the list above. If a type is not found, use null
     const errors: ImportError[] = [];
     const duplicates: Transaction[] = [];
     
-    // Skip header if present
-    const startRow = mapping.hasHeader ? 1 : 0;
-    const dataRows = data.slice(startRow) as any[][];
-    
-    // Get column indices
-    const header = mapping.hasHeader ? (data[0] as string[]) : [];
-    const dateIndex = this.getColumnIndex(header, mapping.dateColumn);
-    const amountIndex = this.getColumnIndex(header, mapping.amountColumn);
-    const descriptionIndex = this.getColumnIndex(header, mapping.descriptionColumn);
+    const dataRows = mapping.hasHeader ? data.slice(1) : data;
     
     let earliestDate = '';
     let latestDate = '';
+    
+    // Improved currency detection with proper fallback
+    const allText = data.flat().map(cell => String(cell || '')).join(' ');
+    const detectedCurrency = this.detectDocumentCurrency(allText, fileName);
 
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
-      const rowNumber = startRow + i + 1;
+      const rowNumber = mapping.hasHeader ? i + 2 : i + 1;
       
       try {
-        // Extract values
-        const rawDate = row[dateIndex];
-        const rawAmount = row[amountIndex];
-        const rawDescription = row[descriptionIndex];
+        // Skip non-transaction rows more effectively
+        if (this.isHeaderRow(row) || this.isDocumentInfoRow(row)) continue;
         
-        // Skip empty rows
+        // Extract values with better error handling
+        const headerRow = mapping.hasHeader ? data[0] || [] : [];
+        const rawDate = row[this.getColumnIndex(headerRow, mapping.dateColumn)];
+        const rawAmount = row[this.getColumnIndex(headerRow, mapping.amountColumn)];
+        const rawDescription = row[this.getColumnIndex(headerRow, mapping.descriptionColumn)];
+        const rawComment = mapping.commentColumn ? 
+          row[this.getColumnIndex(headerRow, mapping.commentColumn)] : null;
+        
+        // Skip empty or invalid rows
         if (!rawDate && !rawAmount && !rawDescription) continue;
         
-        // Skip header-like rows (containing text like "Дата", "Amount", etc.)
-        if (this.isHeaderRow(row)) continue;
-        
-        // Parse date
+        // Parse date with enhanced validation
         const parsedDate = this.parseDate(rawDate);
         if (!parsedDate) {
           errors.push({
             row: rowNumber,
             column: mapping.dateColumn,
-            error: `Invalid date: ${rawDate} (type: ${typeof rawDate})`,
+            error: `Invalid date format: ${rawDate}`,
             rawData: row
           });
           continue;
         }
         
-        // Parse amount
+        // Parse amount with better negative number handling
         const parsedAmount = this.parseAmount(rawAmount);
-        if (parsedAmount === null) {
+        if (parsedAmount === null || isNaN(parsedAmount)) {
           errors.push({
             row: rowNumber,
             column: mapping.amountColumn,
-            error: `Invalid amount: ${rawAmount} (type: ${typeof rawAmount})`,
+            error: `Invalid amount format: ${rawAmount}`,
             rawData: row
           });
           continue;
         }
         
-        // Parse description
-        const description = String(rawDescription || 'Imported transaction').trim();
+        // Enhanced description and comment handling
+        const description = this.extractDescription(rawDescription);
+        const comment = this.extractComment(rawComment, rawDescription, description);
         
-        // Determine if it's income (positive amount) or expense (negative amount)
-        const isIncome = parsedAmount >= 0;
+        // Improved transaction type detection
+        const isIncome = this.determineTransactionType(rawAmount, parsedAmount);
         const absoluteAmount = Math.abs(parsedAmount);
         
-        // Create transaction
+        // Enhanced category detection
+        const category = this.guessCategory(description, comment);
+        
+        // Create transaction with validation
         const transaction: Transaction = {
           id: uuidv4(),
           date: parsedDate,
           card: this.extractCardFromFileName(fileName),
-          amount: parseCurrencyToSmallestUnit(absoluteAmount),
-          currency: 'USD',
-          originalDescription: description,
-          description: this.cleanDescription(description),
-          category: this.guessCategory(description),
+          amount: parseCurrencyToSmallestUnit(absoluteAmount, detectedCurrency),
+          currency: detectedCurrency,
+          originalDescription: String(rawDescription || '').trim(),
+          description: description,
+          category: category,
+          comment: comment || undefined,
           isDuplicate: false,
           isIncome,
           metadata: {
@@ -494,7 +385,7 @@ Use the exact header names from the list above. If a type is not found, use null
           }
         };
         
-        // Check for duplicates
+        // Enhanced duplicate detection
         const potentialDuplicates = await transactionRepository.findPotentialDuplicates(transaction);
         if (potentialDuplicates.length > 0) {
           transaction.isDuplicate = true;
@@ -508,10 +399,11 @@ Use the exact header names from the list above. If a type is not found, use null
         if (!latestDate || parsedDate > latestDate) latestDate = parsedDate;
         
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown parsing error';
         errors.push({
           row: rowNumber,
           column: 'general',
-          error: error instanceof Error ? error.message : 'Unknown parsing error',
+          error: `Row parsing failed: ${errorMessage}`,
           rawData: row
         });
       }
@@ -533,18 +425,68 @@ Use the exact header names from the list above. If a type is not found, use null
       }
     };
   }
+
+  private extractDescription(rawDescription: any): string {
+    const desc = String(rawDescription || 'Imported transaction').trim();
+    if (!desc || desc.length === 0) {
+      return 'Imported transaction';
+    }
+    return this.cleanDescription(desc);
+  }
+
+  private extractComment(rawComment: any, rawDescription: any, cleanedDescription: string): string | null {
+    // If there's a dedicated comment column, use it
+    if (rawComment && String(rawComment).trim()) {
+      const comment = String(rawComment).trim();
+      // Avoid duplicating description in comment
+      if (comment !== cleanedDescription && comment !== String(rawDescription || '').trim()) {
+        return comment;
+      }
+    }
+    
+    // Extract additional info from description that could be a comment
+    const descText = String(rawDescription || '');
+    const parts = descText.split(/[|;:]/).map(p => p.trim()).filter(p => p.length > 0);
+    
+    if (parts.length > 1) {
+      // Return the secondary part as comment if it's different from main description
+      const possibleComment = parts[1];
+      if (possibleComment !== cleanedDescription) {
+        return possibleComment;
+      }
+    }
+    
+    return null;
+  }
+
+  private determineTransactionType(rawAmount: any, parsedAmount: number): boolean {
+    const rawText = String(rawAmount).toLowerCase();
+    
+    // Check for explicit negative indicators
+    if (rawText.includes('-') || rawText.includes('debit') || rawText.includes('дебет')) {
+      return false; // Expense
+    }
+    
+    // Check for explicit positive indicators
+    if (rawText.includes('+') || rawText.includes('credit') || rawText.includes('кредит')) {
+      return true; // Income
+    }
+    
+    // Default to the sign of the parsed amount
+    return parsedAmount >= 0;
+  }
   
   private getColumnIndex(header: string[], columnName: string): number {
-    if (!header.length) return 0; // No header, use first column
-    const index = header.indexOf(columnName);
+    if (!header.length || !columnName) return 0;
+    const index = header.findIndex(h => String(h).trim() === columnName);
     return index >= 0 ? index : 0;
   }
   
   private parseDate(value: any): string | null {
     if (!value) return null;
     
-    // Skip header values like "Дата" (Ukrainian for "Date")
-    if (typeof value === 'string' && /^(дата|date|fecha|datum)$/i.test(value.trim())) {
+    // Skip obvious header values
+    if (typeof value === 'string' && /^(дата|date|fecha|datum|data|time|час)$/i.test(value.trim())) {
       return null;
     }
     
@@ -552,19 +494,21 @@ Use the exact header names from the list above. If a type is not found, use null
       let date: Date;
       
       if (typeof value === 'number') {
-        // Excel date serial number
-        date = new Date((value - 25569) * 86400 * 1000);
+        // Excel date serial number (handle both 1900 and 1904 date systems)
+        if (value > 59) {
+          // 1900 date system
+          date = new Date((value - 25569) * 86400 * 1000);
+        } else {
+          // Handle edge cases for very early dates
+          date = new Date(1900, 0, value);
+        }
       } else if (typeof value === 'string') {
         const dateStr = value.trim();
-        
-        // Skip empty or header-like values
-        if (!dateStr || /^(дата|date|fecha|datum)$/i.test(dateStr)) {
+        if (!dateStr || /^(дата|date|fecha|datum|data|time|час)$/i.test(dateStr)) {
           return null;
         }
         
-        // Handle various date formats
         date = this.parseStringDate(dateStr);
-        
         if (!date || isNaN(date.getTime())) {
           return null;
         }
@@ -572,74 +516,62 @@ Use the exact header names from the list above. If a type is not found, use null
         return null;
       }
       
+      // Validate date is reasonable (not too far in past/future)
+      const now = new Date();
+      const tenYearsAgo = new Date(now.getFullYear() - 10, 0, 1);
+      const oneYearFromNow = new Date(now.getFullYear() + 1, 11, 31);
+      
+      if (date < tenYearsAgo || date > oneYearFromNow) {
+        console.warn(`Date ${date.toISOString()} seems unreasonable, skipping`);
+        return null;
+      }
+      
       if (isNaN(date.getTime())) return null;
       
       return format(date, 'yyyy-MM-dd');
-    } catch {
+    } catch (error) {
+      console.warn(`Failed to parse date: ${value}`, error);
       return null;
     }
   }
   
   private parseStringDate(dateStr: string): Date {
-    // Remove time portion if present (e.g., "31.05.2025 19:28:11" -> "31.05.2025")
+    // Remove time portion if present
     const datePart = dateStr.split(' ')[0];
     
-    // Try different date formats
+    // Enhanced date format support
     const formats = [
-      // DD.MM.YYYY (Ukrainian, German, etc.)
-      /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/,
-      // DD/MM/YYYY (British, etc.)
-      /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
-      // MM/DD/YYYY (American)
-      /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
-      // YYYY-MM-DD (ISO)
-      /^(\d{4})-(\d{1,2})-(\d{1,2})$/,
+      // DD.MM.YYYY (most common for Ukrainian banks)
+      { regex: /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/, order: [2, 1, 0] }, // [year, month, day]
+      // DD/MM/YYYY
+      { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, order: [2, 1, 0] },
+      // YYYY-MM-DD (ISO format)
+      { regex: /^(\d{4})-(\d{1,2})-(\d{1,2})$/, order: [0, 1, 2] },
       // DD-MM-YYYY
-      /^(\d{1,2})-(\d{1,2})-(\d{4})$/,
+      { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})$/, order: [2, 1, 0] },
+      // MM/DD/YYYY (US format)
+      { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, order: [2, 0, 1] },
+      // YYYY/MM/DD
+      { regex: /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/, order: [0, 1, 2] }
     ];
     
-    // Try DD.MM.YYYY format first (most common for Ukrainian banks)
-    const dotMatch = datePart.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-    if (dotMatch) {
-      const [, day, month, year] = dotMatch;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) return date;
-    }
-    
-    // Try DD/MM/YYYY format
-    const slashMatch = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (slashMatch) {
-      const [, day, month, year] = slashMatch;
-      // Assume European format (DD/MM/YYYY) first
-      let date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime()) && parseInt(day) <= 12) {
-        return date;
+    for (const format of formats) {
+      const match = datePart.match(format.regex);
+      if (match) {
+        const [, part1, part2, part3] = match;
+        const parts = [part1, part2, part3];
+        const year = parseInt(parts[format.order[0]]);
+        const month = parseInt(parts[format.order[1]]) - 1; // JS months are 0-indexed
+        const day = parseInt(parts[format.order[2]]);
+        
+        const date = new Date(year, month, day);
+        if (!isNaN(date.getTime()) && 
+            date.getFullYear() === year && 
+            date.getMonth() === month && 
+            date.getDate() === day) {
+          return date;
+        }
       }
-      
-      // If day > 12, definitely DD/MM/YYYY
-      if (parseInt(day) > 12) {
-        return date;
-      }
-      
-      // If day <= 12, could be MM/DD/YYYY (American format)
-      date = new Date(parseInt(year), parseInt(day) - 1, parseInt(month));
-      if (!isNaN(date.getTime())) return date;
-    }
-    
-    // Try YYYY-MM-DD (ISO format)
-    const isoMatch = datePart.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if (isoMatch) {
-      const [, year, month, day] = isoMatch;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) return date;
-    }
-    
-    // Try DD-MM-YYYY format
-    const dashMatch = datePart.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-    if (dashMatch) {
-      const [, day, month, year] = dashMatch;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) return date;
     }
     
     // Fall back to JavaScript's native Date parsing
@@ -657,175 +589,282 @@ Use the exact header names from the list above. If a type is not found, use null
     if (typeof value === 'number') return value;
     
     if (typeof value === 'string') {
-      // Remove currency symbols and commas
-      const cleaned = value.replace(/[£$€,\s]/g, '');
+      let cleaned = value.trim();
+      
+      // Handle different negative formats
+      const isNegative = cleaned.includes('-') || cleaned.startsWith('(') && cleaned.endsWith(')');
+      
+      // Remove currency symbols, spaces, parentheses, and formatting
+      cleaned = cleaned
+        .replace(/[£$€₴₽,\s()]/g, '')
+        .replace(/[+-]/g, '');
+      
+      // Handle different decimal separators
+      if (cleaned.includes(',') && cleaned.includes('.')) {
+        // Both comma and dot - assume European format (1.234,56)
+        cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+      } else if (cleaned.includes(',')) {
+        // Check if comma is likely a thousands separator or decimal separator
+        const lastCommaIndex = cleaned.lastIndexOf(',');
+        if (lastCommaIndex === cleaned.length - 3) {
+          // Likely decimal separator (123,45)
+          cleaned = cleaned.replace(',', '.');
+        } else {
+          // Likely thousands separator (1,234)
+          cleaned = cleaned.replace(/,/g, '');
+        }
+      }
+      
       const number = parseFloat(cleaned);
-      return isNaN(number) ? null : number;
+      if (isNaN(number)) return null;
+      
+      return isNegative ? -Math.abs(number) : number;
     }
     
     return null;
   }
   
   private extractCardFromFileName(fileName: string): string {
-    // Try to extract bank/card name from filename
     const name = fileName.replace(/\.(xlsx?|csv)$/i, '');
     const parts = name.split(/[-_\s]/);
     
-    // Common bank names
-    const bankNames = ['monzo', 'santander', 'chase', 'amex', 'barclays', 'hsbc', 'natwest', 'lloyds'];
+    // Enhanced bank names including Ukrainian banks
+    const bankNames = [
+      'monzo', 'santander', 'chase', 'amex', 'barclays', 'hsbc', 'natwest', 'lloyds',
+      'приват', 'приватбанк', 'privatbank', 'mono', 'monobank', 'ощад', 'ощадбанк',
+      'укрсиббанк', 'укргазбанк', 'альфа', 'альфабанк', 'райффайзен', 'raiffeisen',
+      'креди агриколь', 'credit', 'agricole', 'ubs', 'ing', 'dkb'
+    ];
     
     for (const part of parts) {
       const lowerPart = part.toLowerCase();
-      if (bankNames.includes(lowerPart)) {
+      if (bankNames.some(bank => lowerPart.includes(bank))) {
         return part;
       }
     }
     
-    return parts[0] || 'Imported';
+    // Try to extract meaningful card/account identifier
+    const meaningfulPart = parts.find(part => 
+      part.length >= 3 && 
+      part.length <= 20 && 
+      !/^\d+$/.test(part) // Not just numbers
+    );
+    
+    return meaningfulPart || parts[0] || 'Imported';
   }
   
   private cleanDescription(description: string): string {
-    // Remove common bank statement prefixes/suffixes
+    // Enhanced cleaning for various bank statement formats
     let cleaned = description
-      .replace(/^(POS|ATM|DIR|TFR|DD|SO|CHQ|FEE|INT)\s+/i, '')
-      .replace(/\s+\d{2}\/\d{2}\/\d{4}$/, '') // Remove trailing dates
-      .replace(/\s+\d{2}\/\d{2}$/, '') // Remove trailing dates
+      .replace(/^(POS|ATM|DIR|TFR|DD|SO|CHQ|FEE|INT|PAYMENT|PURCHASE|WITHDRAWAL)\s+/i, '')
+      .replace(/\s+\d{2}[\/\.-]\d{2}[\/\.-]\d{4}$/, '') // Remove trailing dates
+      .replace(/\s+\d{2}[\/\.-]\d{2}$/, '') // Remove trailing MM/DD
+      .replace(/\s+\d{4}$/, '') // Remove trailing year
+      .replace(/^\w{3}\s+\d{1,2}\s+/, '') // Remove "JAN 15 " style prefixes
+      .replace(/\s{2,}/g, ' ') // Normalize multiple spaces
       .trim();
     
-    // Capitalize first letter
-    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    // Remove redundant bank codes and references
+    cleaned = cleaned
+      .replace(/^REF:\s*/i, '')
+      .replace(/\s+REF\s+\w+$/i, '')
+      .replace(/\s+TXN\s+\w+$/i, '')
+      .replace(/\s+AUTH\s+\w+$/i, '');
+    
+    // Capitalize properly
+    if (cleaned.length > 0) {
+      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+      
+      // Capitalize after certain punctuation
+      cleaned = cleaned.replace(/([.!?]\s+)([a-z])/g, (match, punct, letter) => 
+        punct + letter.toUpperCase()
+      );
+    }
+    
+    return cleaned || 'Imported transaction';
   }
   
-  private guessCategory(description: string): string {
-    const desc = description.toLowerCase();
+  private guessCategory(description: string, comment?: string | null): string {
+    const text = `${description} ${comment || ''}`.toLowerCase();
     
-    // Category mapping based on keywords
-    const categoryMap: { [key: string]: string[] } = {
-      'food & dining': ['restaurant', 'cafe', 'coffee', 'pizza', 'burger', 'food', 'dining', 'starbucks', 'mcdonalds', 'subway'],
-      'transportation': ['uber', 'lyft', 'taxi', 'bus', 'train', 'metro', 'parking', 'fuel', 'petrol', 'gas station'],
-      'shopping': ['amazon', 'ebay', 'store', 'shop', 'retail', 'mall', 'target', 'walmart'],
-      'bills & utilities': ['electric', 'gas', 'water', 'internet', 'phone', 'utility', 'bill', 'payment'],
-      'healthcare': ['hospital', 'doctor', 'pharmacy', 'medical', 'health', 'dentist'],
-      'entertainment': ['cinema', 'movie', 'netflix', 'spotify', 'game', 'entertainment'],
-      'income': ['salary', 'wage', 'payment', 'refund', 'cashback', 'interest'],
+    // Enhanced category mapping with better patterns and Ukrainian keywords
+    const categoryPatterns: { [key: string]: RegExp[] } = {
+      'food & dining': [
+        /\b(restaurant|cafe|coffee|pizza|burger|food|dining|starbucks|mcdonalds|kfc|subway|dominos)\b/,
+        /\b(ресторан|кафе|їжа|піца|кава|макдональдс|кфс|subway|домінос)\b/,
+        /\b(bistro|bakery|deli|canteen|buffet|grill|kitchen|eatery)\b/,
+        /\b(wolt|glovo|uber\s*eats|bolt\s*food|delivery)\b/
+      ],
+      'transportation': [
+        /\b(uber|lyft|taxi|bus|train|metro|parking|fuel|petrol|gas|transport|bolt)\b/,
+        /\b(таксі|автобус|метро|паливо|транспорт|bolt|укрзалізниця|маршрутка)\b/,
+        /\b(station|railway|subway|tram|trolley|airport|airline|flight)\b/,
+        /\b(shell|bp|esso|total|okko|wog|автозаправка|азс)\b/
+      ],
+      'shopping': [
+        /\b(amazon|ebay|store|shop|retail|mall|target|walmart|costco|ikea)\b/,
+        /\b(магазин|покупки|торговий|центр|супермаркет|silpo|атб|novus|fora)\b/,
+        /\b(clothing|fashion|shoes|electronics|furniture|grocery|supermarket)\b/,
+        /\b(zara|h&m|nike|adidas|apple|samsung|rozetka|eldorado)\b/
+      ],
+      'bills & utilities': [
+        /\b(electric|electricity|gas|water|internet|phone|utility|bill|payment|insurance)\b/,
+        /\b(комунальні|електро|газ|вода|інтернет|телефон|страхування|платіж|kyivstar|vodafone|lifecell)\b/,
+        /\b(heating|sewage|garbage|mobile|broadband|cable|satellite)\b/,
+        /\b(укртелеком|київстар|vodafone|lifecell|тріолан|volia)\b/
+      ],
+      'healthcare': [
+        /\b(hospital|doctor|pharmacy|medical|health|dentist|clinic|medicine)\b/,
+        /\b(лікар|аптека|медичний|здоров'я|стоматолог|клініка|ліки|медицина)\b/,
+        /\b(therapy|surgery|treatment|examination|prescription|vaccine)\b/,
+        /\b(bayer|pfizer|johnson|abbott|медична|допомога)\b/
+      ],
+      'entertainment': [
+        /\b(cinema|movie|netflix|spotify|game|entertainment|theatre|concert|music)\b/,
+        /\b(кіно|розваги|театр|концерт|музика|гра|ігри|мультиплекс|планета)\b/,
+        /\b(youtube|twitch|steam|playstation|xbox|nintendo|epic|blizzard)\b/,
+        /\b(ticket|booking|reservation|event|festival|party)\b/
+      ],
+      'income': [
+        /\b(salary|wage|payment|refund|cashback|interest|dividend|bonus)\b/,
+        /\b(зарплата|доходи|повернення|відсотки|бонус|премія|винагорода)\b/,
+        /\b(freelance|commission|royalty|pension|benefit|grant)\b/,
+        /\b(employer|payroll|compensation|earning|revenue)\b/
+      ],
+      'transfer': [
+        /\b(transfer|sent|received|p2p|peer|friend|family|relative)\b/,
+        /\b(переказ|відправлено|отримано|друг|сім'я|родич|близькі)\b/,
+        /\b(western\s*union|moneygram|wise|revolut|paypal|venmo)\b/
+      ],
+      'cash & atm': [
+        /\b(atm|cash|withdrawal|deposit|банкомат|готівка|зняття|внесення)\b/,
+        /\b(cashback|cash\s*back|готівковий|відкат)\b/
+      ]
     };
     
-    for (const [category, keywords] of Object.entries(categoryMap)) {
-      if (keywords.some((keyword: string) => desc.includes(keyword))) {
-        return category;
+    // Find best matching category
+    let bestMatch = '';
+    let highestMatches = 0;
+    
+    for (const [category, patterns] of Object.entries(categoryPatterns)) {
+      let matches = 0;
+      for (const pattern of patterns) {
+        if (pattern.test(text)) {
+          matches++;
+        }
+      }
+      
+      if (matches > highestMatches) {
+        highestMatches = matches;
+        bestMatch = category;
       }
     }
     
-    return DEFAULT_CATEGORIES[8]; // 'Other'
+    // Return best match or default category
+    return bestMatch || DEFAULT_CATEGORIES[8]; // 'Other'
+  }
+
+  private isDocumentInfoRow(row: any[]): boolean {
+    if (!row || row.length === 0) return true;
+    
+    const rowText = row.map(cell => String(cell || '').trim()).join(' ').toLowerCase();
+    
+    // Skip empty rows
+    if (rowText.replace(/\s/g, '').length < 3) return true;
+    
+    // Enhanced document header patterns
+    const documentPatterns = [
+      /виписка.*карток.*період/,
+      /statement.*cards.*period/,
+      /період.*\d{2}\.\d{2}\.\d{4}.*\d{2}\.\d{2}\.\d{4}/,
+      /bank.*statement/,
+      /financial.*report/,
+      /account.*summary/,
+      /transaction.*history/,
+      /виписка.*операцій/,
+      /звіт.*операції/,
+      /банківська.*виписка/,
+      /^\s*банк\s+/,
+      /^\s*bank\s+/,
+      /card.*number.*\*+/,
+      /номер.*карти.*\*+/
+    ];
+    
+    return documentPatterns.some(pattern => pattern.test(rowText));
   }
 
   private isHeaderRow(row: any[]): boolean {
     if (!row || row.length === 0) return true;
     
-    // Convert all cells to string and join
     const rowText = row.map(cell => String(cell || '').trim()).join(' ').toLowerCase();
     
-    // Skip if the row is mostly empty
+    // Skip empty rows
     if (rowText.replace(/\s/g, '').length < 3) return true;
     
-    // Advanced header detection patterns for Ukrainian bank statements
+    // Enhanced header patterns
     const headerPatterns = [
-      // Ukrainian bank statement document headers
-      /виписка.*карток.*період/,  // "Виписка з Ваших карток за період"
-      /statement.*cards.*period/,  // English equivalent
-      /виписка.*рахунк/,  // "Виписка з рахунку" - Account statement
-      /період.*\d{2}\.\d{2}\.\d{4}.*\d{2}\.\d{2}\.\d{4}/,  // Date ranges
-      
-      // Single column headers (when a cell just contains header text)
       /^(дата|date|fecha|datum|data)$/,
       /^(сума|сумма|amount|betrag|montant|importe|kwota)$/,
       /^(опис|описание|description|beschreibung|descripción|opis)$/,
       /^(баланс|balance|saldo)$/,
-      /^(валюта|currency|moneda|devise)$/,
-      /^(картка|карта|card|karte|carte)$/,
-      
-      // Document metadata
-      /statement.*period/,
-      /transaction.*history/,
-      /account.*summary/,
-      /balance.*report/,
-      /bank.*statement/,
-      /financial.*report/,
-      
-      // Table headers and formatting
-      /^\s*(no\.?|num\.?|#|№)\s*$/,  // Row numbers
-      /^\s*total\s*$/,
-      /^\s*subtotal\s*$/,
-      /^\s*sum\s*$/,
-      /^\s*всього\s*$/,  // Ukrainian "total"
-      /^\s*итого\s*$/,   // Russian "total"
-      
-      // Common Ukrainian bank terms that appear in headers
-      /операц/,  // операція/операції - operation/operations
-      /транзакц/,  // транзакція - transaction  
-      /переказ/,   // переказ - transfer
-      /платіж/,    // платіж - payment
-      /зарахування/, // зарахування - credit
-      /списання/,   // списання - debit
+      /^\s*(no\.?|num\.?|#|№)\s*$/,
+      /^\s*(total|subtotal|sum|всього|итого)\s*$/,
+      /^(currency|валюта|монета)$/,
+      /^(comment|коментар|примітк)$/
     ];
     
-    // Check if any pattern matches
-    const isHeaderByPattern = headerPatterns.some(pattern => pattern.test(rowText));
-    
-    // Special check for rows that contain only document metadata
-    const isDocumentInfo = /виписка|statement|звіт|report|період|period/.test(rowText) && 
-                           !/\d{1,2}\.\d{1,2}\.\d{4}\s+\d/.test(rowText); // No date+amount pattern
-    
-    // Check if the row contains only header-like values
-    const cellTypes = row.map(cell => {
+    // Check if majority of cells contain header-like content
+    const headerCells = row.filter(cell => {
       const str = String(cell || '').trim().toLowerCase();
-      
-      // Skip empty cells
-      if (str === '') return 'empty';
-      
-      // Check if it's a common header word
-      const headerWords = [
-        'дата', 'date', 'time', 'час', 'время',
-        'сума', 'сумма', 'amount', 'value', 'betrag',
-        'опис', 'описание', 'description', 'details',
-        'card', 'account', 'рахунок', 'счет', 'картка',
-        'balance', 'баланс', 'total', 'всього', 'итого',
-        'валюта', 'currency', 'монета',
-        'операція', 'операции', 'transaction', 'операця',
-        'виписка', 'statement', 'звіт', 'report'
-      ];
-      
-      if (headerWords.some(word => str.includes(word))) return 'header';
-      
-      // Check if it's a pure number (could be row number)
-      if (/^\d+$/.test(str)) return 'number';
-      
-      // Check if it's a date range or period info
-      if (/\d{2}\.\d{2}\.\d{4}.*\d{2}\.\d{2}\.\d{4}/.test(str)) return 'period';
-      
-      // Check if it contains Ukrainian document keywords
-      if (/виписка|період|карток|рахунк/.test(str)) return 'document';
-      
-      return 'data';
+      return headerPatterns.some(pattern => pattern.test(str));
     });
     
-    // Count different cell types
-    const headerCells = cellTypes.filter(type => 
-      type === 'header' || type === 'empty' || type === 'period' || type === 'document'
-    ).length;
+    // Check for obvious data pattern (excludes headers)
+    const hasDataPattern = /\d{1,2}[.\/-]\d{1,2}[.\/-]\d{4}.*[-+]?\d+[.,]?\d*/.test(rowText);
     
-    // If more than 70% of cells are header-like, empty, or document info, skip the row
-    const isHeaderByRatio = (headerCells / cellTypes.length) > 0.7;
-    
-    // Also skip if it's clearly a document info row
-    const isHeaderByContent = cellTypes.includes('document') || cellTypes.includes('period');
-    
-    const shouldSkip = isHeaderByPattern || isDocumentInfo || isHeaderByRatio || isHeaderByContent;
-    
-    if (shouldSkip) {
-      console.log(`🚫 Skipping header/info row: "${rowText}"`);
+    return headerCells.length >= Math.min(2, row.filter(c => String(c).trim()).length) && !hasDataPattern;
+  }
+
+  private detectDocumentCurrency(content: string, fileName: string): string {
+    // First, try to detect from content
+    const detectedFromContent = detectCurrencyFromText(content);
+    if (detectedFromContent && SUPPORTED_CURRENCIES.some(c => c.code === detectedFromContent)) {
+      return detectedFromContent;
     }
     
-    return shouldSkip;
+    // Try to detect from filename
+    const detectedFromFilename = detectCurrencyFromText(fileName);
+    if (detectedFromFilename && SUPPORTED_CURRENCIES.some(c => c.code === detectedFromFilename)) {
+      return detectedFromFilename;
+    }
+    
+    // Enhanced Ukrainian bank pattern detection
+    const contentLower = content.toLowerCase();
+    if (contentLower.includes('гривн') || contentLower.includes('uah') || 
+        contentLower.includes('виписка') || contentLower.includes('картк') ||
+        contentLower.includes('приват') || contentLower.includes('mono') ||
+        contentLower.includes('ощад') || contentLower.includes('укр')) {
+      return 'UAH';
+    }
+    
+    // Check for other supported currencies
+    if (contentLower.includes('dollar') || contentLower.includes('usd') || /\$\d/.test(content)) {
+      return 'USD';
+    }
+    
+    if (contentLower.includes('euro') || contentLower.includes('eur') || /€\d/.test(content)) {
+      return 'EUR';
+    }
+    
+    if (contentLower.includes('pound') || contentLower.includes('gbp') || /£\d/.test(content)) {
+      return 'GBP';
+    }
+    
+    if (contentLower.includes('shekel') || contentLower.includes('ils') || /₪\d/.test(content)) {
+      return 'ILS';
+    }
+    
+    // Default to UAH (primary currency) instead of USD
+    return 'UAH';
   }
 } 

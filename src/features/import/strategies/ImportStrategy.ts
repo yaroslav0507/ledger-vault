@@ -38,6 +38,7 @@ export interface ImportMapping {
   descriptionColumn: string;
   cardColumn?: string;
   categoryColumn?: string;
+  commentColumn?: string;
   dateFormat: string;
   hasHeader: boolean;
 }
