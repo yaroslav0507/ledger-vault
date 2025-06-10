@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -20,10 +20,10 @@ import {
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SUPPORTED_CURRENCIES, getCurrencySymbol } from '@/shared/utils/currencyUtils';
-import { DEFAULT_CATEGORIES } from '../../model/Transaction';
 import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
 import { useTransactionStore } from '../../store/transactionStore';
+import { categoryService } from '../../service/CategoryService';
 
 interface SettingsScreenProps {
   onClose: () => void;
@@ -41,9 +41,11 @@ interface AppSettings {
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
   const { clearAllTransactions, transactions, loading, loadTransactions } = useTransactionStore();
   
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  
   const [settings, setSettings] = useState<AppSettings>({
     defaultCurrency: 'UAH',
-    defaultCategory: DEFAULT_CATEGORIES[0],
+    defaultCategory: 'General',
     dateFormat: 'DD.MM.YYYY',
     autoDetectCurrency: true,
     confirmDeleteTransactions: true,
@@ -53,6 +55,30 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showDateFormatModal, setShowDateFormatModal] = useState(false);
+
+  // Load available categories on component mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categories = await categoryService.getAllCategories();
+        setAvailableCategories(categories);
+        
+        // Update default category if categories are available and still set to default
+        if (categories.length > 0) {
+          setSettings(prev => ({
+            ...prev,
+            defaultCategory: prev.defaultCategory === 'General' ? categories[0] : prev.defaultCategory
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load categories:', error);
+        // Fallback to default category
+        setAvailableCategories(['General']);
+      }
+    };
+    
+    loadCategories();
+  }, []); // Empty dependency array since we only want this to run once
 
   const handleSaveSettings = () => {
     // TODO: Implement settings persistence
@@ -354,7 +380,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
               Select Default Category
             </Text>
             <ScrollView style={styles.modalContent}>
-              {DEFAULT_CATEGORIES.map((category) => (
+              {availableCategories.map((category) => (
                 <List.Item
                   key={category}
                   title={category}
