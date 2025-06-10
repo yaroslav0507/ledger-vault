@@ -18,6 +18,7 @@ export interface TransactionFilters {
     end: string;
   };
   categories?: string[];
+  categoriesMode?: 'include' | 'exclude'; // Whether to include or exclude selected categories
   cards?: string[];
   amountRange?: {
     min: number;

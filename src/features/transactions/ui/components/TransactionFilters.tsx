@@ -180,7 +180,34 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
           {/* Categories Filter - Show during loading or when categories are available */}
           {(categoriesLoading || availableCategories.length > 0) && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Categories</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Categories</Text>
+                
+                {/* Include/Exclude Switch - only show when categories are selected */}
+                {(filters.categories && filters.categories.length > 0) && (
+                  <View style={styles.switchContainer}>
+                    <Text style={styles.switchLabel}>
+                      {filters.categoriesMode === 'exclude' ? 'Exclude' : 'Include'}
+                    </Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.switch,
+                        filters.categoriesMode === 'exclude' && styles.switchActive
+                      ]}
+                      onPress={() => setFilters({
+                        ...filters,
+                        categoriesMode: filters.categoriesMode === 'exclude' ? 'include' : 'exclude'
+                      })}
+                    >
+                      <View style={[
+                        styles.switchThumb,
+                        filters.categoriesMode === 'exclude' && styles.switchThumbActive
+                      ]} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              
               <View style={styles.chipContainer}>
                 {categoriesLoading ? (
                   <Text style={styles.loadingText}>Loading categories...</Text>
@@ -325,5 +352,45 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.text.secondary,
     fontWeight: '600',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  switchLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+    fontWeight: '600',
+  },
+  switch: {
+    width: 50,
+    height: 26,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: 13,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    justifyContent: 'center',
+  },
+  switchActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  switchThumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: theme.colors.surface,
+    alignSelf: 'flex-start',
+  },
+  switchThumbActive: {
+    alignSelf: 'flex-end',
+    backgroundColor: theme.colors.surface,
   },
 }); 

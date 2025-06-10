@@ -10,17 +10,37 @@ class CategoryService {
     let transactionCategories: string[] = [];
     
     if (dateRange) {
-      // Get categories from transactions within the specified date range
-      const filteredTransactions = await db.transactions
-        .where('date')
-        .between(dateRange.start, dateRange.end, true, true)
-        .toArray();
+      let filteredTransactions: Transaction[] = [];
+      
+      // Special handling for winter (Dec, Jan, Feb of current year)
+      if (dateRange.start === 'WINTER_CURRENT_YEAR') {
+        const targetYear = parseInt(dateRange.end);
+        const allTransactions = await db.transactions.toArray();
+        
+        filteredTransactions = allTransactions.filter(t => {
+          const transactionDate = new Date(t.date);
+          const transactionYear = transactionDate.getFullYear();
+          const transactionMonth = transactionDate.getMonth(); // 0-based: 0=Jan, 1=Feb, 11=Dec
+          
+          // Check if transaction is in December, January, or February of the target year
+          const isWinterMonth = transactionMonth === 11 || transactionMonth === 0 || transactionMonth === 1;
+          const isTargetYear = transactionYear === targetYear;
+          
+          return isWinterMonth && isTargetYear;
+        });
+      } else {
+        // Normal date range filtering
+        filteredTransactions = await db.transactions
+          .where('date')
+          .between(dateRange.start, dateRange.end, true, true)
+          .toArray();
+      }
       
       transactionCategories = Array.from(new Set(
         filteredTransactions.map(t => t.category).filter(Boolean)
       ));
       
-      console.log(`📋 Found ${transactionCategories.length} categories in date range ${dateRange.start} to ${dateRange.end}:`, transactionCategories);
+      console.log(`📋 Found ${transactionCategories.length} categories in date range:`, transactionCategories);
     } else {
       // Get categories from ALL transactions in database
       transactionCategories = await this.getTransactionCategories();

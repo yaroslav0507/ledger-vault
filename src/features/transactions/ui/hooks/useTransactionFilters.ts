@@ -6,8 +6,15 @@ export const useTransactionFilters = (transactions: Transaction[], filters: Tran
   const filteredTransactions = useMemo(() => {
     return transactions.filter(transaction => {
       // Category filter
-      if (filters.categories && filters.categories.length > 0 && !filters.categories.includes(transaction.category)) {
-        return false;
+      if (filters.categories && filters.categories.length > 0) {
+        const categoriesMode = filters.categoriesMode || 'include'; // Default to include mode
+        const isInCategory = filters.categories.includes(transaction.category);
+        
+        if (categoriesMode === 'include' && !isInCategory) {
+          return false;
+        } else if (categoriesMode === 'exclude' && isInCategory) {
+          return false;
+        }
       }
 
       // Card filter

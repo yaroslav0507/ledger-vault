@@ -6,6 +6,7 @@ import {
   TransactionFilters 
 } from '../model/Transaction';
 import { getDateRangeForPeriod, TimePeriod, DateRange } from '@/shared/utils/dateUtils';
+import { updateUrlWithFilters, loadFiltersFromUrl } from '@/shared/utils/filterPersistence';
 
 // Export the type for use in other files
 export type { TransactionFilters };
@@ -14,6 +15,39 @@ export type { TransactionFilters };
 const getDefaultFilters = (): TransactionFilters => ({
   // No default date range - let user choose via TimePeriodSelector
 });
+
+// Load initial state from URL or use defaults
+const getInitialState = () => {
+  const savedFilters = loadFiltersFromUrl();
+  
+  if (savedFilters) {
+    let filters = savedFilters.filters;
+    const selectedTimePeriod = savedFilters.selectedTimePeriod || 'lastMonth';
+    
+    // If we have a time period but no date range, generate the date range
+    if (selectedTimePeriod && selectedTimePeriod !== 'custom' && !filters.dateRange) {
+      const dateRange = getDateRangeForPeriod(selectedTimePeriod);
+      filters = { ...filters, dateRange };
+    }
+    
+    return {
+      filters,
+      selectedTimePeriod
+    };
+  }
+  
+  // Default state with lastMonth period and its date range
+  const defaultPeriod = 'lastMonth' as TimePeriod;
+  const defaultDateRange = getDateRangeForPeriod(defaultPeriod);
+  
+  return {
+    filters: {
+      ...getDefaultFilters(),
+      dateRange: defaultDateRange
+    },
+    selectedTimePeriod: defaultPeriod
+  };
+};
 
 interface TransactionStore {
   // State
@@ -48,8 +82,7 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
   transactions: [],
   loading: false,
   error: null,
-  filters: getDefaultFilters(),
-  selectedTimePeriod: 'lastMonth', // Default to lastMonth on first use
+  ...getInitialState(),
 
   // Actions
   loadTransactions: async () => {
@@ -178,13 +211,23 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
     
     set({ filters: updatedFilters });
     
+    // Save to URL
+    updateUrlWithFilters(updatedFilters, get().selectedTimePeriod);
+    
     // Automatically reload transactions with new filters
     get().loadTransactions();
   },
 
   setTimePeriod: (period: TimePeriod, dateRange: DateRange) => {
     set({ selectedTimePeriod: period });
-    get().setFilters({ dateRange });
+    
+    // Update filters and save to URL
+    const updatedFilters = { ...get().filters, dateRange };
+    set({ filters: updatedFilters });
+    updateUrlWithFilters(updatedFilters, period);
+    
+    // Reload transactions
+    get().loadTransactions();
   },
 
   toggleCategoryFilter: (category: string) => {
@@ -195,12 +238,27 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
         ? currentFilters.categories.filter((c) => c !== category)
         : [...(currentFilters.categories || []), category]
     };
+    
     set({ filters: updatedFilters });
+    
+    // Save to URL
+    updateUrlWithFilters(updatedFilters, get().selectedTimePeriod);
+    
     get().loadTransactions();
   },
 
   clearFilters: () => {
-    set({ filters: getDefaultFilters() });
+    const defaultFilters = getDefaultFilters();
+    const defaultPeriod = 'lastMonth' as TimePeriod;
+    
+    set({ 
+      filters: defaultFilters,
+      selectedTimePeriod: defaultPeriod
+    });
+    
+    // Save to URL (this will clear the query params since filters are empty)
+    updateUrlWithFilters(defaultFilters, defaultPeriod);
+    
     get().loadTransactions();
   },
 

@@ -67,7 +67,16 @@ export class TransactionRepository {
 
       // Apply category filter
       if (filters.categories && filters.categories.length > 0) {
-        query = query.filter(t => filters.categories!.includes(t.category));
+        const categoriesMode = filters.categoriesMode || 'include'; // Default to include mode
+        query = query.filter(t => {
+          const isInCategory = filters.categories!.includes(t.category);
+          
+          if (categoriesMode === 'include') {
+            return isInCategory;
+          } else {
+            return !isInCategory; // exclude mode
+          }
+        });
       }
 
       // Apply card filter
