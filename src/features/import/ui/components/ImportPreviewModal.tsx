@@ -205,18 +205,10 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                           numberOfLines={1}
                           ellipsizeMode="tail"
                       >
-                        {transaction.isIncome ? '+' : '-'}
                         {formatCurrency(transaction.amount, transaction.currency)}
                       </Text>
                     </View>
                     </View>
-                    {transaction.originalDescription && transaction.originalDescription !== transaction.description && (
-                      <View style={styles.originalDescriptionContainer}>
-                        <Text variant="bodySmall" style={styles.originalDescription} numberOfLines={1} ellipsizeMode="tail">
-                          📄 {transaction.originalDescription}
-                        </Text>
-                      </View>
-                    )}
                     {index < validTransactions.slice(0, 10).length - 1 && (
                       <Divider style={styles.transactionDivider} />
                     )}
@@ -364,13 +356,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 8,
-  },
-  originalDescriptionContainer: {
-    marginTop: 4,
-  },
-  originalDescription: {
-    color: '#666',
-    fontStyle: 'italic',
   },
   actions: {
     flexDirection: 'row',

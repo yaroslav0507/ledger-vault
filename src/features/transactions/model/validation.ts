@@ -37,10 +37,10 @@ export const transactionFormSchema = z.object({
   
   date: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$|^\d{4}-\d{2}-\d{2}$/, 'Date must be in ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ) or YYYY-MM-DD format')
     .refine((date) => {
       const parsed = new Date(date);
-      return !isNaN(parsed.getTime()) && date === parsed.toISOString().split('T')[0];
+      return !isNaN(parsed.getTime());
     }, 'Please enter a valid date'),
   
   currency: z

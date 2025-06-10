@@ -17,19 +17,12 @@ export class TransactionRepository {
       card: request.card,
       amount: request.amount,
       currency: request.currency,
-      originalDescription: request.description,
       description: request.description,
       category: request.category,
       comment: request.comment,
       isDuplicate: false,
       isIncome: request.isIncome,
-      metadata: {
-        createdAt: now,
-        updatedAt: now,
-        aiEnriched: false,
-        version: 1,
-        source: 'manual'
-      }
+      createdAt: now
     };
 
     await db.transactions.add(transaction);
@@ -82,10 +75,9 @@ export class TransactionRepository {
         const searchTerm = filters.searchQuery.toLowerCase();
         query = query.filter(t => {
           const descriptionMatch = t.description.toLowerCase().includes(searchTerm);
-          const originalDescriptionMatch = t.originalDescription.toLowerCase().includes(searchTerm);
           const commentMatch = t.comment ? t.comment.toLowerCase().includes(searchTerm) : false;
           
-          return descriptionMatch || originalDescriptionMatch || commentMatch;
+          return descriptionMatch || commentMatch;
         });
       }
     }
@@ -101,12 +93,7 @@ export class TransactionRepository {
 
     const updatedTransaction: Transaction = {
       ...existing,
-      ...updates,
-      metadata: {
-        ...existing.metadata,
-        updatedAt: new Date().toISOString(),
-        version: existing.metadata.version + 1
-      }
+      ...updates
     };
 
     await db.transactions.update(id, updatedTransaction);

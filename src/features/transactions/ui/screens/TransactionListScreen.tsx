@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { 
   View, 
   TouchableOpacity, 
@@ -11,12 +11,11 @@ import {
 } from 'react-native';
 import { Card, Button, Portal, Snackbar, Text, FAB } from 'react-native-paper';
 import { useTransactionStore } from '../../store/transactionStore';
+import { useTransactionActions } from '../hooks/useTransactionActions';
 import { TransactionCard } from '../components/TransactionCard';
+import { BalanceCard } from '../components/BalanceCard';
 import { AddTransactionModal } from '../components/AddTransactionModal';
 import { TransactionFiltersModal } from '../components/TransactionFilters';
-import { BalanceCard } from '../components/BalanceCard';
-import { useTransactionActions } from '../hooks/useTransactionActions';
-import { useTransactionFilters } from '../hooks/useTransactionFilters';
 import { initializeDatabase } from '../../storage/TransactionDatabase';
 import { theme } from '@/shared/ui/theme/theme';
 import { ImportButton } from '@/features/import/ui/components/ImportButton';
@@ -56,7 +55,16 @@ export const TransactionListScreen: React.FC = () => {
   const scrollViewRef = useRef<SectionList>(null);
   
   const balance = getBalance();
-  const { filteredTransactions, activeFiltersCount } = useTransactionFilters(transactions, filters);
+  const filteredTransactions = transactions; // Repository already applies filters
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.categories && filters.categories.length > 0) count++;
+    if (filters.cards && filters.cards.length > 0) count++;
+    if (filters.isIncome !== undefined) count++;
+    if (filters.searchQuery) count++;
+    if (filters.dateRange?.start || filters.dateRange?.end) count++;
+    return count;
+  }, [filters]);
   const {
     handleTransactionPress,
     handleImportConfirm,
@@ -95,7 +103,10 @@ export const TransactionListScreen: React.FC = () => {
     // Toggle behavior: if already filtering income, clear filter to show all
     if (filters.isIncome === true) {
       const { isIncome, ...filtersWithoutIncomeType } = filters;
-      setFilters(filtersWithoutIncomeType);
+      setFilters({
+        ...filters,
+        isIncome: undefined
+      });
     } else {
       setFilters({
         ...filters,
@@ -108,8 +119,10 @@ export const TransactionListScreen: React.FC = () => {
   const handleExpenseFilter = () => {
     // Toggle behavior: if already filtering expenses, clear filter to show all
     if (filters.isIncome === false) {
-      const { isIncome, ...filtersWithoutIncomeType } = filters;
-      setFilters(filtersWithoutIncomeType);
+      setFilters({
+        ...filters,
+        isIncome: undefined
+      });
     } else {
       setFilters({
         ...filters,

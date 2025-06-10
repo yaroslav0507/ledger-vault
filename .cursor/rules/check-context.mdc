@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Every time, before changing files, check the conversation context to ensure that you don't override existing changes.

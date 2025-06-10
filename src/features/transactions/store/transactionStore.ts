@@ -28,7 +28,7 @@ interface TransactionStore {
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   clearAllTransactions: () => Promise<void>;
-  setFilters: (filters: Partial<TransactionFilters>) => void;
+  setFilters: (newFilters: Partial<TransactionFilters>) => void;
   clearFilters: () => void;
   refreshTransactions: () => Promise<void>;
   
@@ -141,7 +141,23 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
 
   setFilters: (newFilters: Partial<TransactionFilters>) => {
     const currentFilters = get().filters;
-    const updatedFilters = { ...currentFilters, ...newFilters };
+    
+    // Check if we're explicitly removing the isIncome filter
+    // This happens when the destructured object doesn't include isIncome
+    const hasIsIncomeInNew = 'isIncome' in newFilters;
+    const hasIsIncomeInCurrent = 'isIncome' in currentFilters && currentFilters.isIncome !== undefined;
+    
+    let updatedFilters: TransactionFilters;
+    
+    if (!hasIsIncomeInNew && hasIsIncomeInCurrent) {
+      // We're removing the isIncome filter - create new object without it
+      const { isIncome, ...filtersWithoutIncome } = currentFilters;
+      updatedFilters = { ...filtersWithoutIncome, ...newFilters };
+    } else {
+      // Normal merge operation
+      updatedFilters = { ...currentFilters, ...newFilters };
+    }
+    
     set({ filters: updatedFilters });
     
     // Automatically reload transactions with new filters

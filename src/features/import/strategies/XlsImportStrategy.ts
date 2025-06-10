@@ -641,36 +641,29 @@ export class XlsImportStrategy implements ImportStrategy {
         const description = this.extractDescription(rawDescription);
         const comment = this.extractComment(rawComment, rawDescription, description);
         
-        // Determine transaction type and amount
-        const isIncome = this.determineTransactionType(rawAmount, parsedAmount, description, rawCategory);
-        const absoluteAmount = Math.abs(parsedAmount);
-        
         // Use mapped card/category or defaults
         const card = this.cleanCardName(String(rawCard).trim());
         const category = rawCategory ? String(rawCategory).trim() : DEFAULT_CATEGORIES[8]; // 'Other'
+        
+        // Determine transaction type (income vs expense)
+        const isIncome = this.determineTransactionType(rawAmount, parsedAmount, description, category);
+        
+        // Store the original amount with its sign - don't use Math.abs()
+        const finalAmount = parsedAmount;
         
         // Create transaction
         const transaction: Transaction = {
           id: uuidv4(),
           date: parsedDate,
           card: card || 'Imported',
-          amount: parseCurrencyToSmallestUnit(absoluteAmount, detectedCurrency),
+          amount: parseCurrencyToSmallestUnit(finalAmount, detectedCurrency),
           currency: detectedCurrency,
-          originalDescription: String(rawDescription || '').trim(),
           description: description,
           category: category,
           comment: comment || undefined,
           isDuplicate: false,
           isIncome,
-          metadata: {
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            importedAt: new Date().toISOString(),
-            importBatchId: uuidv4(),
-            aiEnriched: false,
-            version: 1,
-            source: 'import'
-          }
+          createdAt: new Date().toISOString()
         };
         
         // Check for duplicates
@@ -748,59 +741,18 @@ export class XlsImportStrategy implements ImportStrategy {
   }
 
   private determineTransactionType(rawAmount: any, parsedAmount: number, description?: string, category?: string): boolean {
-    const rawText = String(rawAmount).toLowerCase();
-    const descText = String(description || '').toLowerCase();
-    const catText = String(category || '').toLowerCase();
-    const combinedText = `${rawText} ${descText} ${catText}`;
+    // Debug the input values
+    console.log('🔍 determineTransactionType called with:', {
+      rawAmount,
+      parsedAmount,
+      description: description?.substring(0, 50),
+      category
+    });
+    // Default to amount-based logic: positive = income, negative = expense
+    const isIncome = rawAmount >= 0;
+    console.log(`💰 Amount-based detection: ${parsedAmount} -> ${isIncome ? 'INCOME' : 'EXPENSE'}`);
     
-    // Check for explicit negative indicators (definitely expenses)
-    if (rawText.includes('-') || rawText.includes('debit') || rawText.includes('дебет')) {
-      return false; // Expense
-    }
-    
-    // Check for explicit positive indicators (definitely income)
-    if (rawText.includes('+') || rawText.includes('credit') || rawText.includes('кредит')) {
-      return true; // Income
-    }
-    
-    // If the amount is negative, it's definitely an expense
-    if (parsedAmount < 0) {
-      return false; // Expense
-    }
-    
-    // For positive amounts, check if it's likely income based on description/category
-    const incomePatterns = [
-      // Transfers and deposits that indicate income
-      /transfer.*from.*my.*card/i,
-      /transfer.*from/i,
-      /transfer.*to.*me/i,
-      /deposit/i,
-      /refund/i,
-      /return/i,
-      /cashback/i,
-      /salary/i,
-      /зарплата/i,
-      /повернення/i,
-      /переказ.*від/i,
-      /переказ.*на.*карт/i,
-      /поповнення/i,
-      /відшкодування/i,
-      /кешбек/i,
-      /зачислення/i,
-      // Income categories
-      /income/i,
-      /доход/i,
-      /прибуток/i
-    ];
-    
-    // If any income pattern matches, treat as income
-    if (incomePatterns.some(pattern => pattern.test(combinedText))) {
-      return true; // Income
-    }
-    
-    // Otherwise, for positive amounts in Ukrainian bank statements, default to expense
-    // This matches the convention where most transactions are expenses
-    return false; // Default to expense for positive amounts
+    return isIncome;
   }
   
   private getColumnIndex(header: string[], columnName: string): number {
@@ -855,8 +807,8 @@ export class XlsImportStrategy implements ImportStrategy {
       if (typeof value === 'number') {
         // Excel date serial number (handle both 1900 and 1904 date systems)
         if (value > 59) {
-          // 1900 date system
-        date = new Date((value - 25569) * 86400 * 1000);
+          // 1900 date system - Excel stores dates as days since 1900-01-01
+          date = new Date((value - 25569) * 86400 * 1000);
         } else {
           // Handle edge cases for very early dates
           date = new Date(1900, 0, value);
@@ -887,7 +839,8 @@ export class XlsImportStrategy implements ImportStrategy {
       
       if (isNaN(date.getTime())) return null;
       
-      return format(date, 'yyyy-MM-dd');
+      // Return full ISO timestamp instead of just date
+      return date.toISOString();
     } catch (error) {
       console.warn(`Failed to parse date: ${value}`, error);
       return null;
@@ -895,8 +848,10 @@ export class XlsImportStrategy implements ImportStrategy {
   }
   
   private parseStringDate(dateStr: string): Date {
-    // Remove time portion if present
-    const datePart = dateStr.split(' ')[0];
+    // Extract date and time parts
+    const parts = dateStr.trim().split(/\s+/);
+    const datePart = parts[0];
+    const timePart = parts[1] || '00:00:00'; // Default to midnight if no time
     
     // Enhanced date format support
     const formats = [
@@ -914,6 +869,8 @@ export class XlsImportStrategy implements ImportStrategy {
       { regex: /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/, order: [0, 1, 2] }
     ];
     
+    let date: Date | null = null;
+    
     for (const format of formats) {
       const match = datePart.match(format.regex);
       if (match) {
@@ -923,23 +880,45 @@ export class XlsImportStrategy implements ImportStrategy {
         const month = parseInt(parts[format.order[1]]) - 1; // JS months are 0-indexed
         const day = parseInt(parts[format.order[2]]);
         
-        const date = new Date(year, month, day);
+        date = new Date(year, month, day);
         if (!isNaN(date.getTime()) && 
             date.getFullYear() === year && 
             date.getMonth() === month && 
             date.getDate() === day) {
-        return date;
-      }
+          break;
+        } else {
+          date = null;
+        }
       }
     }
     
-    // Fall back to JavaScript's native Date parsing
-    const fallbackDate = new Date(dateStr);
-    if (!isNaN(fallbackDate.getTime())) {
-      return fallbackDate;
+    if (!date) {
+      // Fall back to JavaScript's native Date parsing
+      const fallbackDate = new Date(datePart);
+      if (!isNaN(fallbackDate.getTime())) {
+        date = fallbackDate;
+      }
     }
     
-    throw new Error(`Unable to parse date: ${dateStr}`);
+    if (!date) {
+      throw new Error(`Unable to parse date: ${dateStr}`);
+    }
+    
+    // Parse and apply time if provided
+    if (timePart && timePart !== '00:00:00') {
+      const timeMatch = timePart.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+      if (timeMatch) {
+        const hours = parseInt(timeMatch[1]);
+        const minutes = parseInt(timeMatch[2]);
+        const seconds = parseInt(timeMatch[3] || '0');
+        
+        if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59 && seconds >= 0 && seconds <= 59) {
+          date.setHours(hours, minutes, seconds, 0);
+        }
+      }
+    }
+    
+    return date;
   }
   
   private parseAmount(value: any): number | null {

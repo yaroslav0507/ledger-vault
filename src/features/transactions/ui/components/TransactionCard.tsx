@@ -21,11 +21,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
   const cardBackgroundColor = transaction.isIncome ? '#F0FDF4' : '#F8FAFC';
   const leftBorderColor = transaction.isIncome ? theme.colors.income : '#94A3B8';
 
-  // Check if we have an original description that differs from the cleaned description
-  const hasOriginalDescription = transaction.originalDescription && 
-    transaction.originalDescription !== transaction.description &&
-    transaction.originalDescription.length > 0;
-
   return (
     <TouchableOpacity
       style={[styles.container, { backgroundColor: cardBackgroundColor, borderLeftColor: leftBorderColor }]}
@@ -61,7 +56,8 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
         {/* Right Section - Amount */}
         <View style={styles.rightSection}>
           <Text style={[styles.amount, { color: amountColor }]} numberOfLines={1}>
-            {amountPrefix}{formatCurrency(transaction.amount, transaction.currency)}
+            {/* {amountPrefix} */}
+            {formatCurrency(transaction.amount, transaction.currency)}
           </Text>
           <View style={[styles.incomeIndicator, { backgroundColor: amountColor }]}>
             <Text style={styles.incomeText}>
@@ -71,25 +67,15 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
         </View>
       </View>
       
-      {/* Comments Section */}
-      {(transaction.comment || hasOriginalDescription) && (
+      {/* Comments Section - Simplified */}
+      {transaction.comment && (
         <View style={styles.commentSection}>
-          {transaction.comment && (
-            <View style={styles.commentRow}>
-              <Text style={styles.commentIcon}>💬</Text>
-              <Text style={styles.comment} numberOfLines={2} ellipsizeMode="tail">
-                {transaction.comment}
-              </Text>
-            </View>
-          )}
-          {hasOriginalDescription && (
-            <View style={styles.originalDescRow}>
-              <Text style={styles.originalDescIcon}>📝</Text>
-              <Text style={styles.originalDescription} numberOfLines={1} ellipsizeMode="tail">
-                {transaction.originalDescription}
-              </Text>
-            </View>
-          )}
+          <View style={styles.commentRow}>
+            <Text style={styles.commentIcon}>💬</Text>
+            <Text style={styles.comment} numberOfLines={2} ellipsizeMode="tail">
+              {transaction.comment}
+            </Text>
+          </View>
         </View>
       )}
     </TouchableOpacity>
@@ -224,23 +210,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     fontSize: 12,
     lineHeight: 16,
-    flex: 1,
-  },
-  originalDescRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: theme.spacing.xs,
-  },
-  originalDescIcon: {
-    fontSize: 10,
-    marginTop: 2,
-  },
-  originalDescription: {
-    ...theme.typography.caption,
-    color: theme.colors.text.disabled,
-    fontSize: 10,
-    lineHeight: 14,
-    fontFamily: 'monospace',
     flex: 1,
   },
 }); 

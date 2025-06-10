@@ -7,14 +7,14 @@ export class LedgerVaultDatabase extends Dexie {
   constructor() {
     super('LedgerVaultDB');
     
-    // Initial schema
+    // Simplified schema for POC - removed complex metadata indexes
     this.version(1).stores({
-      transactions: '++id, date, card, category, amount, isIncome, createdAt, importBatchId'
+      transactions: '++id, date, card, category, amount, isIncome, createdAt'
     });
 
-    // Enhanced indexes for better performance
+    // Enhanced indexes for better performance - simplified
     this.version(2).stores({
-      transactions: '++id, date, card, category, amount, isIncome, [date+card], [date+category], createdAt, importBatchId'
+      transactions: '++id, date, card, category, amount, isIncome, [date+card], [date+category], createdAt'
     });
   }
 }

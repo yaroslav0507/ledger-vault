@@ -154,8 +154,8 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
                 isBalanceMasked && styles.metricValueMasked
               ]}>
                 {isBalanceMasked ? 
-                  (balance.expenses === 0 ? 'None yet 🎉' : `-${maskAmount(balance.expenses, currency)}`) :
-                  (balance.expenses === 0 ? 'None yet 🎉' : `-${formatCurrency(balance.expenses, currency, 0)}`)
+                  (`-${maskAmount(balance.expenses, currency)}`) :
+                  (`-${formatCurrency(balance.expenses, currency, 0)}`)
                 }
               </Text>
             </View>
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   balanceCard: {
     backgroundColor: theme.colors.surface,
     marginHorizontal: theme.spacing.md,
-    marginVertical: theme.spacing.sm,
+    marginVertical: theme.spacing.xs,
     borderRadius: theme.borderRadius.lg,
     ...theme.shadows.md,
     elevation: 4,
@@ -196,11 +196,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   balanceContent: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   balanceHeader: {
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   balanceMainRow: {
     flexDirection: 'row',
@@ -211,19 +211,19 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.text.primary,
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 15,
     letterSpacing: 0.3,
   },
   balanceAmount: {
     ...theme.typography.h2,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     flex: 1,
     textAlign: 'center',
     letterSpacing: 0.8,
   },
   balanceAmountMasked: {
-    fontSize: 30,
+    fontSize: 26,
     letterSpacing: 0.5,
   },
   trendIndicator: {
@@ -231,22 +231,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F8F9FA',
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1.5,
     borderColor: '#E9ECEF',
-    minWidth: 70,
+    minWidth: 65,
   },
   trendIndicatorMasked: {
     backgroundColor: '#E3F2FD',
     borderColor: '#2196F3',
   },
   trendIcon: {
-    fontSize: 16,
-    marginRight: 4,
+    fontSize: 14,
+    marginRight: 3,
   },
   trendText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   metricsRow: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   metricCard: {
     flex: 1,
@@ -262,12 +262,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FAFAFA',
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 2,
     ...theme.shadows.sm,
     elevation: 2,
-    minHeight: 70,
+    minHeight: 60,
     justifyContent: 'center',
   },
   incomeCard: {
@@ -284,37 +284,38 @@ const styles = StyleSheet.create({
     borderWidth: 3,
   },
   metricIcon: {
-    fontSize: 20,
-    marginBottom: 4,
+    fontSize: 18,
+    marginBottom: 2,
   },
   metricContent: {
     alignItems: 'center',
-    gap: 2,
+    gap: 1,
   },
   metricLabel: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
-    fontSize: 11,
-    marginBottom: 2,
+    fontSize: 10,
+    marginBottom: 1,
     fontWeight: '500',
   },
   metricValue: {
     ...theme.typography.body,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
   },
   metricValueMasked: {
-    fontSize: 15,
+    fontSize: 14,
     letterSpacing: 0.2,
   },
   insightsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 4,
+    gap: 3,
+    marginTop: 2,
   },
   insightText: {
-    fontSize: 11,
+    fontSize: 10,
     color: theme.colors.text.secondary,
     fontStyle: 'italic',
   },

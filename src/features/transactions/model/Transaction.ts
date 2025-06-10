@@ -1,27 +1,15 @@
 export interface Transaction {
   id: string;
-  date: string; // ISO 8601 (YYYY-MM-DD)
+  date: string; // ISO 8601 (YYYY-MM-DDTHH:mm:ss) - now supports timestamps
   card: string;
   amount: number; // Amount in smallest currency unit (cents)
   currency: string; // ISO 4217 currency code
-  originalDescription: string;
-  description: string;
+  description: string; // Single description field - simplified for POC
   category: string;
   comment?: string;
   isDuplicate: boolean;
   isIncome: boolean;
-  metadata: TransactionMetadata;
-}
-
-export interface TransactionMetadata {
-  createdAt: string;
-  updatedAt: string;
-  importedAt?: string;
-  importBatchId?: string;
-  aiEnriched: boolean;
-  aiEnrichedAt?: string;
-  version: number;
-  source: 'manual' | 'import' | 'api';
+  createdAt: string; // Simplified metadata - only keep creation timestamp
 }
 
 export interface TransactionFilters {

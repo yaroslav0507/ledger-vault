@@ -24,10 +24,9 @@ export const useTransactionFilters = (transactions: Transaction[], filters: Tran
       if (filters.searchQuery) {
         const searchLower = filters.searchQuery.toLowerCase();
         const matchesDescription = transaction.description.toLowerCase().includes(searchLower);
-        const matchesOriginal = transaction.originalDescription?.toLowerCase().includes(searchLower);
         const matchesComment = transaction.comment?.toLowerCase().includes(searchLower);
         
-        if (!matchesDescription && !matchesOriginal && !matchesComment) {
+        if (!matchesDescription && !matchesComment) {
           return false;
         }
       }

@@ -33,7 +33,6 @@ interface AppSettings {
   defaultCurrency: string;
   defaultCategory: string;
   dateFormat: 'DD.MM.YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
-  showOriginalDescriptions: boolean;
   autoDetectCurrency: boolean;
   confirmDeleteTransactions: boolean;
   defaultTransactionType: 'expense' | 'income';
@@ -46,7 +45,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
     defaultCurrency: 'UAH',
     defaultCategory: DEFAULT_CATEGORIES[0],
     dateFormat: 'DD.MM.YYYY',
-    showOriginalDescriptions: true,
     autoDetectCurrency: true,
     confirmDeleteTransactions: true,
     defaultTransactionType: 'expense'
@@ -200,20 +198,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
             <Text variant="titleMedium" style={styles.sectionTitle}>
               Display Options
             </Text>
-            
-            <List.Item
-              title="Show Original Descriptions"
-              description="Display original bank statement descriptions alongside cleaned ones"
-              left={(props) => <List.Icon {...props} icon="text" />}
-              right={() => (
-                <Switch
-                  value={settings.showOriginalDescriptions}
-                  onValueChange={(value) => 
-                    setSettings({ ...settings, showOriginalDescriptions: value })
-                  }
-                />
-              )}
-            />
             
             <List.Item
               title="Auto-detect Currency"
