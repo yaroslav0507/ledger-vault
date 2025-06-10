@@ -120,9 +120,9 @@ export function getDateRangeForPeriod(period: TimePeriod, customRange?: DateRang
       };
 
     case 'spring':
-      // March 20 - June 20 (approximate)
-      const springStart = new Date(today.getFullYear(), 2, 20); // March 20
-      const springEnd = new Date(today.getFullYear(), 5, 20); // June 20
+      // March - May (meteorological spring)
+      const springStart = new Date(today.getFullYear(), 2, 1); // March 1
+      const springEnd = new Date(today.getFullYear(), 4, 31); // May 31
       
       return {
         start: toISODate(springStart),
@@ -130,9 +130,9 @@ export function getDateRangeForPeriod(period: TimePeriod, customRange?: DateRang
       };
 
     case 'summer':
-      // June 21 - September 22 (approximate)
-      const summerStart = new Date(today.getFullYear(), 5, 21); // June 21
-      const summerEnd = new Date(today.getFullYear(), 8, 22); // September 22
+      // June - August (meteorological summer)
+      const summerStart = new Date(today.getFullYear(), 5, 1); // June 1
+      const summerEnd = new Date(today.getFullYear(), 7, 31); // August 31
       
       return {
         start: toISODate(summerStart),
@@ -140,9 +140,9 @@ export function getDateRangeForPeriod(period: TimePeriod, customRange?: DateRang
       };
 
     case 'autumn':
-      // September 23 - December 20 (approximate)
-      const autumnStart = new Date(today.getFullYear(), 8, 23); // September 23
-      const autumnEnd = new Date(today.getFullYear(), 11, 20); // December 20
+      // September - November (meteorological autumn)
+      const autumnStart = new Date(today.getFullYear(), 8, 1); // September 1
+      const autumnEnd = new Date(today.getFullYear(), 10, 30); // November 30
       
       return {
         start: toISODate(autumnStart),
@@ -150,16 +150,16 @@ export function getDateRangeForPeriod(period: TimePeriod, customRange?: DateRang
       };
 
     case 'winter':
-      // December 21 - March 19 (spans year boundary)
+      // December - February (meteorological winter, spans year boundary)
       const currentYear = today.getFullYear();
-      const winterStart = new Date(currentYear, 11, 21); // December 21
-      const winterEnd = new Date(currentYear + 1, 2, 19); // March 19 next year
+      const winterStart = new Date(currentYear, 11, 1); // December 1
+      const winterEnd = new Date(currentYear + 1, 1, 28); // February 28/29 next year
       
-      // If we're before March 20, we're in the winter that started last year
-      if (today.getMonth() < 2 || (today.getMonth() === 2 && today.getDate() < 20)) {
+      // If we're before March, we're in the winter that started last year
+      if (today.getMonth() < 2) {
         return {
-          start: toISODate(new Date(currentYear - 1, 11, 21)),
-          end: toISODate(new Date(currentYear, 2, 19))
+          start: toISODate(new Date(currentYear - 1, 11, 1)),
+          end: toISODate(new Date(currentYear, 1, 28))
         };
       }
       
