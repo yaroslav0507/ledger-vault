@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   balanceCard: {
     backgroundColor: theme.colors.surface,
     marginHorizontal: theme.spacing.md,
-    marginVertical: theme.spacing.xs,
+    marginVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.lg,
     ...theme.shadows.md,
     elevation: 4,
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   },
   metricCardActive: {
     borderColor: '#2196F3',
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#f0f7ff',
   },
   metricIcon: {
     fontSize: 36,

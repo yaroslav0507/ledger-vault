@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -25,7 +25,10 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
     start: '',
     end: ''
   });
-
+  
+  const scrollViewRef = useRef<ScrollView>(null);
+  const hasAutoScrolledRef = useRef(false);
+  const lastScrolledPeriodRef = useRef<TimePeriod | null>(null);
   const currentPeriod = getCurrentTimePeriod(currentDateRange);
 
   const timePeriods: { period: TimePeriod; label: string; icon: string }[] = [
@@ -40,6 +43,31 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
     { period: 'winter', label: 'Winter', icon: '❄️' },
     { period: 'custom', label: 'Custom Range', icon: '⚙️' }
   ];
+
+  // Auto-scroll to selected item (smooth, no interruption)
+  const scrollToSelectedItem = useCallback((targetPeriod?: TimePeriod, immediate = false) => {
+    const periodToFind = targetPeriod || currentPeriod;
+    const selectedIndex = timePeriods.findIndex(({ period }) => period === periodToFind);
+    
+    if (selectedIndex >= 0 && scrollViewRef.current) {
+      // More precise calculation based on actual button styling
+      const buttonWidth = 100; // minWidth from styles
+      const marginRight = 12; // marginRight from styles (theme.spacing.sm)
+      const totalButtonWidth = buttonWidth + marginRight;
+      const containerPadding = 16; // paddingHorizontal from container (theme.spacing.md)
+      
+      // Calculate position to center the selected item
+      const scrollToX = Math.max(0, (selectedIndex * totalButtonWidth) - containerPadding);
+      
+      scrollViewRef.current.scrollTo({
+        x: scrollToX,
+        animated: !immediate
+      });
+      
+      // Track that we scrolled to this period
+      lastScrolledPeriodRef.current = periodToFind;
+    }
+  }, [currentPeriod, timePeriods]);
 
   const handlePeriodSelect = (period: TimePeriod) => {
     if (period === 'custom') {
@@ -59,6 +87,9 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
       }
       setShowCustomModal(true);
     } else {
+      // User actively selected a period - scroll immediately
+      scrollToSelectedItem(period, false);
+      
       const dateRange = getDateRangeForPeriod(period);
       onPeriodChange(period, dateRange);
     }
@@ -73,9 +104,27 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
 
   const isCustomRangeValid = customRange.start && customRange.end && customRange.start <= customRange.end;
 
+  // Only auto-scroll on initial load when we have a current date range
+  useEffect(() => {
+    // Only auto-scroll once when component is first initialized with data
+    if (currentDateRange && !hasAutoScrolledRef.current) {
+      const timeoutId = setTimeout(() => {
+        scrollToSelectedItem(currentPeriod, false);
+        hasAutoScrolledRef.current = true;
+      }, 100); // Slight delay to ensure component is fully mounted
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [currentDateRange]); // Only depend on currentDateRange, not currentPeriod
+
   return (
     <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollView}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.scrollView} 
+        ref={scrollViewRef}
+      >
         {timePeriods.map(({ period, label, icon }) => {
           const isSelected = period === currentPeriod;
           const isCustomSelected = period === 'custom' && currentPeriod === 'custom';
@@ -161,9 +210,11 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: theme.spacing.xs,
-    marginTop: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
+    backgroundColor: '#fff',
+    borderBottomColor: theme.colors.border,
+    borderBottomWidth: 1,
   },
   scrollView: {
     marginHorizontal: -theme.spacing.md,

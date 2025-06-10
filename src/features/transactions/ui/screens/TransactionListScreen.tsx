@@ -61,7 +61,6 @@ export const TransactionListScreen: React.FC = () => {
     if (filters.cards && filters.cards.length > 0) count++;
     if (filters.isIncome !== undefined) count++;
     if (filters.searchQuery) count++;
-    if (filters.dateRange?.start || filters.dateRange?.end) count++;
     return count;
   }, [filters]);
   const {
@@ -349,15 +348,10 @@ export const TransactionListScreen: React.FC = () => {
   // Create header component for SectionList (non-sticky content)
   const renderListHeader = useCallback(() => (
     <View>
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">💰 LedgerVault</Text>
         <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">Phase 2 Prototype</Text>
-      </View>
-
-      <TimePeriodSelector
-        currentDateRange={filters.dateRange}
-        onPeriodChange={handleTimePeriodChange}
-      />
+      </View> */}
 
       <BalanceCard 
         balance={balance} 
@@ -394,7 +388,7 @@ export const TransactionListScreen: React.FC = () => {
         </View>
       )}
     </View>
-  ), [balance, filteredTransactions.length, activeFiltersCount, error, filters.dateRange]);
+  ), [balance, filteredTransactions.length, activeFiltersCount, error]);
 
   const getItemLayout = useCallback((data: any, index: number) => ({
     length: 120, // Approximate height of TransactionCard
@@ -415,8 +409,12 @@ export const TransactionListScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
-      
-      {/* Virtual Scrolling Transaction List */}
+
+      <TimePeriodSelector
+        currentDateRange={filters.dateRange}
+        onPeriodChange={handleTimePeriodChange}
+      />
+
       <SectionList
         ref={scrollViewRef}
         style={styles.scrollContainer}
@@ -547,7 +545,7 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingBottom: theme.spacing.md,
     gap: theme.spacing.sm,
     alignItems: 'center',
   },
@@ -786,7 +784,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
-    marginTop: 0,
+    marginTop: -1,
     marginBottom: 10,
     boxShadow: '0 5px 10px 0px #0000001c',
   },
@@ -806,7 +804,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
     borderWidth: 1.5,
     borderColor: '#E0E0E0',
     borderRadius: theme.borderRadius.md,
