@@ -32,8 +32,27 @@ export const useTransactionFilters = (transactions: Transaction[], filters: Tran
       }
 
       // Date range filter
-      if (filters.dateRange?.start && transaction.date < filters.dateRange.start) return false;
-      if (filters.dateRange?.end && transaction.date > filters.dateRange.end) return false;
+      if (filters.dateRange) {
+        // Special handling for winter (Dec, Jan, Feb of current year)
+        if (filters.dateRange.start === 'WINTER_CURRENT_YEAR') {
+          const targetYear = parseInt(filters.dateRange.end);
+          const transactionDate = new Date(transaction.date);
+          const transactionYear = transactionDate.getFullYear();
+          const transactionMonth = transactionDate.getMonth(); // 0-based: 0=Jan, 1=Feb, 11=Dec
+          
+          // Check if transaction is in December, January, or February of the target year
+          const isWinterMonth = transactionMonth === 11 || transactionMonth === 0 || transactionMonth === 1; // Dec, Jan, Feb
+          const isTargetYear = transactionYear === targetYear;
+          
+          if (!(isWinterMonth && isTargetYear)) {
+            return false;
+          }
+        } else {
+          // Normal date range filtering
+          if (filters.dateRange.start && transaction.date < filters.dateRange.start) return false;
+          if (filters.dateRange.end && transaction.date > filters.dateRange.end) return false;
+        }
+      }
 
       return true;
     });

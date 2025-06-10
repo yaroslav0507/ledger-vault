@@ -150,22 +150,13 @@ export function getDateRangeForPeriod(period: TimePeriod, customRange?: DateRang
       };
 
     case 'winter':
-      // December - February (meteorological winter, spans year boundary)
+      // December, January, and February of the current year
+      // This creates a special marker that will be handled by custom filtering logic
       const currentYear = today.getFullYear();
-      const winterStart = new Date(currentYear, 11, 1); // December 1
-      const winterEnd = new Date(currentYear + 1, 1, 28); // February 28/29 next year
-      
-      // If we're before March, we're in the winter that started last year
-      if (today.getMonth() < 2) {
-        return {
-          start: toISODate(new Date(currentYear - 1, 11, 1)),
-          end: toISODate(new Date(currentYear, 1, 28))
-        };
-      }
       
       return {
-        start: toISODate(winterStart),
-        end: toISODate(winterEnd)
+        start: 'WINTER_CURRENT_YEAR', // Special marker for custom filtering
+        end: currentYear.toString() // Year to filter for
       };
       
     case 'custom':

@@ -42,10 +42,27 @@ export class TransactionRepository {
     if (filters) {
       // Apply date range filter
       if (filters.dateRange) {
-        query = query.filter(t => 
-          t.date >= filters.dateRange!.start && 
-          t.date <= filters.dateRange!.end
-        );
+        // Special handling for winter (Dec, Jan, Feb of current year)
+        if (filters.dateRange.start === 'WINTER_CURRENT_YEAR') {
+          const targetYear = parseInt(filters.dateRange.end);
+          query = query.filter(t => {
+            const transactionDate = new Date(t.date);
+            const transactionYear = transactionDate.getFullYear();
+            const transactionMonth = transactionDate.getMonth(); // 0-based: 0=Jan, 1=Feb, 11=Dec
+            
+            // Check if transaction is in December, January, or February of the target year
+            const isWinterMonth = transactionMonth === 11 || transactionMonth === 0 || transactionMonth === 1;
+            const isTargetYear = transactionYear === targetYear;
+            
+            return isWinterMonth && isTargetYear;
+          });
+        } else {
+          // Normal date range filtering
+          query = query.filter(t => 
+            t.date >= filters.dateRange!.start && 
+            t.date <= filters.dateRange!.end
+          );
+        }
       }
 
       // Apply category filter
