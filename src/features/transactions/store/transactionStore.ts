@@ -125,11 +125,25 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
   },
 
   clearAllTransactions: async () => {
+    console.log('🔘 Store: clearAllTransactions called');
     set({ loading: true, error: null });
     
     try {
+      console.log('🔘 Store: Calling repository.clearAll()...');
       await transactionRepository.clearAll();
+      
+      console.log('🔘 Store: Setting transactions to empty array...');
       set({ transactions: [], loading: false });
+      
+      // Verify the database is actually cleared
+      console.log('🔘 Store: Verifying database is cleared...');
+      const remainingCount = await transactionRepository.getTotalCount();
+      console.log('🔍 Store: Remaining transactions in DB:', remainingCount);
+      
+      if (remainingCount > 0) {
+        throw new Error(`Database still contains ${remainingCount} transactions after clear operation`);
+      }
+      
       console.log('✅ All transactions deleted successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to delete all transactions';
@@ -199,7 +213,7 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
     return {
       income,
       expenses,
-      total: income - expenses
+      total: income + expenses
     };
   },
 

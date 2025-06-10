@@ -17,7 +17,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
   onLongPress
 }) => {
   const amountColor = transaction.isIncome ? theme.colors.income : theme.colors.expense;
-  const amountPrefix = transaction.isIncome ? '+' : '-';
   const cardBackgroundColor = transaction.isIncome ? '#F0FDF4' : '#F8FAFC';
   const leftBorderColor = transaction.isIncome ? theme.colors.income : '#94A3B8';
 
@@ -56,7 +55,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
         {/* Right Section - Amount */}
         <View style={styles.rightSection}>
           <Text style={[styles.amount, { color: amountColor }]} numberOfLines={1}>
-            {/* {amountPrefix} */}
             {formatCurrency(transaction.amount, transaction.currency)}
           </Text>
           <View style={[styles.incomeIndicator, { backgroundColor: amountColor }]}>

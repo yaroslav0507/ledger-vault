@@ -6,8 +6,7 @@ import {
   Alert,
   SafeAreaView,
   StatusBar,
-  SectionList,
-  ListRenderItem
+  SectionList
 } from 'react-native';
 import { Card, Button, Portal, Snackbar, Text, FAB } from 'react-native-paper';
 import { useTransactionStore } from '../../store/transactionStore';
@@ -104,8 +103,7 @@ export const TransactionListScreen: React.FC = () => {
     if (filters.isIncome === true) {
       const { isIncome, ...filtersWithoutIncomeType } = filters;
       setFilters({
-        ...filters,
-        isIncome: undefined
+        ...filtersWithoutIncomeType,
       });
     } else {
       setFilters({
@@ -119,9 +117,9 @@ export const TransactionListScreen: React.FC = () => {
   const handleExpenseFilter = () => {
     // Toggle behavior: if already filtering expenses, clear filter to show all
     if (filters.isIncome === false) {
+      const { isIncome, ...filtersWithoutIncomeType } = filters;
       setFilters({
-        ...filters,
-        isIncome: undefined
+        ...filtersWithoutIncomeType,
       });
     } else {
       setFilters({
@@ -351,13 +349,16 @@ export const TransactionListScreen: React.FC = () => {
   // Create header component for SectionList (non-sticky content)
   const renderListHeader = useCallback(() => (
     <View>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">💰 LedgerVault</Text>
         <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">Phase 2 Prototype</Text>
       </View>
 
-      {/* Balance Summary - always visible */}
+      <TimePeriodSelector
+        currentDateRange={filters.dateRange}
+        onPeriodChange={handleTimePeriodChange}
+      />
+
       <BalanceCard 
         balance={balance} 
         transactionCount={filteredTransactions.length}
@@ -367,7 +368,6 @@ export const TransactionListScreen: React.FC = () => {
         onExpenseFilter={handleExpenseFilter}
       />
 
-      {/* Action Buttons */}
       <View style={styles.actionButtons}>
         <Button
           mode="contained"
@@ -388,13 +388,6 @@ export const TransactionListScreen: React.FC = () => {
         />
       </View>
 
-      {/* Time Period Selector */}
-      <TimePeriodSelector
-        currentDateRange={filters.dateRange}
-        onPeriodChange={handleTimePeriodChange}
-      />
-
-      {/* Error Display */}
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
@@ -460,11 +453,9 @@ export const TransactionListScreen: React.FC = () => {
       <AddTransactionModal
         visible={showAddModal}
         onClose={() => {
-          console.log('🔘 Closing Add Transaction Modal');
           setShowAddModal(false);
         }}
         onSubmit={(transaction) => {
-          console.log('🔘 Submitting transaction:', transaction);
           return addTransaction(transaction);
         }}
       />

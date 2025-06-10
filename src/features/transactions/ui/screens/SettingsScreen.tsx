@@ -39,7 +39,7 @@ interface AppSettings {
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
-  const { clearAllTransactions, transactions, loading } = useTransactionStore();
+  const { clearAllTransactions, transactions, loading, loadTransactions } = useTransactionStore();
   
   const [settings, setSettings] = useState<AppSettings>({
     defaultCurrency: 'UAH',
@@ -84,7 +84,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
             // For now, just show success message
             // In a real app, you would create and download the file
             Alert.alert('Export Successful', 'Transaction data has been exported to CSV format.');
-            console.log('CSV Export:', fullCsv);
           } catch (error) {
             Alert.alert('Export Failed', 'Failed to export data. Please try again.');
             console.error('Export error:', error);
@@ -95,6 +94,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
   };
 
   const handleClearData = () => {
+    console.log('🔘 SettingsScreen: handleClearData called');
+    console.log('🔘 SettingsScreen: Current transactions count:', transactions.length);
+    
     if (transactions.length === 0) {
       Alert.alert('No Data', 'There are no transactions to clear.');
       return;
@@ -106,12 +108,42 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete All', style: 'destructive', onPress: async () => {
+          console.log('🔘 Clear All Data button pressed');
+          console.log('🔘 Current transactions count:', transactions.length);
+          
           try {
+            console.log('🔘 Calling clearAllTransactions...');
             await clearAllTransactions();
-            Alert.alert('Success', 'All transaction data has been cleared.');
+            console.log('✅ clearAllTransactions completed successfully');
+            
+            // Force a reload to ensure UI is updated
+            console.log('🔘 Reloading transactions to refresh UI...');
+            await loadTransactions();
+            
+            // Get fresh state to verify
+            const currentState = useTransactionStore.getState();
+            console.log('🔍 Transactions after clear and reload:', currentState.transactions.length);
+            
+            Alert.alert(
+              'Success', 
+              'All transaction data has been cleared.',
+              [
+                { 
+                  text: 'OK', 
+                  onPress: () => {
+                    // Optional: Close settings screen after successful clear
+                    // onClose();
+                  }
+                }
+              ]
+            );
           } catch (error) {
-            Alert.alert('Error', 'Failed to clear data. Please try again.');
-            console.error('Clear data error:', error);
+            console.error('❌ Clear data error:', error);
+            Alert.alert(
+              'Error', 
+              `Failed to clear data: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+              [{ text: 'OK' }]
+            );
           }
         }}
       ]

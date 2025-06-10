@@ -646,7 +646,7 @@ export class XlsImportStrategy implements ImportStrategy {
         const category = rawCategory ? String(rawCategory).trim() : DEFAULT_CATEGORIES[8]; // 'Other'
         
         // Determine transaction type (income vs expense)
-        const isIncome = this.determineTransactionType(rawAmount, parsedAmount, description, category);
+        const isIncome = rawAmount > 0;
         
         // Store the original amount with its sign - don't use Math.abs()
         const finalAmount = parsedAmount;
@@ -741,16 +741,8 @@ export class XlsImportStrategy implements ImportStrategy {
   }
 
   private determineTransactionType(rawAmount: any, parsedAmount: number, description?: string, category?: string): boolean {
-    // Debug the input values
-    console.log('🔍 determineTransactionType called with:', {
-      rawAmount,
-      parsedAmount,
-      description: description?.substring(0, 50),
-      category
-    });
     // Default to amount-based logic: positive = income, negative = expense
     const isIncome = rawAmount >= 0;
-    console.log(`💰 Amount-based detection: ${parsedAmount} -> ${isIncome ? 'INCOME' : 'EXPENSE'}`);
     
     return isIncome;
   }
@@ -765,7 +757,6 @@ export class XlsImportStrategy implements ImportStrategy {
     let index = header.findIndex(h => String(h).trim() === columnName);
     
     if (index >= 0) {
-      console.log(`✅ Found exact column match for "${columnName}" at index ${index}`);
       return index;
     }
     
@@ -773,7 +764,6 @@ export class XlsImportStrategy implements ImportStrategy {
     index = header.findIndex(h => String(h).trim().toLowerCase() === columnName.toLowerCase());
     
     if (index >= 0) {
-      console.log(`✅ Found case-insensitive column match for "${columnName}" at index ${index}`);
       return index;
     }
     
@@ -784,7 +774,6 @@ export class XlsImportStrategy implements ImportStrategy {
     );
     
     if (index >= 0) {
-      console.log(`✅ Found partial column match for "${columnName}" at index ${index}`);
       return index;
     }
     
@@ -1139,31 +1128,26 @@ export class XlsImportStrategy implements ImportStrategy {
       
     // Handle masked card numbers like "**** 5460" - these are valid and should be kept as-is
     if (/\*{4,}\s*\d{4}/.test(cleaned)) {
-      console.log(`✅ Found masked card number: "${cleaned}"`);
       return cleaned;
     }
     
     // Handle other card masking patterns
     if (/\*+.*\d+/.test(cleaned) && cleaned.length >= 7) {
-      console.log(`✅ Found card masking pattern: "${cleaned}"`);
       return cleaned;
     }
     
     // Reject pure numbers (likely account IDs or transaction IDs) but allow if it has asterisks
     if (/^-?\d+$/.test(cleaned)) {
-      console.log(`❌ Rejecting pure number: "${cleaned}"`);
       return 'Imported Card';
     }
     
     // Reject very short values (likely codes) unless they contain card patterns
     if (cleaned.length < 3 && !/\*/.test(cleaned)) {
-      console.log(`❌ Rejecting short value: "${cleaned}"`);
       return 'Imported Card';
     }
     
     // Reject negative values that don't look like card names
     if (cleaned.startsWith('-') && !/card|карт|visa|master|\*/.test(cleaned)) {
-      console.log(`❌ Rejecting negative value: "${cleaned}"`);
       return 'Imported Card';
     }
     
@@ -1176,7 +1160,6 @@ export class XlsImportStrategy implements ImportStrategy {
     
     for (const pattern of rejectPatterns) {
       if (pattern.test(cleaned)) {
-        console.log(`❌ Rejecting pattern match: "${cleaned}"`);
         return 'Imported Card';
       }
     }
@@ -1186,7 +1169,6 @@ export class XlsImportStrategy implements ImportStrategy {
     
     // Keep masked card numbers as-is
     if (/\*/.test(result)) {
-      console.log(`✅ Keeping masked card as-is: "${result}"`);
       return result;
     }
     
@@ -1202,7 +1184,6 @@ export class XlsImportStrategy implements ImportStrategy {
       .replace(/\bmono\b/gi, 'Monobank')
       .replace(/\bощад\b/gi, 'Ощадбанк');
     
-    console.log(`✅ Cleaned card name: "${cleaned}" -> "${result}"`);
     return result;
   }
 } 

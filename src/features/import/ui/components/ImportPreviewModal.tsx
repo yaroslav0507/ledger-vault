@@ -9,7 +9,6 @@ import {
   Card,
   Divider,
   List,
-  DataTable,
   IconButton
 } from 'react-native-paper';
 import { View, ScrollView, StyleSheet } from 'react-native';

@@ -161,7 +161,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
     marginTop: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
   },

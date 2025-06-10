@@ -111,8 +111,25 @@ export class TransactionRepository {
   }
 
   async clearAll(): Promise<void> {
-    await db.transactions.clear();
-    console.log('✅ All transactions cleared from database');
+    console.log('🔘 Repository: clearAll called');
+    try {
+      const countBefore = await db.transactions.count();
+      console.log('🔍 Repository: Transactions before clear:', countBefore);
+      
+      await db.transactions.clear();
+      
+      const countAfter = await db.transactions.count();
+      console.log('🔍 Repository: Transactions after clear:', countAfter);
+      
+      if (countAfter > 0) {
+        throw new Error(`Clear operation failed: ${countAfter} transactions remain in database`);
+      }
+      
+      console.log('✅ All transactions cleared from database successfully');
+    } catch (error) {
+      console.error('❌ Repository: Error clearing transactions:', error);
+      throw error;
+    }
   }
 
   async getTotalCount(): Promise<number> {

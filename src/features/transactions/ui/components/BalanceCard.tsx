@@ -90,7 +90,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
               { color: balance.total >= 0 ? '#2E7D32' : '#64748B' },
               isBalanceMasked && styles.balanceAmountMasked
             ]}>
-              {isBalanceMasked ? maskAmount(Math.abs(balance.total), currency) : formatCurrency(Math.abs(balance.total), currency, 0)}
+              {isBalanceMasked ? maskAmount(Math.abs(balance.total), currency) : formatCurrency(balance.total, currency, 2)}
             </Text>
             <TouchableOpacity 
               style={[styles.trendIndicator, isBalanceMasked && styles.trendIndicatorMasked]} 
@@ -131,7 +131,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
                 { color: '#2E7D32' },
                 isBalanceMasked && styles.metricValueMasked
               ]}>
-                {isBalanceMasked ? `+${maskAmount(balance.income, currency)}` : `+${formatCurrency(balance.income, currency, 0)}`}
+                {isBalanceMasked ? `+${maskAmount(balance.income, currency)}` : `+${formatCurrency(balance.income, currency, 2)}`}
               </Text>
             </View>
           </TouchableOpacity>
@@ -154,8 +154,8 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
                 isBalanceMasked && styles.metricValueMasked
               ]}>
                 {isBalanceMasked ? 
-                  (`-${maskAmount(balance.expenses, currency)}`) :
-                  (`-${formatCurrency(balance.expenses, currency, 0)}`)
+                  maskAmount(balance.expenses, currency) :
+                  formatCurrency(balance.expenses, currency, 2)
                 }
               </Text>
             </View>
@@ -258,7 +258,8 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    flexDirection: 'column',
+    gap: theme.spacing.sm,
+    flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FAFAFA',
     paddingHorizontal: theme.spacing.sm,
@@ -281,22 +282,21 @@ const styles = StyleSheet.create({
   metricCardActive: {
     borderColor: '#2196F3',
     backgroundColor: '#E3F2FD',
-    borderWidth: 3,
   },
   metricIcon: {
-    fontSize: 18,
-    marginBottom: 2,
+    fontSize: 36,
+    marginTop: 2,
   },
   metricContent: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 1,
   },
   metricLabel: {
     ...theme.typography.caption,
     color: theme.colors.text.secondary,
-    fontSize: 10,
+    fontSize: 12,
+    fontWeight: '600',
     marginBottom: 1,
-    fontWeight: '500',
   },
   metricValue: {
     ...theme.typography.body,

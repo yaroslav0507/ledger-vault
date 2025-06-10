@@ -8,12 +8,17 @@ export function formatCurrency(amount: number, currency: string = 'USD', digits?
   
   // Special formatting for UAH - Ukrainian convention places ₴ after amount
   if (currency === 'UAH') {
-    return new Intl.NumberFormat('en-US', {
+    const value = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency,
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits
-    }).format(mainAmount).replace('UAH', '') + ' ₴';
+    }).format(mainAmount)
+      .replace(currency, '')
+      .replace(/\s+/g, '')
+      .trim();
+
+    return value + '₴';
   }
   
   try {
