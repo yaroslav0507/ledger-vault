@@ -1,6 +1,6 @@
 import { read, utils, WorkBook } from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
-import { Transaction, DEFAULT_CATEGORIES } from '@/features/transactions/model/Transaction';
+import { Transaction } from '@/features/transactions/model/Transaction';
 import { transactionRepository } from '@/features/transactions/storage/TransactionRepository';
 import { 
   parseCurrencyToSmallestUnit, 
@@ -11,6 +11,7 @@ import {
 } from '@/shared/utils/currencyUtils';
 import { format } from 'date-fns';
 import { ImportStrategy, ImportFile, ImportResult, ImportMapping, ImportError } from './ImportStrategy';
+import * as XLSX from 'xlsx';
 
 export interface FilePreview {
   columns: string[];
@@ -643,7 +644,7 @@ export class XlsImportStrategy implements ImportStrategy {
         
         // Use mapped card/category or defaults
         const card = this.cleanCardName(String(rawCard).trim());
-        const category = rawCategory ? String(rawCategory).trim() : DEFAULT_CATEGORIES[8]; // 'Other'
+        const category = rawCategory ? String(rawCategory).trim() : 'Other';
         
         // Determine transaction type (income vs expense)
         const isIncome = rawAmount > 0;

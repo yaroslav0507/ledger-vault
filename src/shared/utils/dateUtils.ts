@@ -45,7 +45,7 @@ export function isThisMonth(date: string): boolean {
   return date >= start && date <= end;
 }
 
-export type TimePeriod = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'spring' | 'summer' | 'autumn' | 'winter' | 'custom';
+export type TimePeriod = 'today' | 'week' | 'month' | 'lastMonth' | 'quarter' | 'year' | 'spring' | 'summer' | 'autumn' | 'winter' | 'custom';
 
 export interface DateRange {
   start: string;
@@ -88,6 +88,15 @@ export function getDateRangeForPeriod(period: TimePeriod, customRange?: DateRang
       return {
         start: toISODate(startOfMonthDate),
         end: toISODate(endOfMonthDate)
+      };
+
+    case 'lastMonth':
+      const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+      
+      return {
+        start: toISODate(startOfLastMonth),
+        end: toISODate(endOfLastMonth)
       };
 
     case 'quarter':
@@ -184,6 +193,8 @@ export function getTimePeriodLabel(period: TimePeriod, customRange?: DateRange):
       return 'This Week';
     case 'month':
       return 'This Month';
+    case 'lastMonth':
+      return 'Previous Month';
     case 'quarter':
       return 'This Quarter';
     case 'year':
@@ -231,7 +242,7 @@ export function isDateRangeForPeriod(dateRange: DateRange, period: TimePeriod): 
 export function getCurrentTimePeriod(dateRange?: DateRange): TimePeriod {
   if (!dateRange) return 'custom';
   
-  const periods: TimePeriod[] = ['today', 'week', 'month', 'quarter', 'year', 'spring', 'summer', 'autumn', 'winter'];
+  const periods: TimePeriod[] = ['today', 'week', 'month', 'lastMonth', 'quarter', 'year', 'spring', 'summer', 'autumn', 'winter'];
   
   for (const period of periods) {
     if (isDateRangeForPeriod(dateRange, period)) {

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { DEFAULT_CATEGORIES } from './Transaction';
 
 export const transactionFormSchema = z.object({
   description: z
@@ -23,8 +22,10 @@ export const transactionFormSchema = z.object({
     .trim(),
   
   category: z
-    .enum([...DEFAULT_CATEGORIES] as [string, ...string[]])
-    .default(DEFAULT_CATEGORIES[0]),
+    .string()
+    .min(1, 'Category is required')
+    .max(50, 'Category must be less than 50 characters')
+    .trim(),
   
   comment: z
     .string()
@@ -58,6 +59,7 @@ export interface ValidationErrors {
   comment?: string;
   date?: string;
   currency?: string;
+  isIncome?: string;
 }
 
 export const validateTransactionForm = (data: any): { 

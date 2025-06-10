@@ -53,9 +53,12 @@ export class ImportService {
       ? transactions.filter(t => !t.isDuplicate)
       : transactions;
 
+    // Save transactions
     for (const transaction of transactionsToSave) {
       await transactionRepository.create(transaction);
     }
+
+    console.log(`✅ Imported ${transactionsToSave.length} transactions`);
   }
 
   async previewImport(file: ImportFile, mapping?: ImportMapping): Promise<ImportResult> {

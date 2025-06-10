@@ -111,6 +111,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.text.primary,
     textAlign: 'center',
+    fontSize: 16,
   },
   actionButton: {
     minWidth: 64,

@@ -26,6 +26,7 @@ export class TransactionRepository {
     };
 
     await db.transactions.add(transaction);
+    
     console.log('✅ Transaction created:', transaction.id);
     return transaction;
   }

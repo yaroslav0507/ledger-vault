@@ -7,17 +7,19 @@ import {
   ScrollView
 } from 'react-native';
 import { Modal, Portal, Surface, TextInput, Button } from 'react-native-paper';
-import { TimePeriod, DateRange, getDateRangeForPeriod, getTimePeriodLabel, getCurrentTimePeriod } from '../../utils/dateUtils';
+import { TimePeriod, DateRange, getDateRangeForPeriod, getTimePeriodLabel, getCurrentTimePeriod, getMonthRange } from '../../utils/dateUtils';
 import { theme } from '../theme/theme';
 import { ModalHeader } from './ModalHeader';
 
 interface TimePeriodSelectorProps {
   currentDateRange?: DateRange;
+  selectedPeriod?: TimePeriod;
   onPeriodChange: (period: TimePeriod, dateRange: DateRange) => void;
 }
 
 export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
   currentDateRange,
+  selectedPeriod,
   onPeriodChange
 }) => {
   const [showCustomModal, setShowCustomModal] = useState(false);
@@ -29,12 +31,13 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
   const scrollViewRef = useRef<ScrollView>(null);
   const hasAutoScrolledRef = useRef(false);
   const lastScrolledPeriodRef = useRef<TimePeriod | null>(null);
-  const currentPeriod = getCurrentTimePeriod(currentDateRange);
+  const currentPeriod = selectedPeriod || 'lastMonth';
 
   const timePeriods: { period: TimePeriod; label: string; icon: string }[] = [
     { period: 'today', label: 'Today', icon: '📅' },
     { period: 'week', label: 'This Week', icon: '📊' },
     { period: 'month', label: 'This Month', icon: '🗓️' },
+    { period: 'lastMonth', label: 'Previous Month', icon: '📅' },
     { period: 'quarter', label: 'This Quarter', icon: '📈' },
     { period: 'year', label: 'This Year', icon: '📆' },
     { period: 'spring', label: 'Spring', icon: '🌸' },
@@ -77,11 +80,10 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
       } else {
         // Suggest 5-year range: from 5 years ago to today
         const today = new Date();
-        const fiveYearsAgo = new Date();
-        fiveYearsAgo.setFullYear(today.getFullYear() - 5);
-        
+        const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
         setCustomRange({
-          start: fiveYearsAgo.toISOString().split('T')[0],
+          start: startOfCurrentMonth.toISOString().split('T')[0],
           end: today.toISOString().split('T')[0]
         });
       }
@@ -106,8 +108,9 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
 
   // Only auto-scroll on initial load when we have a current date range
   useEffect(() => {
-    // Only auto-scroll once when component is first initialized with data
-    if (currentDateRange && !hasAutoScrolledRef.current) {
+    // Auto-scroll once when component is first initialized
+    // This includes both when we have a date range OR when defaulting to 'month'
+    if (!hasAutoScrolledRef.current) {
       const timeoutId = setTimeout(() => {
         scrollToSelectedItem(currentPeriod, false);
         hasAutoScrolledRef.current = true;
@@ -115,7 +118,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
       
       return () => clearTimeout(timeoutId);
     }
-  }, [currentDateRange]); // Only depend on currentDateRange, not currentPeriod
+  }, []); // Empty dependency array - only run once on mount
 
   return (
     <View style={styles.container}>

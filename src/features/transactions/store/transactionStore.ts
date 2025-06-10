@@ -5,14 +5,14 @@ import {
   CreateTransactionRequest, 
   TransactionFilters 
 } from '../model/Transaction';
-import { getDateRangeForPeriod } from '@/shared/utils/dateUtils';
+import { getDateRangeForPeriod, TimePeriod, DateRange } from '@/shared/utils/dateUtils';
 
 // Export the type for use in other files
 export type { TransactionFilters };
 
-// Get default "this month" filter
+// Get default filters (no date range - show all transactions)
 const getDefaultFilters = (): TransactionFilters => ({
-  dateRange: getDateRangeForPeriod('month')
+  // No default date range - let user choose via TimePeriodSelector
 });
 
 interface TransactionStore {
@@ -21,6 +21,7 @@ interface TransactionStore {
   loading: boolean;
   error: string | null;
   filters: TransactionFilters;
+  selectedTimePeriod: TimePeriod | undefined; // Track selected period separately
   
   // Actions
   loadTransactions: () => Promise<void>;
@@ -29,6 +30,7 @@ interface TransactionStore {
   deleteTransaction: (id: string) => Promise<void>;
   clearAllTransactions: () => Promise<void>;
   setFilters: (newFilters: Partial<TransactionFilters>) => void;
+  setTimePeriod: (period: TimePeriod, dateRange: DateRange) => void;
   clearFilters: () => void;
   refreshTransactions: () => Promise<void>;
   
@@ -46,6 +48,7 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
   loading: false,
   error: null,
   filters: getDefaultFilters(),
+  selectedTimePeriod: 'lastMonth', // Default to lastMonth on first use
 
   // Actions
   loadTransactions: async () => {
@@ -176,6 +179,11 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
     
     // Automatically reload transactions with new filters
     get().loadTransactions();
+  },
+
+  setTimePeriod: (period: TimePeriod, dateRange: DateRange) => {
+    set({ selectedTimePeriod: period });
+    get().setFilters({ dateRange });
   },
 
   clearFilters: () => {

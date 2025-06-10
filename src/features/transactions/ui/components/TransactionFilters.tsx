@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,20 @@ import {
   ScrollView,
   TextInput
 } from 'react-native';
-import { TransactionFilters, DEFAULT_CATEGORIES } from '../../model/Transaction';
+import { TransactionFilters } from '../../model/Transaction';
 import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
+import { categoryService } from '../../service/CategoryService';
+import { Transaction } from '../../model/Transaction';
 
 interface TransactionFiltersProps {
   visible: boolean;
   onClose: () => void;
   currentFilters: TransactionFilters;
   onApplyFilters: (filters: TransactionFilters) => void;
+  onClearFilters: () => void;
   availableCards: string[];
+  transactions: Transaction[];
 }
 
 export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
@@ -25,9 +29,41 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
   onClose,
   currentFilters,
   onApplyFilters,
-  availableCards
+  onClearFilters,
+  availableCards,
+  transactions
 }) => {
   const [filters, setFilters] = useState<TransactionFilters>(currentFilters);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  // Sync local filters state with currentFilters prop changes (e.g., from TimePeriodSelector)
+  useEffect(() => {
+    setFilters(currentFilters);
+  }, [currentFilters]);
+
+  // Load categories when modal opens or when date range changes
+  useEffect(() => {
+    if (visible) {
+      loadCategories();
+    }
+  }, [visible, filters.dateRange]);
+
+  const loadCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      console.log('�� Loading categories for date range:', filters.dateRange);
+      
+      // Pass the current date range to get categories only from selected time period
+      const categories = await categoryService.getAllCategories(filters.dateRange);
+      console.log('📋 Loaded categories:', categories);
+      setAvailableCategories(categories);
+    } catch (error) {
+      console.error('❌ Failed to load categories:', error);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
 
   const handleApply = () => {
     onApplyFilters(filters);
@@ -35,9 +71,8 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
   };
 
   const handleClear = () => {
-    const emptyFilters: TransactionFilters = {};
-    setFilters(emptyFilters);
-    onApplyFilters(emptyFilters);
+    console.log('🧹 Clearing all filters...');
+    onClearFilters();
     onClose();
   };
 
@@ -142,29 +177,35 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
             </View>
           </View>
 
-          {/* Categories Filter */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Categories</Text>
-            <View style={styles.chipContainer}>
-              {DEFAULT_CATEGORIES.map((category) => {
-                const isSelected = filters.categories?.includes(category) || false;
-                return (
-                  <TouchableOpacity
-                    key={category}
-                    style={[styles.chip, isSelected && styles.selectedChip]}
-                    onPress={() => toggleCategory(category)}
-                  >
-                    <Text style={[
-                      styles.chipText,
-                      isSelected && styles.selectedChipText
-                    ]}>
-                      {category}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+          {/* Categories Filter - Show during loading or when categories are available */}
+          {(categoriesLoading || availableCategories.length > 0) && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Categories</Text>
+              <View style={styles.chipContainer}>
+                {categoriesLoading ? (
+                  <Text style={styles.loadingText}>Loading categories...</Text>
+                ) : (
+                  availableCategories.map((category) => {
+                    const isSelected = filters.categories?.includes(category) || false;
+                    return (
+                      <TouchableOpacity
+                        key={category}
+                        style={[styles.chip, isSelected && styles.selectedChip]}
+                        onPress={() => toggleCategory(category)}
+                      >
+                        <Text style={[
+                          styles.chipText,
+                          isSelected && styles.selectedChipText
+                        ]}>
+                          {category}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Cards Filter */}
           {availableCards.length > 0 && (
@@ -205,45 +246,6 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
               placeholder="Search descriptions, comments..."
               placeholderTextColor={theme.colors.text.disabled}
             />
-          </View>
-
-          {/* Date Range Filter */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Date Range</Text>
-            <View style={styles.dateInputContainer}>
-              <View style={styles.dateInputGroup}>
-                <Text style={styles.dateLabel}>From</Text>
-                <TextInput
-                  style={styles.dateInput}
-                  value={filters.dateRange?.start || ''}
-                  onChangeText={(text) => setFilters({
-                    ...filters,
-                    dateRange: {
-                      start: text,
-                      end: filters.dateRange?.end || ''
-                    }
-                  })}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={theme.colors.text.disabled}
-                />
-              </View>
-              <View style={styles.dateInputGroup}>
-                <Text style={styles.dateLabel}>To</Text>
-                <TextInput
-                  style={styles.dateInput}
-                  value={filters.dateRange?.end || ''}
-                  onChangeText={(text) => setFilters({
-                    ...filters,
-                    dateRange: {
-                      start: filters.dateRange?.start || '',
-                      end: text
-                    }
-                  })}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={theme.colors.text.disabled}
-                />
-              </View>
-            </View>
           </View>
 
           {/* Clear Filters Button */}
@@ -308,28 +310,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     color: theme.colors.text.primary,
   },
-  dateInputContainer: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-  },
-  dateInputGroup: {
-    flex: 1,
-  },
-  dateLabel: {
-    ...theme.typography.body,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
-    fontWeight: '600',
-  },
-  dateInput: {
-    ...theme.typography.bodyLarge,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    color: theme.colors.text.primary,
-  },
   clearButton: {
     backgroundColor: theme.colors.error,
     borderRadius: theme.borderRadius.md,
@@ -340,5 +320,10 @@ const styles = StyleSheet.create({
   clearButtonText: {
     ...theme.typography.button,
     color: theme.colors.text.inverse,
+  },
+  loadingText: {
+    ...theme.typography.body,
+    color: theme.colors.text.secondary,
+    fontWeight: '600',
   },
 }); 

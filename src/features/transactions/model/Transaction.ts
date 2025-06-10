@@ -36,19 +36,4 @@ export interface CreateTransactionRequest {
   category: string;
   comment?: string;
   isIncome: boolean;
-}
-
-// Default categories for our MVP
-export const DEFAULT_CATEGORIES = [
-  'Food & Dining',
-  'Transportation',
-  'Shopping',
-  'Entertainment',
-  'Bills & Utilities',
-  'Healthcare',
-  'Travel',
-  'Income',
-  'Other'
-] as const;
-
-export type CategoryType = typeof DEFAULT_CATEGORIES[number]; 
+} 

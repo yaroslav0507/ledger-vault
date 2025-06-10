@@ -32,9 +32,11 @@ export const TransactionListScreen: React.FC = () => {
     loading, 
     error, 
     filters,
+    selectedTimePeriod,
     loadTransactions, 
     addTransaction, 
     setFilters,
+    setTimePeriod,
     clearFilters,
     getBalance
   } = useTransactionStore();
@@ -57,8 +59,8 @@ export const TransactionListScreen: React.FC = () => {
   const filteredTransactions = transactions; // Repository already applies filters
   const activeFiltersCount = useMemo(() => {
     let count = 0;
-    if (filters.categories && filters.categories.length > 0) count++;
-    if (filters.cards && filters.cards.length > 0) count++;
+    if (filters.categories && filters.categories.length > 0) count += filters.categories.length;
+    if (filters.cards && filters.cards.length > 0) count += filters.cards.length;
     if (filters.isIncome !== undefined) count++;
     if (filters.searchQuery) count++;
     return count;
@@ -82,13 +84,7 @@ export const TransactionListScreen: React.FC = () => {
 
   // Handle time period changes
   const handleTimePeriodChange = (period: TimePeriod, dateRange: DateRange) => {
-    setFilters({
-      ...filters,
-      dateRange: {
-        start: dateRange.start,
-        end: dateRange.end
-      }
-    });
+    setTimePeriod(period, dateRange);
   };
 
   // Handle clearing all filters
@@ -412,6 +408,7 @@ export const TransactionListScreen: React.FC = () => {
 
       <TimePeriodSelector
         currentDateRange={filters.dateRange}
+        selectedPeriod={selectedTimePeriod}
         onPeriodChange={handleTimePeriodChange}
       />
 
@@ -463,7 +460,9 @@ export const TransactionListScreen: React.FC = () => {
         onClose={() => setShowFiltersModal(false)}
         currentFilters={filters}
         onApplyFilters={setFilters}
+        onClearFilters={clearFilters}
         availableCards={availableCards}
+        transactions={transactions}
       />
 
       {/* Import Preview Modal */}

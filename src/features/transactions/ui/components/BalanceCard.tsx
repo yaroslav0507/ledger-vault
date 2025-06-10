@@ -60,6 +60,8 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
         return 'this week';
       case 'month':
         return 'this month';
+      case 'lastMonth':
+        return 'previous month';
       case 'quarter':
         return 'this quarter';
       case 'year':

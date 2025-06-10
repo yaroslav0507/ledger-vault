@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,13 @@ import {
   ScrollView,
   Switch
 } from 'react-native';
-import { CreateTransactionRequest, DEFAULT_CATEGORIES, CategoryType } from '../../model/Transaction';
+import { CreateTransactionRequest } from '../../model/Transaction';
 import { validateTransactionForm, ValidationErrors, TransactionFormData } from '../../model/validation';
 import { getCurrentDateISO } from '@/shared/utils/dateUtils';
 import { parseCurrencyToSmallestUnit, SUPPORTED_CURRENCIES, getCurrencySymbol } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
+import { categoryService } from '../../service/CategoryService';
 
 interface AddTransactionModalProps {
   visible: boolean;
@@ -28,102 +29,107 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   onClose,
   onSubmit
 }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<TransactionFormData>({
     description: '',
     amount: '',
     card: '',
-    category: DEFAULT_CATEGORIES[0] as CategoryType,
+    category: '',
     comment: '',
     isIncome: false,
     date: getCurrentDateISO(),
     currency: 'UAH'
   });
-  const [loading, setLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  const resetForm = () => {
-    setFormData({
-      description: '',
-      amount: '',
-      card: '',
-      category: DEFAULT_CATEGORIES[0] as CategoryType,
-      comment: '',
-      isIncome: false,
-      date: getCurrentDateISO(),
-      currency: 'UAH'
-    });
-    setValidationErrors({});
-    setHasSubmitted(false);
-  };
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResettingForm, setIsResettingForm] = useState(false);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
-  const validateForm = () => {
-    const validation = validateTransactionForm(formData);
-    setValidationErrors(validation.errors || {});
-    return validation;
+  // Reset form when modal is opened
+  useEffect(() => {
+    if (visible) {
+      setIsResettingForm(true);
+      setFormData({
+        description: '',
+        amount: '',
+        card: '',
+        category: '',
+        comment: '',
+        isIncome: false,
+        date: getCurrentDateISO(),
+        currency: 'UAH'
+      });
+      setErrors({});
+      loadCategories();
+      setIsResettingForm(false);
+    }
+  }, [visible]);
+
+  const loadCategories = async () => {
+    try {
+      // Get all categories (no date filter for add transaction modal)
+      const categories = await categoryService.getAllCategories();
+      setAvailableCategories(categories);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
   };
 
   const handleSubmit = async () => {
-    console.log('🔘 HandleSubmit called', formData);
-    setHasSubmitted(true);
-    
-    const validation = validateForm();
+    setIsSubmitting(true);
+    setErrors({});
+
+    const validation = validateTransactionForm(formData);
     
     if (!validation.success) {
-      console.log('❌ Validation failed:', validation.errors);
+      setErrors(validation.errors || {});
+      setIsSubmitting(false);
       return;
     }
 
-    console.log('✅ Validation passed, creating transaction...');
-
-    setLoading(true);
     try {
-      const validatedData = validation.data as TransactionFormData;
-      const transaction: CreateTransactionRequest = {
-        description: validatedData.description,
-        amount: parseCurrencyToSmallestUnit(parseFloat(validatedData.amount), validatedData.currency),
-        card: validatedData.card,
-        category: validatedData.category,
-        comment: validatedData.comment || undefined,
-        isIncome: validatedData.isIncome,
-        date: validatedData.date,
-        currency: validatedData.currency
+      const { data } = validation;
+      if (!data) {
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const amount = parseCurrencyToSmallestUnit(parseFloat(data.amount), data.currency);
+      
+      const transactionRequest: CreateTransactionRequest = {
+        description: data.description,
+        amount,
+        card: data.card,
+        category: data.category,
+        comment: data.comment || undefined,
+        isIncome: data.isIncome,
+        date: data.date,
+        currency: data.currency
       };
 
-      console.log('🔘 About to call onSubmit with:', transaction);
-      await onSubmit(transaction);
-      console.log('✅ onSubmit completed successfully');
-      
-      resetForm();
+      await onSubmit(transactionRequest);
       onClose();
-      Alert.alert('Success', 'Transaction added successfully!');
     } catch (error) {
-      console.error('❌ Error in handleSubmit:', error);
-      Alert.alert('Error', 'Failed to add transaction');
+      console.error('Error creating transaction:', error);
+      Alert.alert('Error', 'Failed to create transaction. Please try again.');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
-  // Real-time validation on blur if form has been submitted
-  const handleFieldBlur = (fieldName: keyof ValidationErrors) => {
-    if (hasSubmitted) {
-      validateForm();
-    }
-  };
-
-  const renderInputError = (fieldName: keyof ValidationErrors) => {
-    const error = validationErrors[fieldName];
-    if (!error || !hasSubmitted) return null;
+  const handleFieldChange = (field: keyof TransactionFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
     
-    return (
-      <Text style={styles.errorText}>{error}</Text>
-    );
+    // Clear error for this field when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const renderError = (field: keyof ValidationErrors) => {
+    return errors[field] ? (
+      <Text style={styles.errorText}>{errors[field]}</Text>
+    ) : null;
   };
 
   return (
@@ -131,25 +137,24 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={handleClose}
+      onRequestClose={onClose}
     >
       <View style={styles.container}>
         <ModalHeader
           title="Add Transaction"
           leftAction={{
             label: "Cancel",
-            onPress: handleClose
+            onPress: onClose
           }}
           rightAction={{
-            label: loading ? "Saving..." : "Save",
+            label: isSubmitting ? "Adding..." : "Add",
             onPress: handleSubmit,
-            disabled: loading,
-            loading: loading
+            disabled: isSubmitting || isResettingForm
           }}
         />
 
         <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
-          {/* Income/Expense Toggle */}
+          {/* Transaction Type Toggle */}
           <View style={styles.toggleContainer}>
             <Text style={styles.toggleLabel}>Transaction Type</Text>
             <View style={styles.toggleRow}>
@@ -158,9 +163,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               </Text>
               <Switch
                 value={formData.isIncome}
-                onValueChange={(value) => setFormData({ ...formData, isIncome: value })}
-                trackColor={{ false: theme.colors.expense, true: theme.colors.income }}
-                thumbColor={theme.colors.surface}
+                onValueChange={(value) => handleFieldChange('isIncome', value)}
+                trackColor={{ false: theme.colors.backgroundSecondary, true: theme.colors.income }}
+                thumbColor={formData.isIncome ? theme.colors.surface : theme.colors.surface}
               />
               <Text style={[styles.toggleText, formData.isIncome && styles.activeToggleText]}>
                 Income
@@ -172,139 +177,101 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Description *</Text>
             <TextInput
-              style={[
-                styles.input,
-                validationErrors.description && hasSubmitted && styles.inputError
-              ]}
+              style={[styles.input, errors.description && styles.inputError]}
               value={formData.description}
-              onChangeText={(text) => setFormData({ ...formData, description: text })}
-              onBlur={() => handleFieldBlur('description')}
-              placeholder="e.g., Starbucks Coffee"
+              onChangeText={(text) => handleFieldChange('description', text)}
+              placeholder="Enter transaction description"
               placeholderTextColor={theme.colors.text.disabled}
+              autoCapitalize="sentences"
             />
-            {renderInputError('description')}
+            {renderError('description')}
           </View>
 
           {/* Amount */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Amount * ({getCurrencySymbol(formData.currency)})</Text>
-            <TextInput
-              style={[
-                styles.input,
-                validationErrors.amount && hasSubmitted && styles.inputError
-              ]}
-              value={formData.amount}
-              onChangeText={(text) => setFormData({ ...formData, amount: text })}
-              onBlur={() => handleFieldBlur('amount')}
-              placeholder="0.00"
-              placeholderTextColor={theme.colors.text.disabled}
-              keyboardType="decimal-pad"
-            />
-            {renderInputError('amount')}
-          </View>
-
-          {/* Currency */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Currency</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.currencyScroll}>
-              {SUPPORTED_CURRENCIES.map((currency) => (
-                <TouchableOpacity
-                  key={currency.code}
-                  style={[
-                    styles.currencyChip,
-                    formData.currency === currency.code && styles.selectedCurrencyChip
-                  ]}
-                  onPress={() => setFormData({ ...formData, currency: currency.code })}
-                >
-                  <Text style={[
-                    styles.currencyChipText,
-                    formData.currency === currency.code && styles.selectedCurrencyChipText
-                  ]}>
-                    {currency.symbol} {currency.code}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            {renderInputError('currency')}
+            <Text style={styles.label}>Amount *</Text>
+            <View style={styles.amountContainer}>
+              <TextInput
+                style={[styles.input, styles.amountInput, errors.amount && styles.inputError]}
+                value={formData.amount}
+                onChangeText={(text) => handleFieldChange('amount', text)}
+                placeholder="0.00"
+                placeholderTextColor={theme.colors.text.disabled}
+                keyboardType="numeric"
+              />
+              <Text style={styles.currencySymbol}>
+                {getCurrencySymbol(formData.currency)}
+              </Text>
+            </View>
+            {renderError('amount')}
           </View>
 
           {/* Card/Account */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Card/Account *</Text>
             <TextInput
-              style={[
-                styles.input,
-                validationErrors.card && hasSubmitted && styles.inputError
-              ]}
+              style={[styles.input, errors.card && styles.inputError]}
               value={formData.card}
-              onChangeText={(text) => setFormData({ ...formData, card: text })}
-              onBlur={() => handleFieldBlur('card')}
-              placeholder="e.g., Monzo, Santander"
+              onChangeText={(text) => handleFieldChange('card', text)}
+              placeholder="Enter card or account name"
               placeholderTextColor={theme.colors.text.disabled}
+              autoCapitalize="words"
             />
-            {renderInputError('card')}
+            {renderError('card')}
           </View>
 
           {/* Category */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-              {DEFAULT_CATEGORIES.map((category) => (
-                <TouchableOpacity
-                  key={category}
-                  style={[
-                    styles.categoryChip,
-                    formData.category === category && styles.selectedCategoryChip
-                  ]}
-                  onPress={() => setFormData({ ...formData, category: category as CategoryType })}
-                >
-                  <Text style={[
-                    styles.categoryChipText,
-                    formData.category === category && styles.selectedCategoryChipText
-                  ]}>
-                    {category}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            {renderInputError('category')}
+            <Text style={styles.label}>Category *</Text>
+            <TextInput
+              style={[styles.input, errors.category && styles.inputError]}
+              value={formData.category}
+              onChangeText={(text) => handleFieldChange('category', text)}
+              placeholder="Enter or select category"
+              placeholderTextColor={theme.colors.text.disabled}
+              autoCapitalize="words"
+            />
+            {renderError('category')}
+            
+            {/* Show available categories as chips if any exist */}
+            {availableCategories.length > 0 && (
+              <ScrollView horizontal style={styles.categoryScroll} showsHorizontalScrollIndicator={false}>
+                {availableCategories.map((category) => (
+                  <TouchableOpacity
+                    key={category}
+                    style={[
+                      styles.categoryChip,
+                      formData.category === category && styles.selectedCategoryChip
+                    ]}
+                    onPress={() => handleFieldChange('category', category)}
+                  >
+                    <Text style={[
+                      styles.categoryChipText,
+                      formData.category === category && styles.selectedCategoryChipText
+                    ]}>
+                      {category}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
           </View>
 
           {/* Comment */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Comment (Optional)</Text>
+            <Text style={styles.label}>Comment</Text>
             <TextInput
-              style={[
-                styles.input, 
-                styles.textArea,
-                validationErrors.comment && hasSubmitted && styles.inputError
-              ]}
+              style={[styles.input, styles.textArea, errors.comment && styles.inputError]}
               value={formData.comment}
-              onChangeText={(text) => setFormData({ ...formData, comment: text })}
-              onBlur={() => handleFieldBlur('comment')}
-              placeholder="Add a note about this transaction..."
+              onChangeText={(text) => handleFieldChange('comment', text)}
+              placeholder="Add a comment (optional)"
               placeholderTextColor={theme.colors.text.disabled}
               multiline
               numberOfLines={3}
+              textAlignVertical="top"
+              autoCapitalize="sentences"
             />
-            {renderInputError('comment')}
-          </View>
-
-          {/* Date */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Date</Text>
-            <TextInput
-              style={[
-                styles.input,
-                validationErrors.date && hasSubmitted && styles.inputError
-              ]}
-              value={formData.date}
-              onChangeText={(text) => setFormData({ ...formData, date: text })}
-              onBlur={() => handleFieldBlur('date')}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={theme.colors.text.disabled}
-            />
-            {renderInputError('date')}
+            {renderError('comment')}
           </View>
         </ScrollView>
       </View>
@@ -393,29 +360,17 @@ const styles = StyleSheet.create({
   selectedCategoryChipText: {
     color: theme.colors.text.inverse,
   },
-  currencyScroll: {
-    marginTop: theme.spacing.sm,
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  currencyChip: {
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: theme.borderRadius.round,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    marginRight: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+  amountInput: {
+    flex: 1,
   },
-  selectedCurrencyChip: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  currencyChipText: {
-    ...theme.typography.caption,
-    color: theme.colors.text.secondary,
-    fontWeight: '600',
-  },
-  selectedCurrencyChipText: {
-    color: theme.colors.text.inverse,
+  currencySymbol: {
+    ...theme.typography.body,
+    color: theme.colors.text.primary,
+    marginLeft: theme.spacing.sm,
   },
   inputError: {
     borderColor: theme.colors.error,
