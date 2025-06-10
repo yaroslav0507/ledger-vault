@@ -9,12 +9,14 @@ interface TransactionCardProps {
   transaction: Transaction;
   onPress?: () => void;
   onLongPress?: () => void;
+  onCategoryPress?: (category: string) => void;
 }
 
 export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
   transaction,
   onPress,
-  onLongPress
+  onLongPress,
+  onCategoryPress
 }) => {
   const amountColor = transaction.isIncome ? theme.colors.income : theme.colors.expense;
   const cardBackgroundColor = transaction.isIncome ? '#F0FDF4' : '#F8FAFC';
@@ -44,11 +46,15 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
               {transaction.card.slice(-9)}
             </Text>
             <View style={styles.metaDivider} />
-            <View style={styles.categoryBadge}>
+            <TouchableOpacity 
+              style={styles.categoryBadge}
+              onPress={() => onCategoryPress?.(transaction.category)}
+              activeOpacity={0.7}
+            >
               <Text style={styles.categoryText} numberOfLines={1} ellipsizeMode="tail">
                 {transaction.category}
               </Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
         

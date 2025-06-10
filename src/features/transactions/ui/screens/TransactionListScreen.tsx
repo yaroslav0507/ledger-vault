@@ -37,6 +37,7 @@ export const TransactionListScreen: React.FC = () => {
     addTransaction, 
     setFilters,
     setTimePeriod,
+    toggleCategoryFilter,
     clearFilters,
     getBalance
   } = useTransactionStore();
@@ -294,9 +295,10 @@ export const TransactionListScreen: React.FC = () => {
       <TransactionCard
         transaction={transaction}
         onLongPress={() => handleTransactionPress(transaction.id)}
+        onCategoryPress={toggleCategoryFilter}
       />
     );
-  }, [loading, hasTransactions, hasFilteredTransactions, transactions.length, handleClearAllFilters, handleTransactionPress]);
+  }, [loading, hasTransactions, hasFilteredTransactions, transactions.length, handleClearAllFilters, handleTransactionPress, toggleCategoryFilter]);
 
   // For sections with no data, we need to add a placeholder item to trigger rendering
   const sectionsDataWithEmpty = [
@@ -408,7 +410,7 @@ export const TransactionListScreen: React.FC = () => {
 
       <TimePeriodSelector
         currentDateRange={filters.dateRange}
-        selectedPeriod={selectedTimePeriod}
+        selectedPeriod={selectedTimePeriod || undefined}
         onPeriodChange={handleTimePeriodChange}
       />
 

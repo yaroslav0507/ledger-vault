@@ -31,6 +31,7 @@ interface TransactionStore {
   clearAllTransactions: () => Promise<void>;
   setFilters: (newFilters: Partial<TransactionFilters>) => void;
   setTimePeriod: (period: TimePeriod, dateRange: DateRange) => void;
+  toggleCategoryFilter: (category: string) => void;
   clearFilters: () => void;
   refreshTransactions: () => Promise<void>;
   
@@ -184,6 +185,18 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => ({
   setTimePeriod: (period: TimePeriod, dateRange: DateRange) => {
     set({ selectedTimePeriod: period });
     get().setFilters({ dateRange });
+  },
+
+  toggleCategoryFilter: (category: string) => {
+    const currentFilters = get().filters;
+    const updatedFilters = {
+      ...currentFilters,
+      categories: currentFilters.categories?.includes(category)
+        ? currentFilters.categories.filter((c) => c !== category)
+        : [...(currentFilters.categories || []), category]
+    };
+    set({ filters: updatedFilters });
+    get().loadTransactions();
   },
 
   clearFilters: () => {

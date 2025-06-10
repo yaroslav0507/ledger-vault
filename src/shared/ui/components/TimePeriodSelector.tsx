@@ -33,19 +33,36 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
   const lastScrolledPeriodRef = useRef<TimePeriod | null>(null);
   const currentPeriod = selectedPeriod || 'lastMonth';
 
-  const timePeriods: { period: TimePeriod; label: string; icon: string }[] = [
+  const allTimePeriods: { period: TimePeriod; label: string; icon: string }[] = [
     { period: 'today', label: 'Today', icon: '📅' },
     { period: 'week', label: 'This Week', icon: '📊' },
     { period: 'month', label: 'This Month', icon: '🗓️' },
-    { period: 'lastMonth', label: 'Previous Month', icon: '📅' },
+    { period: 'lastMonth', label: 'Last Month', icon: '📅' },
     { period: 'quarter', label: 'This Quarter', icon: '📈' },
-    { period: 'year', label: 'This Year', icon: '📆' },
+    { period: 'winter', label: 'Winter', icon: '❄️' },
     { period: 'spring', label: 'Spring', icon: '🌸' },
     { period: 'summer', label: 'Summer', icon: '☀️' },
     { period: 'autumn', label: 'Autumn', icon: '🍂' },
-    { period: 'winter', label: 'Winter', icon: '❄️' },
+    { period: 'year', label: 'This Year', icon: '📆' },
     { period: 'custom', label: 'Custom Range', icon: '⚙️' }
   ];
+
+  const timePeriods = allTimePeriods.filter(({ period }) => {
+    // Filter out seasons that haven't started yet
+    const seasonStartMonths = {
+      spring: 2,  // March (month 2)
+      summer: 5,  // June (month 5)
+      autumn: 8,  // September (month 8)
+      winter: 0   // Always show (month 0 = always true)
+    };
+    
+    if (!(period in seasonStartMonths)) {
+      return true; // Keep non-seasonal periods
+    }
+    
+    const currentMonth = new Date().getMonth(); // 0-based
+    return currentMonth >= seasonStartMonths[period as keyof typeof seasonStartMonths];
+  });
 
   // Auto-scroll to selected item (smooth, no interruption)
   const scrollToSelectedItem = useCallback((targetPeriod?: TimePeriod, immediate = false) => {
