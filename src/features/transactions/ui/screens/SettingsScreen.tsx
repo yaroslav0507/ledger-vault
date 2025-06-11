@@ -303,6 +303,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
               description="React Native with Expo"
               left={(props) => <List.Icon {...props} icon="hammer" />}
             />
+            
+            <List.Item
+              title="Created by"
+              description="Matrix Sadhu"
+              left={(props) => <List.Icon {...props} icon="account" />}
+            />
           </Card.Content>
         </Card>
       </ScrollView>

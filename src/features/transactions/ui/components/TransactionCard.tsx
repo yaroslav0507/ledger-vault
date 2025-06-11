@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, PanResponder, Dimensions } from 'react-native';
 import { Transaction } from '../../model/Transaction';
 import { formatCurrency } from '@/shared/utils/currencyUtils';
@@ -6,10 +6,12 @@ import { formatDateTime } from '@/shared/utils/dateUtils';
 import { theme } from '@/shared/ui/theme/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const REVEAL_THRESHOLD = SCREEN_WIDTH * 0.25; // 25% of screen width to reveal
-const ACTIVATE_THRESHOLD = SCREEN_WIDTH * 0.5; // 50% of screen width to activate
+const REVEAL_THRESHOLD = SCREEN_WIDTH * 0.15;
 const ACTION_BUTTON_WIDTH = 120;
 const SHIFT_DISTANCE = ACTION_BUTTON_WIDTH - 20;
+const AUTO_ACTION_THRESHOLD = REVEAL_THRESHOLD + ACTION_BUTTON_WIDTH;
+
+type SwipeState = 'center' | 'edit-revealed' | 'archive-revealed';
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -23,6 +25,179 @@ interface TransactionCardProps {
   onSwipeEnd?: () => void;
 }
 
+const useSwipeGesture = (
+  onEdit: () => void,
+  onArchive: () => void,
+  onSwipeStart?: () => void,
+  onSwipeEnd?: () => void
+) => {
+  const [swipeState, setSwipeState] = useState<SwipeState>('center');
+  const initialSwipeState = useRef<SwipeState>('center');
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  const resetToCenter = useCallback(() => {
+    setSwipeState('center');
+    onSwipeEnd?.();
+    Animated.spring(translateX, {
+      toValue: 0,
+      useNativeDriver: false,
+      tension: 300,
+      friction: 30,
+    }).start();
+  }, [translateX, onSwipeEnd]);
+
+  const revealEdit = useCallback(() => {
+    setSwipeState('edit-revealed');
+    Animated.spring(translateX, {
+      toValue: -SHIFT_DISTANCE,
+      useNativeDriver: false,
+      tension: 300,
+      friction: 30,
+    }).start();
+  }, [translateX]);
+
+  const revealArchive = useCallback(() => {
+    setSwipeState('archive-revealed');
+    Animated.spring(translateX, {
+      toValue: SHIFT_DISTANCE,
+      useNativeDriver: false,
+      tension: 300,
+      friction: 30,
+    }).start();
+  }, [translateX]);
+
+  const handleEdit = useCallback(() => {
+    resetToCenter();
+    setTimeout(() => onEdit(), 150);
+  }, [resetToCenter, onEdit]);
+
+  const handleArchive = useCallback(() => {
+    resetToCenter();
+    setTimeout(() => onArchive(), 150);
+  }, [resetToCenter, onArchive]);
+
+  const getThresholds = useCallback((dx: number) => {
+    const isSwipingRight = dx > 0;
+    const isSwipingLeft = dx < 0;
+    
+    // Use the initial state when the gesture started
+    const currentState = initialSwipeState.current;
+    
+    // When swiping right
+    if (isSwipingRight) {
+      // If edit was revealed, need extra distance to reveal archive
+      const revealThreshold = currentState === 'edit-revealed' ? REVEAL_THRESHOLD + SHIFT_DISTANCE : REVEAL_THRESHOLD;
+      const autoThreshold = revealThreshold + ACTION_BUTTON_WIDTH;
+      return { revealThreshold, autoThreshold };
+    }
+    
+    // When swiping left
+    if (isSwipingLeft) {
+      // If archive was revealed, need extra distance to reveal edit
+      const revealThreshold = currentState === 'archive-revealed' ? REVEAL_THRESHOLD + SHIFT_DISTANCE : REVEAL_THRESHOLD;
+      const autoThreshold = revealThreshold + ACTION_BUTTON_WIDTH;
+      return { revealThreshold, autoThreshold };
+    }
+    
+    return { revealThreshold: REVEAL_THRESHOLD, autoThreshold: AUTO_ACTION_THRESHOLD };
+  }, []);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        const { dx, dy } = gestureState;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+        return absDx > 15 && absDx > absDy * 1.5;
+      },
+      
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+        const { dx, dy } = gestureState;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+        return absDy <= absDx && absDx > 15 && absDx > absDy * 1.5;
+      },
+      
+      onPanResponderGrant: () => {
+        // Determine the current visual state based on translateX position
+        const currentTranslateX = (translateX as any)._value;
+        
+        if (currentTranslateX > SHIFT_DISTANCE * 0.5) {
+          initialSwipeState.current = 'archive-revealed';
+        } else if (currentTranslateX < -SHIFT_DISTANCE * 0.5) {
+          initialSwipeState.current = 'edit-revealed';
+        } else {
+          initialSwipeState.current = 'center';
+        }
+        
+        translateX.setOffset(currentTranslateX);
+        onSwipeStart?.();
+      },
+      
+      onPanResponderMove: (evt, gestureState) => {
+        const { dx, dy } = gestureState;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+        
+        if (absDy > absDx * 0.8) {
+          return false;
+        }
+        
+        translateX.setValue(dx);
+      },
+      
+      onPanResponderRelease: (evt, gestureState) => {
+        translateX.flattenOffset();
+        onSwipeEnd?.();
+        
+        const { dx } = gestureState;
+        const absDx = Math.abs(dx);
+        const { revealThreshold, autoThreshold } = getThresholds(dx);
+        
+        if (absDx >= autoThreshold) {
+          // Auto-trigger action
+          if (dx > 0) {
+            handleArchive();
+          } else {
+            handleEdit();
+          }
+        } else if (absDx >= revealThreshold) {
+          // Reveal action
+          if (dx > 0) {
+            revealArchive();
+          } else {
+            revealEdit();
+          }
+        } else {
+          // Reset to center
+          resetToCenter();
+        }
+      },
+      
+      onPanResponderTerminate: () => {
+        translateX.flattenOffset();
+        onSwipeEnd?.();
+        resetToCenter();
+      },
+      
+      onPanResponderReject: () => {
+        translateX.flattenOffset();
+        onSwipeEnd?.();
+        resetToCenter();
+      },
+    })
+  ).current;
+
+  return {
+    swipeState,
+    translateX,
+    panResponder,
+    resetToCenter,
+    handleEdit,
+    handleArchive,
+  };
+};
+
 export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
   transaction,
   onPress,
@@ -34,148 +209,23 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
   onSwipeStart,
   onSwipeEnd
 }) => {
-  const [isRevealed, setIsRevealed] = useState(false);
-  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
-  const translateX = useRef(new Animated.Value(0)).current;
-
-  const panResponder = useRef(
-    PanResponder.create({
-      // More strict gesture recognition for mobile
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
-        const { dx, dy } = gestureState;
-        const absDx = Math.abs(dx);
-        const absDy = Math.abs(dy);
-        
-        // Require more horizontal movement and ensure it's clearly more horizontal than vertical
-        return absDx > 15 && absDx > absDy * 1.5;
-      },
-      
-      // Respond to pan only if we're sure it's a horizontal gesture
-      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
-        const { dx, dy } = gestureState;
-        const absDx = Math.abs(dx);
-        const absDy = Math.abs(dy);
-        
-        // Don't capture if it's clearly a vertical scroll
-        if (absDy > absDx) {
-          return false;
-        }
-        
-        return absDx > 15 && absDx > absDy * 1.5;
-      },
-      
-      onPanResponderGrant: () => {
-        translateX.setOffset((translateX as any)._value);
-        onSwipeStart?.(); // Notify parent that horizontal swipe started
-      },
-      
-      onPanResponderMove: (evt, gestureState) => {
-        const { dx, dy } = gestureState;
-        const absDx = Math.abs(dx);
-        const absDy = Math.abs(dy);
-        
-        // If movement becomes more vertical, release the gesture
-        if (absDy > absDx * 0.8) {
-          return false;
-        }
-        
-        // Smooth, constrained movement
-        const newValue = Math.max(-ACTIVATE_THRESHOLD, Math.min(ACTIVATE_THRESHOLD, dx));
-        translateX.setValue(newValue);
-        
-        // Update swipe direction
-        if (dx > 20) {
-          setSwipeDirection('right');
-        } else if (dx < -20) {
-          setSwipeDirection('left');
-        }
-      },
-      
-      onPanResponderRelease: (evt, gestureState) => {
-        translateX.flattenOffset();
-        onSwipeEnd?.(); // Notify parent that horizontal swipe ended
-        
-        const absDx = Math.abs(gestureState.dx);
-        
-        if (absDx >= ACTIVATE_THRESHOLD) {
-          // Long swipe - activate action immediately
-          if (gestureState.dx > 0) {
-            // Swiped right - archive
-            handleArchive();
-          } else {
-            // Swiped left - edit
-            handleEdit();
-          }
-          resetPosition();
-        } else if (absDx >= REVEAL_THRESHOLD) {
-          // Short swipe - reveal actions
-          setIsRevealed(true);
-          if (gestureState.dx > 0) {
-            // Reveal archive on left
-            setSwipeDirection('right');
-            Animated.spring(translateX, {
-              toValue: SHIFT_DISTANCE,
-              useNativeDriver: false,
-              tension: 300,
-              friction: 30,
-            }).start();
-          } else {
-            // Reveal edit on right
-            setSwipeDirection('left');
-            Animated.spring(translateX, {
-              toValue: -SHIFT_DISTANCE,
-              useNativeDriver: false,
-              tension: 300,
-              friction: 30,
-            }).start();
-          }
-        } else {
-          // Reset to center
-          resetPosition();
-        }
-      },
-      
-      // Critical: Handle gesture termination (when system interrupts the gesture)
-      onPanResponderTerminate: () => {
-        translateX.flattenOffset();
-        onSwipeEnd?.(); // Notify parent that horizontal swipe ended
-        resetPosition();
-      },
-      
-      // Handle gesture rejection (when another component claims the gesture)
-      onPanResponderReject: () => {
-        translateX.flattenOffset();
-        onSwipeEnd?.(); // Notify parent that horizontal swipe ended
-        resetPosition();
-      },
-    })
-  ).current;
-
-  const resetPosition = () => {
-    setIsRevealed(false);
-    setSwipeDirection(null);
-    onSwipeEnd?.(); // Notify parent that horizontal swipe ended
-    Animated.spring(translateX, {
-      toValue: 0,
-      useNativeDriver: false,
-      tension: 300,
-      friction: 30,
-    }).start();
-  };
-
-  const handleEdit = () => {
-    resetPosition();
-    setTimeout(() => onEdit?.(transaction), 150);
-  };
-
-  const handleArchive = () => {
-    resetPosition();
-    setTimeout(() => onArchive?.(transaction), 150);
-  };
+  const {
+    swipeState,
+    translateX,
+    panResponder,
+    resetToCenter,
+    handleEdit,
+    handleArchive,
+  } = useSwipeGesture(
+    () => onEdit?.(transaction),
+    () => onArchive?.(transaction),
+    onSwipeStart,
+    onSwipeEnd
+  );
 
   const handleCardPress = () => {
-    if (isRevealed) {
-      resetPosition();
+    if (swipeState !== 'center') {
+      resetToCenter();
     } else {
       onPress?.();
     }
@@ -185,7 +235,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
   const cardBackgroundColor = transaction.isIncome ? '#F0FDF4' : '#F8FAFC';
   const leftBorderColor = transaction.isIncome ? theme.colors.income : '#94A3B8';
 
-  // Calculate dynamic opacities and scales for smooth reveal
   const leftActionOpacity = translateX.interpolate({
     inputRange: [0, REVEAL_THRESHOLD],
     outputRange: [0, 1],
@@ -206,9 +255,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
           style={[
             styles.actionButton,
             styles.archiveButton,
-            {
-              opacity: leftActionOpacity,
-            },
+            { opacity: leftActionOpacity },
           ]}
         >
           <TouchableOpacity
@@ -228,9 +275,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
           style={[
             styles.actionButton,
             styles.editButton,
-            {
-              opacity: rightActionOpacity,
-            },
+            { opacity: rightActionOpacity },
           ]}
         >
           <TouchableOpacity
@@ -248,9 +293,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
       <Animated.View
         style={[
           styles.cardWrapper,
-          {
-            transform: [{ translateX }],
-          },
+          { transform: [{ translateX }] },
         ]}
         {...panResponder.panHandlers}
       >
@@ -328,7 +371,7 @@ const styles = StyleSheet.create({
   },
   actionContainer: {
     position: 'absolute',
-    width: ACTION_BUTTON_WIDTH,
+    width: '50%',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
@@ -343,21 +386,23 @@ const styles = StyleSheet.create({
     top: 0,
   },
   actionButton: {
-    width: ACTION_BUTTON_WIDTH,
+    width: '100%',
     height: '100%',
     borderRadius: theme.borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...theme.shadows.md,
+    padding: theme.spacing.xl,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   archiveButton: {
     backgroundColor: '#b1b7bc',
+    alignItems: 'flex-start',
   },
   editButton: {
     backgroundColor: '#4285F4',
+    alignItems: 'flex-end',
   },
   actionTouchable: {
-    width: '100%',
+    width: 50,
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
