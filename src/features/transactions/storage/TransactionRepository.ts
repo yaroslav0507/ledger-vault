@@ -138,15 +138,12 @@ export class TransactionRepository {
   }
 
   async clearAll(): Promise<void> {
-    console.log('🔘 Repository: clearAll called');
     try {
       const countBefore = await db.transactions.count();
-      console.log('🔍 Repository: Transactions before clear:', countBefore);
       
       await db.transactions.clear();
       
       const countAfter = await db.transactions.count();
-      console.log('🔍 Repository: Transactions after clear:', countAfter);
       
       if (countAfter > 0) {
         throw new Error(`Clear operation failed: ${countAfter} transactions remain in database`);

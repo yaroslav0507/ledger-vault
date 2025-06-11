@@ -1,12 +1,8 @@
-import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 
 export function formatDate(date: string | Date, formatString: string = 'MMM dd, yyyy'): string {
   const dateObj = typeof date === 'string' ? parseISO(date) : date;
   return format(dateObj, formatString);
-}
-
-export function formatDateShort(date: string | Date): string {
-  return formatDate(date, 'MMM dd');
 }
 
 export function formatDateTime(date: string | Date): string {
@@ -26,23 +22,6 @@ export function getMonthRange(date: Date = new Date()): { start: string; end: st
     start: toISODate(startOfMonth(date)),
     end: toISODate(endOfMonth(date))
   };
-}
-
-export function getWeekRange(date: Date = new Date()): { start: string; end: string } {
-  return {
-    start: toISODate(startOfWeek(date)),
-    end: toISODate(endOfWeek(date))
-  };
-}
-
-export function isToday(date: string): boolean {
-  return date === getCurrentDateISO();
-}
-
-export function isThisMonth(date: string): boolean {
-  const today = new Date();
-  const { start, end } = getMonthRange(today);
-  return date >= start && date <= end;
 }
 
 export type TimePeriod = 'today' | 'week' | 'month' | 'lastMonth' | 'quarter' | 'year' | 'spring' | 'summer' | 'autumn' | 'winter' | 'custom';
@@ -200,39 +179,32 @@ export function getTimePeriodLabel(period: TimePeriod, customRange?: DateRange):
       return 'Winter';
     case 'custom':
       if (customRange) {
-        return `${formatDisplayDate(customRange.start)} - ${formatDisplayDate(customRange.end)}`;
+        return `${formatDate(customRange.start)} - ${formatDate(customRange.end)}`;
       }
-      return 'Custom Range';
+      return 'Custom';
     default:
-      return 'All Time';
+      return 'Unknown';
   }
 }
 
-/**
- * Format date for display (DD.MM.YYYY)
- */
 export function formatDisplayDate(dateString: string): string {
-  const date = new Date(dateString);
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-  return `${day}.${month}.${year}`;
+  try {
+    const date = parseISO(dateString);
+    return formatDate(date, 'MMM dd');
+  } catch {
+    return dateString;
+  }
 }
 
-/**
- * Check if a date range is the same as a specific time period
- */
 export function isDateRangeForPeriod(dateRange: DateRange, period: TimePeriod): boolean {
   const periodRange = getDateRangeForPeriod(period);
   return dateRange.start === periodRange.start && dateRange.end === periodRange.end;
 }
 
-/**
- * Get the current time period based on date range
- */
 export function getCurrentTimePeriod(dateRange?: DateRange): TimePeriod {
-  if (!dateRange) return 'custom';
+  if (!dateRange) return 'month'; // Default period
   
+  // Check against each period
   const periods: TimePeriod[] = ['today', 'week', 'month', 'lastMonth', 'quarter', 'year', 'spring', 'summer', 'autumn', 'winter'];
   
   for (const period of periods) {
@@ -242,4 +214,4 @@ export function getCurrentTimePeriod(dateRange?: DateRange): TimePeriod {
   }
   
   return 'custom';
-} 
+}

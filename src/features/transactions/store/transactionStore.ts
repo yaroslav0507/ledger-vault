@@ -73,12 +73,8 @@ interface TransactionStore {
   clearFilters: () => void;
   refreshTransactions: () => Promise<void>;
   
-  // Computed values - ALL AS METHODS
+  // Computed values
   getBalance: () => { income: number; expenses: number; total: number };
-  getFilteredTransactions: () => Transaction[];
-  getTotalCount: () => number;
-  getTotalIncome: () => number;
-  getTotalExpenses: () => number;
 }
 
 export const useTransactionStore = create<TransactionStore>()((set, get) => {
@@ -174,20 +170,14 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => {
     },
 
     clearAllTransactions: async () => {
-      console.log('🔘 Store: clearAllTransactions called');
       set({ loading: true, error: null });
       
       try {
-        console.log('🔘 Store: Calling repository.clearAll()...');
         await transactionRepository.clearAll();
-        
-        console.log('🔘 Store: Setting transactions to empty array...');
         set({ transactions: [], loading: false });
         
         // Verify the database is actually cleared
-        console.log('🔘 Store: Verifying database is cleared...');
         const remainingCount = await transactionRepository.getTotalCount();
-        console.log('🔍 Store: Remaining transactions in DB:', remainingCount);
         
         if (remainingCount > 0) {
           throw new Error(`Database still contains ${remainingCount} transactions after clear operation`);
@@ -297,7 +287,7 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => {
       await get().loadTransactions();
     },
 
-    // Computed values - ALL AS METHODS, NOT GETTERS
+    // Computed values
     getBalance: () => {
       const currentState = get();
       const transactions = currentState.transactions || [];
@@ -314,32 +304,6 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => {
         expenses,
         total: income + expenses
       };
-    },
-
-    getFilteredTransactions: () => {
-      const currentState = get();
-      return currentState.transactions || [];
-    },
-
-    getTotalCount: () => {
-      const currentState = get();
-      return (currentState.transactions || []).length;
-    },
-
-    getTotalIncome: () => {
-      const currentState = get();
-      const transactions = currentState.transactions || [];
-      return transactions
-        .filter(t => t.isIncome)
-        .reduce((sum, t) => sum + t.amount, 0);
-    },
-
-    getTotalExpenses: () => {
-      const currentState = get();
-      const transactions = currentState.transactions || [];
-      return transactions
-        .filter(t => !t.isIncome)
-        .reduce((sum, t) => sum + t.amount, 0);
     }
   };
 }); 

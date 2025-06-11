@@ -5,7 +5,8 @@ import {
   StyleSheet,
   Alert,
   Switch,
-  TouchableOpacity
+  TouchableOpacity,
+  Platform
 } from 'react-native';
 import {
   Card,
@@ -16,7 +17,8 @@ import {
   Modal,
   Surface,
   Divider,
-  Chip
+  Chip,
+  Dialog
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SUPPORTED_CURRENCIES, getCurrencySymbol } from '@/shared/utils/currencyUtils';
@@ -32,7 +34,6 @@ interface SettingsScreenProps {
 interface AppSettings {
   defaultCurrency: string;
   defaultCategory: string;
-  dateFormat: 'DD.MM.YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   autoDetectCurrency: boolean;
   confirmDeleteTransactions: boolean;
   defaultTransactionType: 'expense' | 'income';
@@ -46,7 +47,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
   const [settings, setSettings] = useState<AppSettings>({
     defaultCurrency: 'UAH',
     defaultCategory: 'General',
-    dateFormat: 'DD.MM.YYYY',
     autoDetectCurrency: true,
     confirmDeleteTransactions: true,
     defaultTransactionType: 'expense'
@@ -54,7 +54,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
 
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showDateFormatModal, setShowDateFormatModal] = useState(false);
 
   // Load available categories on component mount
   useEffect(() => {
@@ -63,7 +62,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
         const categories = await categoryService.getAllCategories();
         setAvailableCategories(categories);
         
-        // Update default category if categories are available and still set to default
         if (categories.length > 0) {
           setSettings(prev => ({
             ...prev,
@@ -72,46 +70,62 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
         }
       } catch (error) {
         console.error('Failed to load categories:', error);
-        // Fallback to default category
         setAvailableCategories(['General']);
       }
     };
     
     loadCategories();
-  }, []); // Empty dependency array since we only want this to run once
+  }, []);
+
+  // Cross-platform alert function
+  const showAlert = (title: string, message: string, buttons?: Array<{text: string, onPress?: () => void, style?: 'default' | 'cancel' | 'destructive'}>) => {
+    if (Platform.OS === 'web') {
+      if (buttons && buttons.length > 1) {
+        const confirmed = window.confirm(`${title}\n\n${message}`);
+        if (confirmed) {
+          const confirmButton = buttons.find(b => b.style === 'destructive' || b.text === 'Delete All' || b.text === 'Export');
+          confirmButton?.onPress?.();
+        } else {
+          const cancelButton = buttons.find(b => b.style === 'cancel' || b.text === 'Cancel');
+          cancelButton?.onPress?.();
+        }
+      } else {
+        window.alert(`${title}\n\n${message}`);
+        buttons?.[0]?.onPress?.();
+      }
+    } else {
+      // For native, use React Native Alert
+      Alert.alert(title, message, buttons);
+    }
+  };
 
   const handleSaveSettings = () => {
-    // TODO: Implement settings persistence
-    Alert.alert('Success', 'Settings saved successfully!');
+    showAlert('Success', 'Settings saved successfully!');
     onClose();
   };
 
   const handleExportData = () => {
     if (transactions.length === 0) {
-      Alert.alert('No Data', 'There are no transactions to export.');
+      showAlert('No Data', 'There are no transactions to export.');
       return;
     }
 
-    Alert.alert(
+    showAlert(
       'Export Data',
       `This will export all ${transactions.length} transactions to a CSV file.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Export', onPress: () => {
           try {
-            // Create CSV content
             const csvHeader = 'Date,Card,Amount,Currency,Description,Category,Type,Comment\n';
             const csvContent = transactions.map(t => 
               `${t.date},"${t.card}",${t.amount},"${t.currency}","${t.description}","${t.category}","${t.isIncome ? 'Income' : 'Expense'}","${t.comment || ''}"`
             ).join('\n');
             
             const fullCsv = csvHeader + csvContent;
-            
-            // For now, just show success message
-            // In a real app, you would create and download the file
-            Alert.alert('Export Successful', 'Transaction data has been exported to CSV format.');
+            showAlert('Export Successful', 'Transaction data has been exported to CSV format.');
           } catch (error) {
-            Alert.alert('Export Failed', 'Failed to export data. Please try again.');
+            showAlert('Export Failed', 'Failed to export data. Please try again.');
             console.error('Export error:', error);
           }
         }}
@@ -120,67 +134,33 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
   };
 
   const handleClearData = () => {
-    console.log('🔘 SettingsScreen: handleClearData called');
-    console.log('🔘 SettingsScreen: Current transactions count:', transactions.length);
-    
     if (transactions.length === 0) {
-      Alert.alert('No Data', 'There are no transactions to clear.');
+      showAlert('No Data', 'There are no transactions to clear.');
       return;
     }
 
-    Alert.alert(
+    showAlert(
       'Clear All Data',
       `This will permanently delete all ${transactions.length} transactions. This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete All', style: 'destructive', onPress: async () => {
-          console.log('🔘 Clear All Data button pressed');
-          console.log('🔘 Current transactions count:', transactions.length);
-          
           try {
-            console.log('🔘 Calling clearAllTransactions...');
             await clearAllTransactions();
-            console.log('✅ clearAllTransactions completed successfully');
-            
-            // Force a reload to ensure UI is updated
-            console.log('🔘 Reloading transactions to refresh UI...');
             await loadTransactions();
             
-            // Get fresh state to verify
-            const currentState = useTransactionStore.getState();
-            console.log('🔍 Transactions after clear and reload:', currentState.transactions.length);
-            
-            Alert.alert(
-              'Success', 
-              'All transaction data has been cleared.',
-              [
-                { 
-                  text: 'OK', 
-                  onPress: () => {
-                    // Optional: Close settings screen after successful clear
-                    // onClose();
-                  }
-                }
-              ]
-            );
+            showAlert('Success', 'All transaction data has been cleared.');
           } catch (error) {
             console.error('❌ Clear data error:', error);
-            Alert.alert(
+            showAlert(
               'Error', 
-              `Failed to clear data: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-              [{ text: 'OK' }]
+              `Failed to clear data: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`
             );
           }
         }}
       ]
     );
   };
-
-  const dateFormatOptions = [
-    { value: 'DD.MM.YYYY', label: 'DD.MM.YYYY (31.12.2024)' },
-    { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY (12/31/2024)' },
-    { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD (2024-12-31)' }
-  ] as const;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -220,14 +200,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
               left={(props) => <List.Icon {...props} icon="tag" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               onPress={() => setShowCategoryModal(true)}
-            />
-            
-            <List.Item
-              title="Date Format"
-              description={dateFormatOptions.find(opt => opt.value === settings.dateFormat)?.label}
-              left={(props) => <List.Icon {...props} icon="calendar" />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => setShowDateFormatModal(true)}
             />
             
             <List.Item
@@ -322,7 +294,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
             
             <List.Item
               title="Version"
-              description="1.0.0 (Phase 2 Prototype)"
+              description="1.0.0"
               left={(props) => <List.Icon {...props} icon="information" />}
             />
             
@@ -396,38 +368,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
                 />
               ))}
             </ScrollView>
-          </Surface>
-        </Modal>
-      </Portal>
-
-      {/* Date Format Selection Modal */}
-      <Portal>
-        <Modal
-          visible={showDateFormatModal}
-          onDismiss={() => setShowDateFormatModal(false)}
-          contentContainerStyle={styles.modalContainer}
-        >
-          <Surface style={styles.modalSurface}>
-            <Text variant="titleMedium" style={styles.modalTitle}>
-              Select Date Format
-            </Text>
-            <View style={styles.modalContent}>
-              {dateFormatOptions.map((option) => (
-                <List.Item
-                  key={option.value}
-                  title={option.label}
-                  onPress={() => {
-                    setSettings({ ...settings, dateFormat: option.value });
-                    setShowDateFormatModal(false);
-                  }}
-                  right={() => 
-                    settings.dateFormat === option.value ? (
-                      <List.Icon icon="check" color={theme.colors.primary} />
-                    ) : null
-                  }
-                />
-              ))}
-            </View>
           </Surface>
         </Modal>
       </Portal>

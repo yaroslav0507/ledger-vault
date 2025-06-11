@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When generating a code with AI model, don't add comments. Focus on the meaningfull names for the entities and clear code formatting (separating contextually related code blocks for better readability).

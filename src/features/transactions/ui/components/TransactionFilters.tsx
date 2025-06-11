@@ -122,8 +122,8 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
             onPress: onClose
           }}
           rightAction={{
-            label: "Apply",
-            onPress: handleApply
+            label: "Clear",
+            onPress: handleClear
           }}
         />
 
@@ -275,9 +275,9 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
             />
           </View>
 
-          {/* Clear Filters Button */}
-          <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
-            <Text style={styles.clearButtonText}>Clear All Filters</Text>
+          {/* Apply All Filters Button */}
+          <TouchableOpacity style={styles.applyAllButton} onPress={handleApply}>
+            <Text style={styles.applyAllButtonText}>Filter Transactions</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -337,14 +337,14 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     color: theme.colors.text.primary,
   },
-  clearButton: {
-    backgroundColor: theme.colors.error,
+  applyAllButton: {
+    backgroundColor: theme.colors.primary,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
     alignItems: 'center',
     marginTop: theme.spacing.lg,
   },
-  clearButtonText: {
+  applyAllButtonText: {
     ...theme.typography.button,
     color: theme.colors.text.inverse,
   },
