@@ -43,11 +43,31 @@ export function formatCurrency(amount: number, currency: string = 'USD', digits?
   }
 }
 
+export function parseAmountString(amount: string): number {
+  if (!amount || typeof amount !== 'string') return 0;
+  
+  const cleanAmount = amount.replace(/[^0-9.,-]/g, '');
+  const hasComma = cleanAmount.includes(',');
+  const hasDot = cleanAmount.includes('.');
+  
+  let normalized = cleanAmount;
+  
+  if (hasComma && hasDot) {
+    // Determine decimal separator by position: 1.234,56 vs 1,234.56
+    normalized = cleanAmount.lastIndexOf(',') > cleanAmount.lastIndexOf('.')
+      ? cleanAmount.replace(/\./g, '').replace(',', '.')  // European: 1.234,56
+      : cleanAmount.replace(/,/g, '');                    // US: 1,234.56
+  } else if (hasComma && !hasDot) {
+    normalized = cleanAmount.replace(',', '.');           // Simple: 123,45
+  }
+  
+  const result = parseFloat(normalized);
+  return isNaN(result) ? 0 : result;
+}
+
 export function parseCurrencyToSmallestUnit(amount: string | number, currency: string = 'USD'): number {
   if (typeof amount === 'string') {
-    // Remove currency symbols and commas, but preserve minus sign
-    const cleanAmount = amount.replace(/[^0-9.-]/g, '');
-    const numericAmount = parseFloat(cleanAmount);
+    const numericAmount = parseAmountString(amount);
     
     // Handle currencies without fractional units (like JPY, KRW)
     const currencyConfig = SUPPORTED_CURRENCIES.find(c => c.code === currency);

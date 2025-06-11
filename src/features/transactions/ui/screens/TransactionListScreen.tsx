@@ -357,13 +357,13 @@ export const TransactionListScreen: React.FC = () => {
     return null;
   }, [loading, transactions.length, filteredTransactions.length, clearFilters]);
 
-  // Simple sections data - only include section if there are transactions
-  const sectionsData = filteredTransactions.length > 0 ? [
+  // Simple sections data - always include section to show header
+  const sectionsData = [
     {
       title: 'Transactions',
       data: filteredTransactions
     }
-  ] : [];
+  ];
 
   // Create sticky header component for transaction section
   const renderStickyHeader = useCallback(() => (
@@ -459,7 +459,7 @@ export const TransactionListScreen: React.FC = () => {
         sections={sectionsData}
         keyExtractor={(item) => item.id}
         renderItem={renderSectionItem}
-        renderSectionHeader={sectionsData.length > 0 ? renderStickyHeader : undefined}
+        renderSectionHeader={renderStickyHeader}
         ListHeaderComponent={renderListHeader}
         ListEmptyComponent={renderEmptyState}
         onScroll={handleScroll}
