@@ -73,6 +73,7 @@ interface TransactionStore {
   toggleCategoryFilter: (category: string) => void;
   clearFilters: () => void;
   refreshTransactions: () => Promise<void>;
+  getAvailableCards: () => Promise<string[]>;
   
   // Computed values
   getBalance: () => { income: number; expenses: number; total: number };
@@ -311,6 +312,21 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => {
 
     refreshTransactions: async () => {
       await get().loadTransactions();
+    },
+
+    getAvailableCards: async () => {
+      const currentState = get();
+      const { dateRange } = currentState.filters || {};
+      
+      try {
+        // Get cards for the current date range only (ignoring other filters)
+        const cards = await transactionRepository.getAllCardsForDateRange(dateRange);
+        return cards;
+      } catch (error) {
+        console.error('❌ Failed to get available cards:', error);
+        // Fallback to empty array
+        return [];
+      }
     },
 
     // Computed values

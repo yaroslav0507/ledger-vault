@@ -36,6 +36,31 @@ export class TransactionRepository {
     return transaction || null;
   }
 
+  private isDateInRange(date: string, start: string, end: string): boolean {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    
+    // Check if this is an "inverted" date range (winter format: start=2025-12-01&end=2025-02-31)
+    // This happens when end month comes before start month in the same year
+    if (startDate.getFullYear() === endDate.getFullYear() && 
+        startDate.getMonth() > endDate.getMonth()) {
+      
+      // This is a year-spanning winter range
+      // Convert end date to next year for proper comparison
+      const adjustedEndDate = new Date(endDate.getFullYear() + 1, endDate.getMonth(), endDate.getDate());
+      
+      const transactionDate = new Date(date);
+      
+      // Transaction is in range if:
+      // 1. It's >= start date in the current year, OR
+      // 2. It's <= adjusted end date in the next year
+      return transactionDate >= startDate || transactionDate <= adjustedEndDate;
+    } else {
+      // Normal date range comparison
+      return date >= start && date <= end;
+    }
+  }
+
   async findAll(filters?: TransactionFilters): Promise<Transaction[]> {
     let query = db.transactions.orderBy('date').reverse();
 
@@ -48,27 +73,8 @@ export class TransactionRepository {
     if (filters) {
       // Apply date range filter
       if (filters.dateRange) {
-        // Special handling for winter (Dec, Jan, Feb of current year)
-        if (filters.dateRange.start === 'WINTER_CURRENT_YEAR') {
-          const targetYear = parseInt(filters.dateRange.end);
-          query = query.filter(t => {
-            const transactionDate = new Date(t.date);
-            const transactionYear = transactionDate.getFullYear();
-            const transactionMonth = transactionDate.getMonth(); // 0-based: 0=Jan, 1=Feb, 11=Dec
-            
-            // Check if transaction is in December, January, or February of the target year
-            const isWinterMonth = transactionMonth === 11 || transactionMonth === 0 || transactionMonth === 1;
-            const isTargetYear = transactionYear === targetYear;
-            
-            return isWinterMonth && isTargetYear;
-          });
-        } else {
-          // Normal date range filtering
-          query = query.filter(t => 
-            t.date >= filters.dateRange!.start && 
-            t.date <= filters.dateRange!.end
-          );
-        }
+        const { start, end } = filters.dateRange;
+        query = query.filter(t => this.isDateInRange(t.date, start, end));
       }
 
       // Apply category filter
@@ -224,6 +230,26 @@ export class TransactionRepository {
       total: data.total,
       count: data.count
     }));
+  }
+
+  async getAllCardsForDateRange(dateRange?: { start: string; end: string }): Promise<string[]> {
+    let query = db.transactions.orderBy('date');
+
+    // Apply date range filter only (ignore other filters)
+    if (dateRange) {
+      const { start, end } = dateRange;
+      query = query.filter(t => this.isDateInRange(t.date, start, end));
+    }
+
+    // Filter out archived transactions
+    query = query.filter(t => t.isArchived !== true);
+
+    const transactions = await query.toArray();
+    
+    // Extract unique cards
+    const uniqueCards = Array.from(new Set(transactions.map(t => t.card)));
+    
+    return uniqueCards;
   }
 
   // Helper method to detect potential duplicates

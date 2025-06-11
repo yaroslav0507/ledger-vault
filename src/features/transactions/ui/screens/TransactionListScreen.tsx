@@ -39,7 +39,8 @@ export const TransactionListScreen: React.FC = () => {
     setTimePeriod,
     toggleCategoryFilter,
     clearFilters,
-    getBalance
+    getBalance,
+    getAvailableCards
   } = useTransactionStore();
 
   const [isInitialized, setIsInitialized] = useState(false);
@@ -47,6 +48,7 @@ export const TransactionListScreen: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
+  const [availableCards, setAvailableCards] = useState<string[]>([]);
   const [importState, setImportState] = useState({
     showModal: false,
     showColumnMapping: false,
@@ -74,6 +76,21 @@ export const TransactionListScreen: React.FC = () => {
     return count;
   }, [filters]);
 
+  // Load available cards when date range changes
+  useEffect(() => {
+    const loadAvailableCards = async () => {
+      try {
+        const cards = await getAvailableCards();
+        setAvailableCards(cards);
+      } catch (error) {
+        console.error('Failed to load available cards:', error);
+        setAvailableCards([]);
+      }
+    };
+
+    loadAvailableCards();
+  }, [filters.dateRange, getAvailableCards]);
+
   // Handle edit transaction - simplified, no need for complex refresh logic
   const handleEditTransaction = (transaction: Transaction) => {
     setTransactionToEdit(transaction);
@@ -90,9 +107,6 @@ export const TransactionListScreen: React.FC = () => {
     setShowSnackbar,
     showMessage
   } = useTransactionActions(handleEditTransaction);
-
-  // Simplified state - removed redundant boolean calculations
-  const availableCards = Array.from(new Set(transactions.map(t => t.card)));
 
   // Remove redundant wrapper functions - use inline callbacks
   const handleSwipeStart = useCallback(() => setIsAnyCardSwiping(true), []);

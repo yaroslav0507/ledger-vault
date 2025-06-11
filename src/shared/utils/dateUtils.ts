@@ -129,13 +129,15 @@ export function getDateRangeForPeriod(period: TimePeriod, customRange?: DateRang
       };
 
     case 'winter':
-      // December, January, and February of the current year
-      // This creates a special marker that will be handled by custom filtering logic
+      // December of current year to February of same year (inverted format)
+      // This creates: start=2025-12-01&end=2025-02-28 (represents Dec 2025 to Feb 2026)
       const currentYear = today.getFullYear();
+      const winterStart = new Date(currentYear, 11, 1); // December 1 of current year
+      const winterEnd = new Date(currentYear, 1, 28);   // February 28 of same year (inverted)
       
       return {
-        start: 'WINTER_CURRENT_YEAR', // Special marker for custom filtering
-        end: currentYear.toString() // Year to filter for
+        start: toISODate(winterStart),
+        end: toISODate(winterEnd)
       };
       
     case 'custom':
