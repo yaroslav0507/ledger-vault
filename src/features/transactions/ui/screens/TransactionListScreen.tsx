@@ -22,7 +22,7 @@ import { ImportPreviewModal } from '@/features/import/ui/components/ImportPrevie
 import { ColumnMappingModal } from '@/features/import/ui/components/ColumnMappingModal';
 import { importService, FilePreview } from '@/features/import/service/ImportService';
 import { ImportResult, ImportMapping } from '@/features/import/strategies/ImportStrategy';
-import { Transaction } from '../../model/Transaction';
+import { Transaction, UpdateTransactionRequest } from '../../model/Transaction';
 import { TimePeriodSelector } from '@/shared/ui/components/TimePeriodSelector';
 import { TimePeriod, DateRange } from '@/shared/utils/dateUtils';
 
@@ -56,6 +56,7 @@ export const TransactionListScreen: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [removingTransactionIds, setRemovingTransactionIds] = useState<Set<string>>(new Set());
+  const [isAnyCardSwiping, setIsAnyCardSwiping] = useState(false);
   
   const scrollViewRef = useRef<SectionList>(null);
   
@@ -71,15 +72,21 @@ export const TransactionListScreen: React.FC = () => {
     return count;
   }, [filters]);
 
-  // Handle edit transaction
+  // Handle edit transaction - always get fresh data from store
   const handleEditTransaction = (transaction: Transaction) => {
-    setTransactionToEdit(transaction);
-    setShowEditModal(true);
+    // Find the latest version of this transaction from the store
+    const latestTransaction = transactions.find(t => t.id === transaction.id);
+    if (latestTransaction) {
+      setTransactionToEdit(latestTransaction);
+      setShowEditModal(true);
+    } else {
+      Alert.alert('Error', 'Transaction not found. It may have been deleted.');
+    }
   };
 
   const {
     handleTransactionPress,
-    handleUpdateTransaction,
+    handleUpdateTransaction: updateTransactionAction,
     handleImportConfirm,
     handleArchiveTransaction,
     snackbarMessage,
@@ -87,6 +94,23 @@ export const TransactionListScreen: React.FC = () => {
     setShowSnackbar,
     showMessage
   } = useTransactionActions(handleEditTransaction);
+
+  // Wrapper for update transaction that refreshes the edit modal data
+  const handleUpdateTransaction = async (id: string, updates: UpdateTransactionRequest) => {
+    try {
+      await updateTransactionAction(id, updates);
+      
+      // Refresh the transactionToEdit with latest data if the modal is still open
+      if (showEditModal && transactionToEdit?.id === id) {
+        const updatedTransaction = transactions.find(t => t.id === id);
+        if (updatedTransaction) {
+          setTransactionToEdit(updatedTransaction);
+        }
+      }
+    } catch (error) {
+      throw error; // Re-throw to maintain error handling in the modal
+    }
+  };
 
   // Get unique cards for filter options
   const availableCards = Array.from(new Set(transactions.map(t => t.card)));
@@ -185,6 +209,16 @@ export const TransactionListScreen: React.FC = () => {
     initApp();
   }, [loadTransactions]);
 
+  // Auto-sync transactionToEdit with latest data from store
+  useEffect(() => {
+    if (showEditModal && transactionToEdit) {
+      const latestTransaction = transactions.find(t => t.id === transactionToEdit.id);
+      if (latestTransaction && JSON.stringify(latestTransaction) !== JSON.stringify(transactionToEdit)) {
+        setTransactionToEdit(latestTransaction);
+      }
+    }
+  }, [transactions, showEditModal, transactionToEdit]);
+
   const handleFileSelect = async (file: File) => {
     try {
       setIsImporting(true);
@@ -269,6 +303,15 @@ export const TransactionListScreen: React.FC = () => {
     }
   };
 
+  // Handle swipe state for blocking vertical scroll
+  const handleSwipeStart = useCallback(() => {
+    setIsAnyCardSwiping(true);
+  }, []);
+
+  const handleSwipeEnd = useCallback(() => {
+    setIsAnyCardSwiping(false);
+  }, []);
+
   // Custom renderItem for SectionList
   const renderSectionItem = useCallback(({ item: transaction }: { item: Transaction }) => {
     return (
@@ -279,9 +322,11 @@ export const TransactionListScreen: React.FC = () => {
         onEdit={handleEditTransaction}
         onArchive={handleArchiveTransactionLocal}
         isBeingRemoved={removingTransactionIds.has(transaction.id)}
+        onSwipeStart={handleSwipeStart}
+        onSwipeEnd={handleSwipeEnd}
       />
     );
-  }, [handleTransactionPress, toggleCategoryFilter, handleEditTransaction, handleArchiveTransactionLocal, removingTransactionIds]);
+  }, [handleTransactionPress, toggleCategoryFilter, handleEditTransaction, handleArchiveTransactionLocal, removingTransactionIds, handleSwipeStart, handleSwipeEnd]);
 
   // Render empty state component
   const renderEmptyState = useCallback(() => {
@@ -482,6 +527,7 @@ export const TransactionListScreen: React.FC = () => {
         removeClippedSubviews={true}
         updateCellsBatchingPeriod={100}
         stickySectionHeadersEnabled={true}
+        scrollEnabled={!isAnyCardSwiping}
       />
 
       {/* Scroll to Top FAB */}
@@ -515,9 +561,7 @@ export const TransactionListScreen: React.FC = () => {
         }}
         editMode={true}
         transactionToEdit={transactionToEdit || undefined}
-        onUpdate={async (id, updates) => {
-          await handleUpdateTransaction(id, updates);
-        }}
+        onUpdate={handleUpdateTransaction}
         onSubmit={() => Promise.resolve()} // Not used in edit mode
       />
 

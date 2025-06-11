@@ -19,6 +19,8 @@ interface TransactionCardProps {
   onEdit?: (transaction: Transaction) => void;
   onArchive?: (transaction: Transaction) => void;
   isBeingRemoved?: boolean;
+  onSwipeStart?: () => void;
+  onSwipeEnd?: () => void;
 }
 
 export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
@@ -28,7 +30,9 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
   onCategoryPress,
   onEdit,
   onArchive,
-  isBeingRemoved = false
+  isBeingRemoved = false,
+  onSwipeStart,
+  onSwipeEnd
 }) => {
   const [isRevealed, setIsRevealed] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
@@ -36,26 +40,61 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
 
   const panResponder = useRef(
     PanResponder.create({
+      // More strict gesture recognition for mobile
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 10;
+        const { dx, dy } = gestureState;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+        
+        // Require more horizontal movement and ensure it's clearly more horizontal than vertical
+        return absDx > 15 && absDx > absDy * 1.5;
       },
+      
+      // Respond to pan only if we're sure it's a horizontal gesture
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+        const { dx, dy } = gestureState;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+        
+        // Don't capture if it's clearly a vertical scroll
+        if (absDy > absDx) {
+          return false;
+        }
+        
+        return absDx > 15 && absDx > absDy * 1.5;
+      },
+      
       onPanResponderGrant: () => {
         translateX.setOffset((translateX as any)._value);
+        onSwipeStart?.(); // Notify parent that horizontal swipe started
       },
+      
       onPanResponderMove: (evt, gestureState) => {
+        const { dx, dy } = gestureState;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+        
+        // If movement becomes more vertical, release the gesture
+        if (absDy > absDx * 0.8) {
+          return false;
+        }
+        
         // Smooth, constrained movement
-        const newValue = Math.max(-ACTIVATE_THRESHOLD, Math.min(ACTIVATE_THRESHOLD, gestureState.dx));
+        const newValue = Math.max(-ACTIVATE_THRESHOLD, Math.min(ACTIVATE_THRESHOLD, dx));
         translateX.setValue(newValue);
         
         // Update swipe direction
-        if (gestureState.dx > 20) {
+        if (dx > 20) {
           setSwipeDirection('right');
-        } else if (gestureState.dx < -20) {
+        } else if (dx < -20) {
           setSwipeDirection('left');
         }
       },
+      
       onPanResponderRelease: (evt, gestureState) => {
         translateX.flattenOffset();
+        onSwipeEnd?.(); // Notify parent that horizontal swipe ended
+        
         const absDx = Math.abs(gestureState.dx);
         
         if (absDx >= ACTIVATE_THRESHOLD) {
@@ -84,8 +123,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
             // Reveal edit on right
             setSwipeDirection('left');
             Animated.spring(translateX, {
-              toValue: -SHIFT_DISTANCE
-              ,
+              toValue: -SHIFT_DISTANCE,
               useNativeDriver: false,
               tension: 300,
               friction: 30,
@@ -96,12 +134,27 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
           resetPosition();
         }
       },
+      
+      // Critical: Handle gesture termination (when system interrupts the gesture)
+      onPanResponderTerminate: () => {
+        translateX.flattenOffset();
+        onSwipeEnd?.(); // Notify parent that horizontal swipe ended
+        resetPosition();
+      },
+      
+      // Handle gesture rejection (when another component claims the gesture)
+      onPanResponderReject: () => {
+        translateX.flattenOffset();
+        onSwipeEnd?.(); // Notify parent that horizontal swipe ended
+        resetPosition();
+      },
     })
   ).current;
 
   const resetPosition = () => {
     setIsRevealed(false);
     setSwipeDirection(null);
+    onSwipeEnd?.(); // Notify parent that horizontal swipe ended
     Animated.spring(translateX, {
       toValue: 0,
       useNativeDriver: false,

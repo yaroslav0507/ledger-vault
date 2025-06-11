@@ -58,9 +58,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       
       if (editMode && transactionToEdit) {
         // Pre-populate form with existing transaction data
+        // Always show absolute value in amount field - sign will be applied based on isIncome toggle
+        const absoluteAmount = Math.abs(transactionToEdit.amount);
         setFormData({
           description: transactionToEdit.description,
-          amount: formatCurrencyFromSmallestUnit(transactionToEdit.amount, transactionToEdit.currency),
+          amount: formatCurrencyFromSmallestUnit(absoluteAmount, transactionToEdit.currency),
           card: transactionToEdit.card,
           category: transactionToEdit.category,
           comment: transactionToEdit.comment || '',
@@ -119,9 +121,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       
       const amount = parseCurrencyToSmallestUnit(parseFloat(data.amount), data.currency);
       
+      // Apply negative sign for expenses, positive for income
+      const signedAmount = data.isIncome ? Math.abs(amount) : -Math.abs(amount);
+      
       const transactionRequest: CreateTransactionRequest = {
         description: data.description,
-        amount,
+        amount: signedAmount,
         card: data.card,
         category: data.category,
         comment: data.comment || undefined,
