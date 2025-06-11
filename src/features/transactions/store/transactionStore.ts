@@ -286,17 +286,22 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => {
     },
 
     clearFilters: () => {
-      const defaultFilters = getDefaultFilters();
-      const defaultPeriod = 'lastMonth' as TimePeriod;
+      const currentState = get();
+      const { dateRange } = currentState.filters || {};
+      const { selectedTimePeriod } = currentState;
+      
+      // Create new filters that only preserve the date range
+      const clearedFilters: TransactionFilters = dateRange ? { dateRange } : {};
       
       set({ 
-        filters: defaultFilters,
-        selectedTimePeriod: defaultPeriod
+        filters: clearedFilters,
+        // Keep the existing time period selection
+        selectedTimePeriod: selectedTimePeriod
       });
       
-      // Save to URL (this will clear the query params since filters are empty)
+      // Save to URL with preserved date range and time period
       try {
-        updateUrlWithFilters(defaultFilters, defaultPeriod);
+        updateUrlWithFilters(clearedFilters, selectedTimePeriod);
       } catch (error) {
         console.warn('Failed to update URL with filters:', error);
       }

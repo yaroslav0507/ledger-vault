@@ -1,5 +1,5 @@
 import { TransactionFilters } from '@/features/transactions/model/Transaction';
-import { TimePeriod } from './dateUtils';
+import { TimePeriod, getCurrentTimePeriod } from './dateUtils';
 
 interface PersistedFilters {
   filters: TransactionFilters;
@@ -12,12 +12,7 @@ interface PersistedFilters {
 export const filtersToQueryParams = (filters: TransactionFilters, selectedTimePeriod: TimePeriod | undefined): URLSearchParams => {
   const params = new URLSearchParams();
   
-  // Time period
-  if (selectedTimePeriod) {
-    params.set('period', selectedTimePeriod);
-  }
-  
-  // Date range (for custom periods)
+  // Date range - this is all we need, period can be derived from it
   if (filters.dateRange?.start && filters.dateRange?.end) {
     params.set('start', filters.dateRange.start);
     params.set('end', filters.dateRange.end);
@@ -63,15 +58,15 @@ export const filtersToQueryParams = (filters: TransactionFilters, selectedTimePe
 export const queryParamsToFilters = (searchParams: URLSearchParams): PersistedFilters => {
   const filters: TransactionFilters = {};
   
-  // Time period
-  const period = searchParams.get('period') as TimePeriod | null;
-  
   // Date range
   const start = searchParams.get('start');
   const end = searchParams.get('end');
   if (start && end) {
     filters.dateRange = { start, end };
   }
+  
+  // Determine time period from date range
+  const selectedTimePeriod = filters.dateRange ? getCurrentTimePeriod(filters.dateRange) : undefined;
   
   // Categories
   const categoriesParam = searchParams.get('categories');
@@ -117,7 +112,7 @@ export const queryParamsToFilters = (searchParams: URLSearchParams): PersistedFi
   
   return {
     filters,
-    selectedTimePeriod: period || undefined
+    selectedTimePeriod
   };
 };
 
@@ -129,8 +124,8 @@ export const updateUrlWithFilters = (filters: TransactionFilters, selectedTimePe
     const params = filtersToQueryParams(filters, selectedTimePeriod);
     const url = new URL(window.location.href);
     
-    // Clear existing filter params
-    const filterKeys = ['period', 'start', 'end', 'categories', 'categoriesMode', 'cards', 'type', 'search', 'minAmount', 'maxAmount'];
+    // Clear existing filter params (removed 'period' from the list)
+    const filterKeys = ['start', 'end', 'categories', 'categoriesMode', 'cards', 'type', 'search', 'minAmount', 'maxAmount'];
     filterKeys.forEach(key => url.searchParams.delete(key));
     
     // Add new filter params
@@ -153,8 +148,8 @@ export const loadFiltersFromUrl = (): PersistedFilters | null => {
   try {
     const params = new URLSearchParams(window.location.search);
     
-    // Check if there are any filter-related params
-    const hasFilterParams = ['period', 'start', 'end', 'categories', 'cards', 'type', 'search'].some(key => params.has(key));
+    // Check if there are any filter-related params (removed 'period' from the list)
+    const hasFilterParams = ['start', 'end', 'categories', 'cards', 'type', 'search'].some(key => params.has(key));
     
     if (!hasFilterParams) {
       console.log('📂 No filter parameters found in URL');
