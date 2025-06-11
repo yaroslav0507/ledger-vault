@@ -229,7 +229,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 onChangeText={(text) => handleFieldChange('amount', text)}
                 placeholder="0.00"
                 placeholderTextColor={theme.colors.text.disabled}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
               />
               <Text style={styles.currencySymbol}>
                 {getCurrencySymbol(formData.currency)}

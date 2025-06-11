@@ -304,10 +304,10 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
           
           {/* Comments Section - Simplified */}
           {transaction.comment && (
-            <View style={[styles.commentSection, { backgroundColor: cardBackgroundColor }]}>
+            <View style={[styles.commentSection]}>
               <View style={styles.commentRow}>
                 <Text style={styles.commentIcon}>💬</Text>
-                <Text style={styles.comment} numberOfLines={2} ellipsizeMode="tail">
+                <Text style={styles.comment} numberOfLines={1} ellipsizeMode="tail">
                   {transaction.comment}
                 </Text>
               </View>

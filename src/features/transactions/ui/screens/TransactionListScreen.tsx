@@ -47,13 +47,15 @@ export const TransactionListScreen: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [showColumnMappingModal, setShowColumnMappingModal] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [importFileName, setImportFileName] = useState('');
-  const [isImporting, setIsImporting] = useState(false);
+  const [importState, setImportState] = useState({
+    showModal: false,
+    showColumnMapping: false,
+    isLoading: false,
+    fileName: '',
+    selectedFile: null as File | null,
+    result: null as ImportResult | null,
+    preview: null as FilePreview | null,
+  });
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [removingTransactionIds, setRemovingTransactionIds] = useState<Set<string>>(new Set());
   const [isAnyCardSwiping, setIsAnyCardSwiping] = useState(false);
@@ -72,21 +74,15 @@ export const TransactionListScreen: React.FC = () => {
     return count;
   }, [filters]);
 
-  // Handle edit transaction - always get fresh data from store
+  // Handle edit transaction - simplified, no need for complex refresh logic
   const handleEditTransaction = (transaction: Transaction) => {
-    // Find the latest version of this transaction from the store
-    const latestTransaction = transactions.find(t => t.id === transaction.id);
-    if (latestTransaction) {
-      setTransactionToEdit(latestTransaction);
-      setShowEditModal(true);
-    } else {
-      Alert.alert('Error', 'Transaction not found. It may have been deleted.');
-    }
+    setTransactionToEdit(transaction);
+    setShowEditModal(true);
   };
 
   const {
     handleTransactionPress,
-    handleUpdateTransaction: updateTransactionAction,
+    handleUpdateTransaction,
     handleImportConfirm,
     handleArchiveTransaction,
     snackbarMessage,
@@ -95,70 +91,32 @@ export const TransactionListScreen: React.FC = () => {
     showMessage
   } = useTransactionActions(handleEditTransaction);
 
-  // Wrapper for update transaction that refreshes the edit modal data
-  const handleUpdateTransaction = async (id: string, updates: UpdateTransactionRequest) => {
-    try {
-      await updateTransactionAction(id, updates);
-      
-      // Refresh the transactionToEdit with latest data if the modal is still open
-      if (showEditModal && transactionToEdit?.id === id) {
-        const updatedTransaction = transactions.find(t => t.id === id);
-        if (updatedTransaction) {
-          setTransactionToEdit(updatedTransaction);
-        }
-      }
-    } catch (error) {
-      throw error; // Re-throw to maintain error handling in the modal
-    }
-  };
-
-  // Get unique cards for filter options
+  // Simplified state - removed redundant boolean calculations
   const availableCards = Array.from(new Set(transactions.map(t => t.card)));
-  
-  // Check different states for the UI
-  const hasTransactions = transactions.length > 0;
-  const hasFilteredTransactions = filteredTransactions.length > 0;
-  const hasActiveFilters = activeFiltersCount > 0;
 
-  // Handle time period changes
-  const handleTimePeriodChange = (period: TimePeriod, dateRange: DateRange) => {
-    setTimePeriod(period, dateRange);
-  };
+  // Remove redundant wrapper functions - use inline callbacks
+  const handleSwipeStart = useCallback(() => setIsAnyCardSwiping(true), []);
+  const handleSwipeEnd = useCallback(() => setIsAnyCardSwiping(false), []);
 
-  // Handle clearing all filters
-  const handleClearAllFilters = () => {
-    clearFilters();
-  };
+  // Remove getTransactionSectionTitle function - inline it
+  const transactionSectionTitle = !transactions.length 
+    ? 'Transactions (0)'
+    : activeFiltersCount > 0 
+      ? `Transactions (${filteredTransactions.length}/${transactions.length})`
+      : `Transactions (${filteredTransactions.length})`;
 
-  // Handle income filter
-  const handleIncomeFilter = () => {
-    // Toggle behavior: if already filtering income, clear filter to show all
-    if (filters.isIncome === true) {
+  // Remove getItemLayout - use inline function
+  // Remove hasTransactions, hasFilteredTransactions, hasActiveFilters - use direct comparisons
+
+  // Simplified filter toggle - handles both income and expense
+  const handleIncomeExpenseFilter = (filterValue: boolean | undefined) => {
+    if (filters.isIncome === filterValue) {
+      // If already set to this value, clear filter
       const { isIncome, ...filtersWithoutIncomeType } = filters;
-      setFilters({
-        ...filtersWithoutIncomeType,
-      });
+      setFilters(filtersWithoutIncomeType);
     } else {
-      setFilters({
-        ...filters,
-        isIncome: true
-      });
-    }
-  };
-
-  // Handle expense filter
-  const handleExpenseFilter = () => {
-    // Toggle behavior: if already filtering expenses, clear filter to show all
-    if (filters.isIncome === false) {
-      const { isIncome, ...filtersWithoutIncomeType } = filters;
-      setFilters({
-        ...filtersWithoutIncomeType,
-      });
-    } else {
-      setFilters({
-        ...filters,
-        isIncome: false
-      });
+      // Set new filter value
+      setFilters({ ...filters, isIncome: filterValue });
     }
   };
 
@@ -209,21 +167,17 @@ export const TransactionListScreen: React.FC = () => {
     initApp();
   }, [loadTransactions]);
 
-  // Auto-sync transactionToEdit with latest data from store
-  useEffect(() => {
-    if (showEditModal && transactionToEdit) {
-      const latestTransaction = transactions.find(t => t.id === transactionToEdit.id);
-      if (latestTransaction && JSON.stringify(latestTransaction) !== JSON.stringify(transactionToEdit)) {
-        setTransactionToEdit(latestTransaction);
-      }
-    }
-  }, [transactions, showEditModal, transactionToEdit]);
-
   const handleFileSelect = async (file: File) => {
     try {
-      setIsImporting(true);
-      setSelectedFile(file);
-      setImportFileName(file.name);
+      setImportState({
+        showModal: true,
+        showColumnMapping: true,
+        isLoading: true,
+        fileName: file.name,
+        selectedFile: file,
+        result: null,
+        preview: null,
+      });
       
       // Convert browser File to ImportFile
       const importFile = await importService.createImportFileFromBrowser(file);
@@ -231,47 +185,68 @@ export const TransactionListScreen: React.FC = () => {
       // Extract preview for column mapping
       const preview = await importService.extractFilePreview(importFile);
       
-      setFilePreview(preview);
-      setShowColumnMappingModal(true);
+      setImportState(prev => ({
+        ...prev,
+        preview: preview,
+        showColumnMapping: true,
+      }));
     } catch (error) {
       console.error('Import error:', error);
       Alert.alert(
         'Import Error',
         error instanceof Error ? error.message : 'Failed to process the file'
       );
-      setSelectedFile(null);
-      setFilePreview(null);
+      setImportState(prev => ({
+        ...prev,
+        selectedFile: null,
+        preview: null,
+      }));
     } finally {
-      setIsImporting(false);
+      setImportState(prev => ({
+        ...prev,
+        isLoading: false,
+      }));
     }
   };
 
   const handleImportConfirmLocal = async (transactions: Transaction[], ignoreDuplicates: boolean) => {
     const success = await handleImportConfirm(transactions, ignoreDuplicates);
     if (success) {
-      setShowImportModal(false);
-      setImportResult(null);
+      setImportState(prev => ({
+        ...prev,
+        showModal: false,
+        result: null,
+      }));
     }
-    setIsImporting(false);
+    setImportState(prev => ({
+      ...prev,
+      isLoading: false,
+    }));
   };
 
   const handleColumnMappingConfirm = async (mapping: ImportMapping) => {
     try {
-      setIsImporting(true);
-      setShowColumnMappingModal(false);
+      setImportState(prev => ({
+        ...prev,
+        showColumnMapping: false,
+        isLoading: true,
+      }));
       
-      if (!selectedFile) {
+      if (!importState.selectedFile) {
         throw new Error('No file selected');
       }
       
       // Convert browser File to ImportFile
-      const importFile = await importService.createImportFileFromBrowser(selectedFile);
+      const importFile = await importService.createImportFileFromBrowser(importState.selectedFile);
       
       // Preview the import with user mapping
       const result = await importService.previewImport(importFile, mapping);
       
-      setImportResult(result);
-      setShowImportModal(true);
+      setImportState(prev => ({
+        ...prev,
+        result: result,
+        showModal: true,
+      }));
     } catch (error) {
       console.error('Import error:', error);
       Alert.alert(
@@ -279,38 +254,27 @@ export const TransactionListScreen: React.FC = () => {
         error instanceof Error ? error.message : 'Failed to process the file with your mapping'
       );
     } finally {
-      setIsImporting(false);
+      setImportState(prev => ({
+        ...prev,
+        isLoading: false,
+      }));
     }
   };
 
   const handleColumnMappingDismiss = () => {
-    setShowColumnMappingModal(false);
-    setFilePreview(null);
-    setSelectedFile(null);
-    setImportFileName('');
+    setImportState(prev => ({
+      ...prev,
+      showColumnMapping: false,
+      preview: null,
+      selectedFile: null,
+      fileName: '',
+    }));
   };
 
   const handleScroll = (event: any) => {
     const scrollY = event.nativeEvent.contentOffset.y;
-      
-    // Show/hide scroll to top button
     setShowScrollToTop(scrollY > 300);
   };
-
-  const scrollToTop = () => {
-    if (filteredTransactions.length > 0) {
-      scrollViewRef.current?.scrollToLocation({ sectionIndex: 0, itemIndex: 0, animated: true });
-    }
-  };
-
-  // Handle swipe state for blocking vertical scroll
-  const handleSwipeStart = useCallback(() => {
-    setIsAnyCardSwiping(true);
-  }, []);
-
-  const handleSwipeEnd = useCallback(() => {
-    setIsAnyCardSwiping(false);
-  }, []);
 
   // Custom renderItem for SectionList
   const renderSectionItem = useCallback(({ item: transaction }: { item: Transaction }) => {
@@ -338,7 +302,7 @@ export const TransactionListScreen: React.FC = () => {
       );
     }
 
-    if (!hasTransactions) {
+    if (!transactions.length) {
       return (
         <View style={styles.emptyCard}>
           <View style={styles.emptyContent}>
@@ -353,7 +317,7 @@ export const TransactionListScreen: React.FC = () => {
       );
     }
 
-    if (!hasFilteredTransactions) {
+    if (!filteredTransactions.length) {
       return (
         <View style={styles.emptyCard}>
           <View style={styles.emptyContent}>
@@ -367,7 +331,7 @@ export const TransactionListScreen: React.FC = () => {
               <Button
                 mode="outlined"
                 icon="filter-remove"
-                onPress={handleClearAllFilters}
+                onPress={clearFilters}
                 style={styles.emptyButton}
                 labelStyle={styles.emptyButtonLabel}
                 contentStyle={styles.emptyButtonContent}
@@ -391,7 +355,7 @@ export const TransactionListScreen: React.FC = () => {
     }
 
     return null;
-  }, [loading, hasTransactions, hasFilteredTransactions, transactions.length, handleClearAllFilters]);
+  }, [loading, transactions.length, filteredTransactions.length, clearFilters]);
 
   // Simple sections data - only include section if there are transactions
   const sectionsData = filteredTransactions.length > 0 ? [
@@ -401,25 +365,12 @@ export const TransactionListScreen: React.FC = () => {
     }
   ] : [];
 
-  // Dynamic transaction section title based on state
-  const getTransactionSectionTitle = () => {
-    if (!hasTransactions) {
-      return 'Transactions (0)';
-    }
-    
-    if (hasActiveFilters) {
-      return `Transactions (${filteredTransactions.length}/${transactions.length})`;
-    }
-    
-    return `Transactions (${filteredTransactions.length})`;
-  };
-
   // Create sticky header component for transaction section
   const renderStickyHeader = useCallback(() => (
     <View style={styles.stickyHeader}>
       <View style={styles.stickyHeaderContent}>
         <Text style={styles.stickyTitle} numberOfLines={1} ellipsizeMode="tail">
-          {getTransactionSectionTitle()}
+          {transactionSectionTitle}
         </Text>
         
         <TouchableOpacity 
@@ -434,7 +385,7 @@ export const TransactionListScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
     </View>
-  ), [activeFiltersCount, getTransactionSectionTitle]);
+  ), [activeFiltersCount, transactionSectionTitle]);
 
   // Create header component for SectionList (non-sticky content)
   const renderListHeader = useCallback(() => (
@@ -449,8 +400,8 @@ export const TransactionListScreen: React.FC = () => {
         transactionCount={filteredTransactions.length}
         currency={transactions.length > 0 ? transactions[0].currency : 'USD'}
         currentFilters={filters}
-        onIncomeFilter={handleIncomeFilter}
-        onExpenseFilter={handleExpenseFilter}
+        onIncomeFilter={() => handleIncomeExpenseFilter(true)}
+        onExpenseFilter={() => handleIncomeExpenseFilter(false)}
       />
 
       <View style={styles.actionButtons}>
@@ -481,12 +432,6 @@ export const TransactionListScreen: React.FC = () => {
     </View>
   ), [balance, filteredTransactions.length, activeFiltersCount, error]);
 
-  const getItemLayout = useCallback((data: any, index: number) => ({
-    length: 120, // Approximate height of TransactionCard
-    offset: 120 * index,
-    index,
-  }), []);
-
   if (!isInitialized) {
     return (
       <SafeAreaView style={styles.container}>
@@ -504,7 +449,7 @@ export const TransactionListScreen: React.FC = () => {
       <TimePeriodSelector
         currentDateRange={filters.dateRange}
         selectedPeriod={selectedTimePeriod || undefined}
-        onPeriodChange={handleTimePeriodChange}
+        onPeriodChange={(period, dateRange) => setTimePeriod(period, dateRange)}
       />
 
       <SectionList
@@ -520,7 +465,11 @@ export const TransactionListScreen: React.FC = () => {
         onScroll={handleScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={true}
-        getItemLayout={getItemLayout}
+        getItemLayout={(data: any, index: number) => ({
+          length: 120, // Approximate height of TransactionCard
+          offset: 120 * index,
+          index,
+        })}
         initialNumToRender={10}
         maxToRenderPerBatch={20}
         windowSize={10}
@@ -535,7 +484,11 @@ export const TransactionListScreen: React.FC = () => {
         <FAB
           icon="arrow-up"
           style={styles.scrollToTopFab}
-          onPress={scrollToTop}
+          onPress={() => {
+            if (filteredTransactions.length > 0) {
+              scrollViewRef.current?.scrollToLocation({ sectionIndex: 0, itemIndex: 0, animated: true });
+            }
+          }}
           size="small"
           color="white"
         />
@@ -577,26 +530,29 @@ export const TransactionListScreen: React.FC = () => {
 
       {/* Import Preview Modal */}
       <ImportPreviewModal
-        visible={showImportModal}
+        visible={importState.showModal}
         onDismiss={() => {
-          setShowImportModal(false);
-          setImportResult(null);
+          setImportState(prev => ({
+            ...prev,
+            showModal: false,
+            result: null,
+          }));
         }}
         onConfirm={handleImportConfirmLocal}
-        result={importResult}
-        fileName={importFileName}
-        isLoading={isImporting}
+        result={importState.result}
+        fileName={importState.fileName}
+        isLoading={importState.isLoading}
       />
 
       {/* Column Mapping Modal */}
       <ColumnMappingModal
-        visible={showColumnMappingModal}
+        visible={importState.showColumnMapping}
         onDismiss={handleColumnMappingDismiss}
         onConfirm={handleColumnMappingConfirm}
-        columns={filePreview?.columns || []}
-        sampleData={filePreview?.sampleData || []}
-        fileName={importFileName}
-        suggestedMapping={filePreview?.suggestedMapping}
+        columns={importState.preview?.columns || []}
+        sampleData={importState.preview?.sampleData || []}
+        fileName={importState.fileName}
+        suggestedMapping={importState.preview?.suggestedMapping}
       />
 
       {/* Success Snackbar */}
