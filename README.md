@@ -53,17 +53,6 @@ LedgerVault is a sophisticated financial transaction management application that
 
 ---
 
-## 🚀 **Live Demo**
-
-**Try it now:** [https://yaroslav0507.github.io/ledger-vault](https://yaroslav0507.github.io/ledger-vault)
-
-- No installation required
-- Runs directly in your browser
-- All data stored in local database for privacy
-- Mobile-friendly interface
-
----
-
 ## 🛠️ **Technology Stack**
 
 ### **Frontend**
