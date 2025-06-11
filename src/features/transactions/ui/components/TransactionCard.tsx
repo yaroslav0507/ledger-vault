@@ -73,7 +73,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
       
       {/* Comments Section - Simplified */}
       {transaction.comment && (
-        <View style={styles.commentSection}>
+        <View style={[styles.commentSection, { backgroundColor: cardBackgroundColor }]}>
           <View style={styles.commentRow}>
             <Text style={styles.commentIcon}>💬</Text>
             <Text style={styles.comment} numberOfLines={2} ellipsizeMode="tail">
@@ -194,20 +194,19 @@ const styles = StyleSheet.create({
   },
   commentSection: {
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    backgroundColor: '#FAFAFA',
+    borderTopColor: '#E0E0E0',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     gap: theme.spacing.xs,
   },
   commentRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: theme.spacing.xs,
+    alignItems: 'center',
+    gap: theme.spacing.md,
   },
   commentIcon: {
     fontSize: 12,
-    marginTop: 2,
+    lineHeight: 16,
   },
   comment: {
     ...theme.typography.body,

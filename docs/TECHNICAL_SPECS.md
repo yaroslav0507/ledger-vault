@@ -21,7 +21,7 @@ ledger-vault/
 │   │   │   │   └── transactionStore.ts     # Zustand state management with URL persistence
 │   │   │   └── ui/
 │   │   │       ├── screens/
-│   │   │       │   ├── TransactionListScreen.tsx  # Main screen with FAB navigation
+│   │   │       │   ├── TransactionListScreen.tsx  # Main screen with navigation
 │   │   │       │   └── SettingsScreen.tsx         # App settings & data management
 │   │   │       ├── components/
 │   │   │       │   ├── TransactionCard.tsx
@@ -179,9 +179,9 @@ interface TransactionStore {
 ## 🎨 UI/UX Architecture
 
 ### Navigation System
-- **FAB-based Navigation**: Floating Action Buttons for primary actions
-- **Settings FAB**: Gear icon for accessing app settings
-- **Scroll-to-top FAB**: Dynamic visibility based on scroll position
+- **Primary Navigation**: Action buttons for main functionality
+- **Settings Access**: Gear icon for accessing app settings
+- **Scroll-to-top Button**: Dynamic visibility based on scroll position
 - **Modal-based Settings**: Full-screen settings experience
 
 ### Filter System

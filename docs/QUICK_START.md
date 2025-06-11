@@ -2,7 +2,7 @@
 
 ## 📱 What is LedgerVault?
 
-LedgerVault is a modern React Native financial transaction management app designed for the Ukrainian market with international currency support. It features comprehensive bank statement import capabilities, advanced filtering with URL persistence, FAB-based navigation, and a clean, responsive interface that works seamlessly on both web and mobile platforms.
+LedgerVault is a modern React Native financial transaction management app designed for the Ukrainian market with international currency support. It features comprehensive bank statement import capabilities, advanced filtering with URL persistence, clean navigation, and a responsive interface that works seamlessly on both web and mobile platforms.
 
 ---
 
@@ -28,9 +28,9 @@ LedgerVault is a modern React Native financial transaction management app design
 - ✅ **Comprehensive validation** with row-level feedback
 
 ### 🎨 **User Interface**
-- ✅ **FAB Navigation** - Floating Action Buttons for primary actions
-- ✅ **Settings FAB** - Easy access to app preferences
-- ✅ **Scroll-to-top FAB** - Dynamic visibility while scrolling
+- ✅ **Clean Navigation** - Action buttons for primary functions
+- ✅ **Settings Access** - Easy access to app preferences
+- ✅ **Scroll-to-top Button** - Dynamic visibility while scrolling
 - ✅ **Advanced filter modal** with real-time category loading
 - ✅ **Time period selector** with seasonal support (including winter logic)
 - ✅ **Responsive design** supporting long content
@@ -80,6 +80,11 @@ The app is deployed and ready to use immediately in your browser!
 - Click the **gear icon (⚙️)** in the bottom-right corner
 - Configure app preferences, manage data, or export transactions
 - Access comprehensive settings in a full-screen modal
+
+### **Manage Settings**
+1. Click the **gear icon (⚙️)** in bottom-right
+2. Configure currencies, categories, and preferences
+3. Export data or clear all transactions
 
 ---
 
@@ -295,7 +300,7 @@ LedgerVault supports **any ISO currency** with special optimization for:
 ✅ **Full transaction management** with CRUD operations
 ✅ **Advanced import system** with interactive column mapping  
 ✅ **Comprehensive filtering** with URL persistence and sharing
-✅ **FAB-based navigation** for clean, modern interface
+✅ **Clean navigation** for modern interface
 ✅ **Cross-platform compatibility** (web and mobile)
 ✅ **Multi-currency support** with intelligent detection
 ✅ **Data export** and management tools
