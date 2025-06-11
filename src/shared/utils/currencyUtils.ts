@@ -69,6 +69,14 @@ export function formatAmount(amount: number, currency: string = 'USD'): string {
   return mainAmount.toFixed(fractionDigits);
 }
 
+export function formatCurrencyFromSmallestUnit(amount: number, currency: string = 'USD'): string {
+  const currencyConfig = SUPPORTED_CURRENCIES.find(c => c.code === currency);
+  const fractionDigits = currencyConfig?.fractionDigits ?? 2;
+  const multiplier = fractionDigits === 0 ? 1 : 100;
+  const mainAmount = amount / multiplier;
+  return mainAmount.toString();
+}
+
 export function detectCurrencyFromText(text: string): string | null {
   if (!text) return null;
   

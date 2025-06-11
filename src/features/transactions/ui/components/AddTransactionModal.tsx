@@ -10,10 +10,10 @@ import {
   ScrollView,
   Switch
 } from 'react-native';
-import { CreateTransactionRequest } from '../../model/Transaction';
+import { CreateTransactionRequest, Transaction, UpdateTransactionRequest } from '../../model/Transaction';
 import { validateTransactionForm, ValidationErrors, TransactionFormData } from '../../model/validation';
 import { getCurrentDateISO } from '@/shared/utils/dateUtils';
-import { parseCurrencyToSmallestUnit, SUPPORTED_CURRENCIES, getCurrencySymbol } from '@/shared/utils/currencyUtils';
+import { parseCurrencyToSmallestUnit, formatCurrencyFromSmallestUnit, SUPPORTED_CURRENCIES, getCurrencySymbol } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
 import { categoryService } from '../../service/CategoryService';
@@ -22,12 +22,18 @@ interface AddTransactionModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (transaction: CreateTransactionRequest) => Promise<void>;
+  editMode?: boolean;
+  transactionToEdit?: Transaction;
+  onUpdate?: (id: string, updates: UpdateTransactionRequest) => Promise<void>;
 }
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   visible,
   onClose,
-  onSubmit
+  onSubmit,
+  editMode,
+  transactionToEdit,
+  onUpdate
 }) => {
   const [formData, setFormData] = useState<TransactionFormData>({
     description: '',
@@ -49,21 +55,38 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   useEffect(() => {
     if (visible) {
       setIsResettingForm(true);
-      setFormData({
-        description: '',
-        amount: '',
-        card: '',
-        category: '',
-        comment: '',
-        isIncome: false,
-        date: getCurrentDateISO(),
-        currency: 'UAH'
-      });
+      
+      if (editMode && transactionToEdit) {
+        // Pre-populate form with existing transaction data
+        setFormData({
+          description: transactionToEdit.description,
+          amount: formatCurrencyFromSmallestUnit(transactionToEdit.amount, transactionToEdit.currency),
+          card: transactionToEdit.card,
+          category: transactionToEdit.category,
+          comment: transactionToEdit.comment || '',
+          isIncome: transactionToEdit.isIncome,
+          date: transactionToEdit.date,
+          currency: transactionToEdit.currency as 'UAH' | 'USD' | 'EUR' | 'GBP' | 'ILS'
+        });
+      } else {
+        // Reset form for new transaction
+        setFormData({
+          description: '',
+          amount: '',
+          card: '',
+          category: '',
+          comment: '',
+          isIncome: false,
+          date: getCurrentDateISO(),
+          currency: 'UAH'
+        });
+      }
+      
       setErrors({});
       loadCategories();
       setIsResettingForm(false);
     }
-  }, [visible]);
+  }, [visible, editMode, transactionToEdit]);
 
   const loadCategories = async () => {
     try {
@@ -107,7 +130,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         currency: data.currency
       };
 
-      await onSubmit(transactionRequest);
+      if (editMode) {
+        await onUpdate?.(transactionToEdit?.id || '', transactionRequest);
+      } else {
+        await onSubmit(transactionRequest);
+      }
       onClose();
     } catch (error) {
       console.error('Error creating transaction:', error);
@@ -141,13 +168,13 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     >
       <View style={styles.container}>
         <ModalHeader
-          title="Add Transaction"
+          title={editMode ? "Edit Transaction" : "Add Transaction"}
           leftAction={{
             label: "Cancel",
             onPress: onClose
           }}
           rightAction={{
-            label: isSubmitting ? "Adding..." : "Add",
+            label: isSubmitting ? (editMode ? "Updating..." : "Adding...") : (editMode ? "Update" : "Add"),
             onPress: handleSubmit,
             disabled: isSubmitting || isResettingForm
           }}

@@ -9,6 +9,7 @@ export interface Transaction {
   comment?: string;
   isDuplicate: boolean;
   isIncome: boolean;
+  isArchived?: boolean; // Soft delete flag - archived transactions are hidden but not deleted
   createdAt: string; // Simplified metadata - only keep creation timestamp
 }
 
@@ -26,6 +27,7 @@ export interface TransactionFilters {
   };
   isIncome?: boolean;
   searchQuery?: string;
+  includeArchived?: boolean; // Whether to include archived transactions in results
 }
 
 export interface CreateTransactionRequest {
@@ -37,4 +39,16 @@ export interface CreateTransactionRequest {
   category: string;
   comment?: string;
   isIncome: boolean;
+}
+
+export interface UpdateTransactionRequest {
+  description?: string;
+  amount?: number;
+  card?: string;
+  category?: string;
+  comment?: string;
+  isIncome?: boolean;
+  date?: string;
+  currency?: string;
+  isArchived?: boolean; // Allow archiving/unarchiving via update
 } 

@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useTransactionStore } from '../../store/transactionStore';
-import { Transaction } from '../../model/Transaction';
+import { Transaction, CreateTransactionRequest, UpdateTransactionRequest } from '../../model/Transaction';
 import { ImportResult } from '@/features/import/strategies/ImportStrategy';
-import { importService } from '@/features/import/service/ImportService';
 
-export const useTransactionActions = () => {
-  const { deleteTransaction, loadTransactions } = useTransactionStore();
+export const useTransactionActions = (onEditTransaction?: (transaction: Transaction) => void) => {
+  const { deleteTransaction, updateTransaction, loadTransactions, addTransaction, archiveTransaction } = useTransactionStore();
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [showSnackbar, setShowSnackbar] = useState(false);
 
@@ -15,57 +14,101 @@ export const useTransactionActions = () => {
     setShowSnackbar(true);
   };
 
+  // Helper function to handle archived transactions gracefully
+  const handleArchiveTransaction = async (transactionId: string) => {
+    try {
+      await archiveTransaction(transactionId);
+      showMessage('Transaction archived successfully');
+    } catch (error) {
+      console.error('Failed to archive transaction:', error);
+      throw error;
+    }
+  };
+
+  // Keep delete function for internal/admin use only (like "Clear all data")
   const handleDeleteTransaction = async (transactionId: string) => {
     try {
       await deleteTransaction(transactionId);
       showMessage('Transaction deleted successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to delete transaction');
+      console.error('Failed to delete transaction:', error);
+      throw error;
     }
   };
 
-  const handleTransactionPress = (transactionId: string) => {
+  const handleTransactionPress = (transaction: Transaction, onEdit?: (transaction: Transaction) => void) => {
     Alert.alert(
-      'Transaction Options',
-      'What would you like to do?',
+      'Transaction Actions',
+      `What would you like to do with "${transaction.description}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => handleDeleteTransaction(transactionId)
+        {
+          text: 'Edit',
+          onPress: () => {
+            if (onEdit) {
+              onEdit(transaction);
+            } else if (onEditTransaction) {
+              onEditTransaction(transaction);
+            }
+          }
         },
+        {
+          text: 'Archive',
+          style: 'destructive',
+          onPress: () => handleArchiveTransaction(transaction.id)
+        }
       ]
     );
   };
 
-  const handleImportConfirm = async (transactions: Transaction[], ignoreDuplicates: boolean) => {
+  const handleUpdateTransaction = async (id: string, updates: UpdateTransactionRequest) => {
     try {
-      // Save transactions to database
-      await importService.saveTransactions(transactions, ignoreDuplicates);
+      await updateTransaction(id, updates);
+      showMessage('Transaction updated successfully');
+    } catch (error) {
+      console.error('Failed to update transaction:', error);
+      throw error;
+    }
+  };
+
+  const handleImportConfirm = async (transactions: Transaction[], ignoreDuplicates: boolean = false): Promise<boolean> => {
+    try {
+      let successCount = 0;
+      let errorCount = 0;
       
-      // Reload transactions to show the new ones
-      await loadTransactions();
+      for (const transaction of transactions) {
+        try {
+          const { id, createdAt, isDuplicate, isArchived, ...createRequest } = transaction;
+          await addTransaction(createRequest as CreateTransactionRequest);
+          successCount++;
+        } catch (error) {
+          console.error('Failed to import transaction:', error);
+          errorCount++;
+          if (!ignoreDuplicates) {
+            throw error;
+          }
+        }
+      }
       
-      const importedCount = ignoreDuplicates 
-        ? transactions.filter(t => !t.isDuplicate).length
-        : transactions.length;
+      if (errorCount > 0 && ignoreDuplicates) {
+        showMessage(`Import completed: ${successCount} transactions imported, ${errorCount} duplicates ignored`);
+      } else {
+        showMessage(`Successfully imported ${successCount} transactions`);
+      }
       
-      showMessage(`Successfully imported ${importedCount} transactions`);
       return true;
     } catch (error) {
-      console.error('Save import error:', error);
-      Alert.alert(
-        'Import Error',
-        error instanceof Error ? error.message : 'Failed to save transactions'
-      );
+      console.error('Import failed:', error);
+      showMessage('Failed to import transactions');
       return false;
     }
   };
 
   return {
-    handleDeleteTransaction,
     handleTransactionPress,
+    handleUpdateTransaction,
+    handleArchiveTransaction,
+    handleDeleteTransaction, // Keep for admin functions only
     handleImportConfirm,
     snackbarMessage,
     showSnackbar,

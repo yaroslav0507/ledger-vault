@@ -39,6 +39,12 @@ export class TransactionRepository {
   async findAll(filters?: TransactionFilters): Promise<Transaction[]> {
     let query = db.transactions.orderBy('date').reverse();
 
+    // Filter out archived transactions by default
+    const includeArchived = filters?.includeArchived ?? false;
+    if (!includeArchived) {
+      query = query.filter(t => t.isArchived !== true);
+    }
+
     if (filters) {
       // Apply date range filter
       if (filters.dateRange) {
@@ -128,6 +134,22 @@ export class TransactionRepository {
     return updatedTransaction;
   }
 
+  async archive(id: string): Promise<Transaction> {
+    const existing = await this.findById(id);
+    if (!existing) {
+      throw new Error(`Transaction with id ${id} not found`);
+    }
+
+    const archivedTransaction: Transaction = {
+      ...existing,
+      isArchived: true
+    };
+
+    await db.transactions.update(id, archivedTransaction);
+    console.log('✅ Transaction archived:', id);
+    return archivedTransaction;
+  }
+
   async delete(id: string): Promise<void> {
     const deleted = await db.transactions.delete(id);
     const existing = await this.findById(id);
@@ -163,11 +185,14 @@ export class TransactionRepository {
   async getBalance(): Promise<{ income: number; expenses: number; total: number }> {
     const transactions = await db.transactions.toArray();
     
-    const income = transactions
+    // Filter out archived transactions
+    const activeTransactions = transactions.filter(t => t.isArchived !== true);
+    
+    const income = activeTransactions
       .filter(t => t.isIncome)
       .reduce((sum, t) => sum + t.amount, 0);
     
-    const expenses = transactions
+    const expenses = activeTransactions
       .filter(t => !t.isIncome)
       .reduce((sum, t) => sum + t.amount, 0);
 
@@ -180,9 +205,13 @@ export class TransactionRepository {
 
   async getCategoryTotals(): Promise<{ category: string; total: number; count: number }[]> {
     const transactions = await db.transactions.toArray();
+    
+    // Filter out archived transactions
+    const activeTransactions = transactions.filter(t => t.isArchived !== true);
+    
     const categoryMap = new Map<string, { total: number; count: number }>();
 
-    transactions.forEach(t => {
+    activeTransactions.forEach(t => {
       const existing = categoryMap.get(t.category) || { total: 0, count: 0 };
       categoryMap.set(t.category, {
         total: existing.total + t.amount,

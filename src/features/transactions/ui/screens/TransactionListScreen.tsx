@@ -44,6 +44,8 @@ export const TransactionListScreen: React.FC = () => {
 
   const [isInitialized, setIsInitialized] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showColumnMappingModal, setShowColumnMappingModal] = useState(false);
@@ -53,11 +55,13 @@ export const TransactionListScreen: React.FC = () => {
   const [importFileName, setImportFileName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
+  const [removingTransactionIds, setRemovingTransactionIds] = useState<Set<string>>(new Set());
   
   const scrollViewRef = useRef<SectionList>(null);
   
   const balance = getBalance();
-  const filteredTransactions = transactions; // Repository already applies filters
+  const filteredTransactions = transactions.filter(t => t.isArchived !== true); // Filter out archived transactions (handle undefined)
+  
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (filters.categories && filters.categories.length > 0) count += filters.categories.length;
@@ -66,14 +70,23 @@ export const TransactionListScreen: React.FC = () => {
     if (filters.searchQuery) count++;
     return count;
   }, [filters]);
+
+  // Handle edit transaction
+  const handleEditTransaction = (transaction: Transaction) => {
+    setTransactionToEdit(transaction);
+    setShowEditModal(true);
+  };
+
   const {
     handleTransactionPress,
+    handleUpdateTransaction,
     handleImportConfirm,
+    handleArchiveTransaction,
     snackbarMessage,
     showSnackbar,
     setShowSnackbar,
     showMessage
-  } = useTransactionActions();
+  } = useTransactionActions(handleEditTransaction);
 
   // Get unique cards for filter options
   const availableCards = Array.from(new Set(transactions.map(t => t.card)));
@@ -122,6 +135,38 @@ export const TransactionListScreen: React.FC = () => {
         ...filters,
         isIncome: false
       });
+    }
+  };
+
+  // Handle archive transaction (soft delete - sets isArchived flag)
+  const handleArchiveTransactionLocal = async (transaction: Transaction) => {
+    try {
+      // Start removal animation
+      setRemovingTransactionIds(prev => new Set(prev).add(transaction.id));
+      
+      // Wait for animation to complete, then archive
+      setTimeout(async () => {
+        try {
+          await handleArchiveTransaction(transaction.id);
+          showMessage(`Transaction "${transaction.description}" archived successfully`);
+        } catch (error) {
+          console.error('Failed to archive transaction:', error);
+          Alert.alert('Error', 'Failed to archive transaction');
+        } finally {
+          // Remove from removing set
+          setRemovingTransactionIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(transaction.id);
+            return newSet;
+          });
+        }
+      }, 300); // Wait for animation duration
+      
+    } catch (error) {
+      console.error('Failed to start archive animation:', error);
+      // Fallback to immediate archive
+      await handleArchiveTransaction(transaction.id);
+      showMessage(`Transaction "${transaction.description}" archived successfully`);
     }
   };
 
@@ -224,89 +269,92 @@ export const TransactionListScreen: React.FC = () => {
     }
   };
 
-  // Custom renderItem for SectionList that handles empty state
-  const renderSectionItem = useCallback(({ item: transaction }: { item: Transaction | null }) => {
-    // If item is null (our placeholder), render empty state
-    if (transaction === null) {
-      if (loading) {
-        return (
-          <View style={styles.centerContent}>
-            <Text style={styles.loadingText}>Loading transactions...</Text>
-          </View>
-        );
-      }
-
-      if (!hasTransactions) {
-        return (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyContent}>
-              <Text variant="titleMedium" style={styles.emptyTitle} numberOfLines={2} ellipsizeMode="tail">
-                No transactions yet
-              </Text>
-              <Text variant="bodyMedium" style={styles.emptyDescription} numberOfLines={3} ellipsizeMode="tail">
-                Start by adding your first transaction or importing data from your bank statements
-              </Text>
-            </View>
-          </View>
-        );
-      }
-
-      if (!hasFilteredTransactions) {
-        return (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyContent}>
-              <Text variant="titleMedium" style={styles.emptyTitle} numberOfLines={2} ellipsizeMode="tail">
-                No transactions match your filters
-              </Text>
-              <Text variant="bodyMedium" style={styles.emptyDescription} numberOfLines={3} ellipsizeMode="tail">
-                Try adjusting your filters or clearing them to see all {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
-              </Text>
-              <View style={styles.emptyActions}>
-                <Button
-                  mode="outlined"
-                  icon="filter-remove"
-                  onPress={handleClearAllFilters}
-                  style={styles.emptyButton}
-                  labelStyle={styles.emptyButtonLabel}
-                  contentStyle={styles.emptyButtonContent}
-                >
-                  Clear Filters
-                </Button>
-                <Button
-                  mode="contained"
-                  icon="filter"
-                  onPress={() => setShowFiltersModal(true)}
-                  style={styles.emptyButton}
-                  labelStyle={styles.emptyButtonLabel}
-                  contentStyle={styles.emptyButtonContent}
-                >
-                  Adjust Filters
-                </Button>
-              </View>
-            </View>
-          </View>
-        );
-      }
-
-      return null;
-    }
-    
+  // Custom renderItem for SectionList
+  const renderSectionItem = useCallback(({ item: transaction }: { item: Transaction }) => {
     return (
       <TransactionCard
         transaction={transaction}
-        onLongPress={() => handleTransactionPress(transaction.id)}
+        onLongPress={() => handleTransactionPress(transaction)}
         onCategoryPress={toggleCategoryFilter}
+        onEdit={handleEditTransaction}
+        onArchive={handleArchiveTransactionLocal}
+        isBeingRemoved={removingTransactionIds.has(transaction.id)}
       />
     );
-  }, [loading, hasTransactions, hasFilteredTransactions, transactions.length, handleClearAllFilters, handleTransactionPress, toggleCategoryFilter]);
+  }, [handleTransactionPress, toggleCategoryFilter, handleEditTransaction, handleArchiveTransactionLocal, removingTransactionIds]);
 
-  // For sections with no data, we need to add a placeholder item to trigger rendering
-  const sectionsDataWithEmpty = [
+  // Render empty state component
+  const renderEmptyState = useCallback(() => {
+    if (loading) {
+      return (
+        <View style={styles.centerContent}>
+          <Text style={styles.loadingText}>Loading transactions...</Text>
+        </View>
+      );
+    }
+
+    if (!hasTransactions) {
+      return (
+        <View style={styles.emptyCard}>
+          <View style={styles.emptyContent}>
+            <Text variant="titleMedium" style={styles.emptyTitle} numberOfLines={2} ellipsizeMode="tail">
+              No transactions yet
+            </Text>
+            <Text variant="bodyMedium" style={styles.emptyDescription} numberOfLines={3} ellipsizeMode="tail">
+              Start by adding your first transaction or importing data from your bank statements
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    if (!hasFilteredTransactions) {
+      return (
+        <View style={styles.emptyCard}>
+          <View style={styles.emptyContent}>
+            <Text variant="titleMedium" style={styles.emptyTitle} numberOfLines={2} ellipsizeMode="tail">
+              No transactions match your filters
+            </Text>
+            <Text variant="bodyMedium" style={styles.emptyDescription} numberOfLines={3} ellipsizeMode="tail">
+              Try adjusting your filters or clearing them to see all {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
+            </Text>
+            <View style={styles.emptyActions}>
+              <Button
+                mode="outlined"
+                icon="filter-remove"
+                onPress={handleClearAllFilters}
+                style={styles.emptyButton}
+                labelStyle={styles.emptyButtonLabel}
+                contentStyle={styles.emptyButtonContent}
+              >
+                Clear Filters
+              </Button>
+              <Button
+                mode="contained"
+                icon="filter"
+                onPress={() => setShowFiltersModal(true)}
+                style={styles.emptyButton}
+                labelStyle={styles.emptyButtonLabel}
+                contentStyle={styles.emptyButtonContent}
+              >
+                Adjust Filters
+              </Button>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    return null;
+  }, [loading, hasTransactions, hasFilteredTransactions, transactions.length, handleClearAllFilters]);
+
+  // Simple sections data - only include section if there are transactions
+  const sectionsData = filteredTransactions.length > 0 ? [
     {
       title: 'Transactions',
-      data: filteredTransactions.length > 0 ? filteredTransactions : [null as any] // placeholder for empty state
+      data: filteredTransactions
     }
-  ];
+  ] : [];
 
   // Dynamic transaction section title based on state
   const getTransactionSectionTitle = () => {
@@ -418,11 +466,12 @@ export const TransactionListScreen: React.FC = () => {
         ref={scrollViewRef}
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
-        sections={sectionsDataWithEmpty}
-        keyExtractor={(item, index) => item?.id || `empty-${index}`}
+        sections={sectionsData}
+        keyExtractor={(item) => item.id}
         renderItem={renderSectionItem}
-        renderSectionHeader={renderStickyHeader}
+        renderSectionHeader={sectionsData.length > 0 ? renderStickyHeader : undefined}
         ListHeaderComponent={renderListHeader}
+        ListEmptyComponent={renderEmptyState}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={true}
@@ -455,6 +504,21 @@ export const TransactionListScreen: React.FC = () => {
         onSubmit={(transaction) => {
           return addTransaction(transaction);
         }}
+      />
+
+      {/* Edit Transaction Modal */}
+      <AddTransactionModal
+        visible={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setTransactionToEdit(null);
+        }}
+        editMode={true}
+        transactionToEdit={transactionToEdit || undefined}
+        onUpdate={async (id, updates) => {
+          await handleUpdateTransaction(id, updates);
+        }}
+        onSubmit={() => Promise.resolve()} // Not used in edit mode
       />
 
       <TransactionFiltersModal
@@ -787,7 +851,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     marginTop: -1,
     marginBottom: 10,
-    boxShadow: '0 5px 10px 0px #0000001c',
+    boxShadow: 'rgba(0, 0, 0, 0.05) 0 2px 5px 0',
   },
   stickyHeaderContent: {
     flexDirection: 'row',

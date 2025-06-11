@@ -65,6 +65,7 @@ interface TransactionStore {
   loadTransactions: () => Promise<void>;
   addTransaction: (request: CreateTransactionRequest) => Promise<void>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
+  archiveTransaction: (id: string) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   clearAllTransactions: () => Promise<void>;
   setFilters: (newFilters: Partial<TransactionFilters>) => void;
@@ -145,6 +146,26 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => {
         const errorMessage = error instanceof Error ? error.message : 'Failed to update transaction';
         set({ error: errorMessage, loading: false });
         console.error('❌ Failed to update transaction:', error);
+        throw error;
+      }
+    },
+
+    archiveTransaction: async (id: string) => {
+      set({ loading: true, error: null });
+      
+      try {
+        await transactionRepository.archive(id);
+        
+        // Remove archived transaction from current transactions list (since they should be hidden)
+        const currentState = get();
+        const transactions = (currentState.transactions || []).filter(t => t.id !== id);
+        
+        set({ transactions, loading: false });
+        console.log('✅ Transaction archived successfully');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to archive transaction';
+        set({ error: errorMessage, loading: false });
+        console.error('❌ Failed to archive transaction:', error);
         throw error;
       }
     },
@@ -291,11 +312,15 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => {
     getBalance: () => {
       const currentState = get();
       const transactions = currentState.transactions || [];
-      const income = transactions
+      
+      // Filter out archived transactions
+      const activeTransactions = transactions.filter(t => t.isArchived !== true);
+      
+      const income = activeTransactions
         .filter(t => t.isIncome)
         .reduce((sum, t) => sum + t.amount, 0);
       
-      const expenses = transactions
+      const expenses = activeTransactions
         .filter(t => !t.isIncome)
         .reduce((sum, t) => sum + t.amount, 0);
 
