@@ -887,13 +887,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#E0E0E0',
     borderRadius: theme.borderRadius.md,
-    minWidth: 80,
+    minWidth: 90,
+    height: 36,
     backgroundColor: '#FAFAFA',
   },
   stickyFilterButtonActive: {
     backgroundColor: '#E8F5E8',
     borderColor: '#4CAF50',
-    borderWidth: 2,
   },
   filterIcon: {
     fontSize: 18,
