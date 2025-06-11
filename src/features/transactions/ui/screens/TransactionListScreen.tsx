@@ -224,18 +224,21 @@ export const TransactionListScreen: React.FC = () => {
   };
 
   const handleImportConfirmLocal = async (transactions: Transaction[], ignoreDuplicates: boolean) => {
-    const success = await handleImportConfirm(transactions, ignoreDuplicates);
-    if (success) {
-      setImportState(prev => ({
-        ...prev,
-        showModal: false,
-        result: null,
-      }));
-    }
+    // Close modal immediately after user confirmation
     setImportState(prev => ({
       ...prev,
+      showModal: false,
+      result: null,
       isLoading: false,
     }));
+    
+    // Run import in background
+    try {
+      await handleImportConfirm(transactions, ignoreDuplicates);
+    } catch (error) {
+      console.error('Background import failed:', error);
+      // Error handling is already done in handleImportConfirm
+    }
   };
 
   const handleColumnMappingConfirm = async (mapping: ImportMapping) => {
