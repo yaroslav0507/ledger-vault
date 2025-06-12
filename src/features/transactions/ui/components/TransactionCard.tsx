@@ -6,9 +6,9 @@ import { formatDateTime } from '@/shared/utils/dateUtils';
 import { theme } from '@/shared/ui/theme/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const REVEAL_THRESHOLD = SCREEN_WIDTH * 0.15;
-const ACTION_BUTTON_WIDTH = 120;
-const SHIFT_DISTANCE = ACTION_BUTTON_WIDTH - 20;
+const REVEAL_THRESHOLD = SCREEN_WIDTH * 0.05;
+const ACTION_BUTTON_WIDTH = 100;
+const SHIFT_DISTANCE = ACTION_BUTTON_WIDTH;
 const AUTO_ACTION_THRESHOLD = REVEAL_THRESHOLD + ACTION_BUTTON_WIDTH;
 
 type SwipeState = 'center' | 'edit-revealed' | 'archive-revealed';
@@ -104,27 +104,33 @@ const useSwipeGesture = (
 
   const panResponder = useRef(
     PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      
       onMoveShouldSetPanResponder: (evt, gestureState) => {
         const { dx, dy } = gestureState;
         const absDx = Math.abs(dx);
         const absDy = Math.abs(dy);
-        return absDx > 15 && absDx > absDy * 1.5;
+        return absDx > 15;
       },
       
       onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
         const { dx, dy } = gestureState;
         const absDx = Math.abs(dx);
         const absDy = Math.abs(dy);
-        return absDy <= absDx && absDx > 15 && absDx > absDy * 1.5;
+        return absDy <= absDx && absDx > 15;
       },
       
+      onPanResponderTerminationRequest: () => false,
+      
+      onShouldBlockNativeResponder: () => false,
+      
       onPanResponderGrant: () => {
-        // Determine the current visual state based on translateX position
         const currentTranslateX = (translateX as any)._value;
+        const autoRevealThreshold = SHIFT_DISTANCE * 0.1;
         
-        if (currentTranslateX > SHIFT_DISTANCE * 0.5) {
+        if (currentTranslateX > autoRevealThreshold) {
           initialSwipeState.current = 'archive-revealed';
-        } else if (currentTranslateX < -SHIFT_DISTANCE * 0.5) {
+        } else if (currentTranslateX < -autoRevealThreshold) {
           initialSwipeState.current = 'edit-revealed';
         } else {
           initialSwipeState.current = 'center';
