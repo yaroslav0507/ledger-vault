@@ -225,10 +225,10 @@ export const TransactionListScreen: React.FC = () => {
 
   const handleImportConfirmLocal = async (transactions: Transaction[], ignoreDuplicates: boolean) => {
     // Close modal immediately after user confirmation
-    setImportState(prev => ({
-      ...prev,
-      showModal: false,
-      result: null,
+      setImportState(prev => ({
+        ...prev,
+        showModal: false,
+        result: null,
       isLoading: false,
     }));
     

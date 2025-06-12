@@ -107,17 +107,15 @@ const useSwipeGesture = (
       onStartShouldSetPanResponder: () => true,
       
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        const { dx, dy } = gestureState;
+        const { dx } = gestureState;
         const absDx = Math.abs(dx);
-        const absDy = Math.abs(dy);
         return absDx > 15;
       },
       
       onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
-        const { dx, dy } = gestureState;
+        const { dx } = gestureState;
         const absDx = Math.abs(dx);
-        const absDy = Math.abs(dy);
-        return absDy <= absDx && absDx > 15;
+        return absDx > 15;
       },
       
       onPanResponderTerminationRequest: () => false,
@@ -141,14 +139,7 @@ const useSwipeGesture = (
       },
       
       onPanResponderMove: (evt, gestureState) => {
-        const { dx, dy } = gestureState;
-        const absDx = Math.abs(dx);
-        const absDy = Math.abs(dy);
-        
-        if (absDy > absDx * 0.8) {
-          return false;
-        }
-        
+        const { dx } = gestureState;
         translateX.setValue(dx);
       },
       
@@ -161,21 +152,18 @@ const useSwipeGesture = (
         const { revealThreshold, autoThreshold } = getThresholds(dx);
         
         if (absDx >= autoThreshold) {
-          // Auto-trigger action
           if (dx > 0) {
             handleArchive();
           } else {
             handleEdit();
           }
         } else if (absDx >= revealThreshold) {
-          // Reveal action
           if (dx > 0) {
             revealArchive();
           } else {
             revealEdit();
           }
         } else {
-          // Reset to center
           resetToCenter();
         }
       },
