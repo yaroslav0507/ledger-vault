@@ -61,6 +61,8 @@ export const TransactionListScreen: React.FC = () => {
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [removingTransactionIds, setRemovingTransactionIds] = useState<Set<string>>(new Set());
   const [isAnyCardSwiping, setIsAnyCardSwiping] = useState(false);
+  const [recentlyArchivedTransaction, setRecentlyArchivedTransaction] = useState<Transaction | null>(null);
+  const [undoTimeoutId, setUndoTimeoutId] = useState<NodeJS.Timeout | null>(null);
   
   const scrollViewRef = useRef<SectionList>(null);
   
@@ -102,11 +104,30 @@ export const TransactionListScreen: React.FC = () => {
     handleUpdateTransaction,
     handleImportConfirm,
     handleArchiveTransaction,
+    handleUnarchiveTransaction,
     snackbarMessage,
     showSnackbar,
     setShowSnackbar,
     showMessage
   } = useTransactionActions(handleEditTransaction);
+
+  const handleUndo = useCallback(async () => {
+    if (!recentlyArchivedTransaction) return;
+    
+    try {
+      if (undoTimeoutId) {
+        clearTimeout(undoTimeoutId);
+        setUndoTimeoutId(null);
+      }
+      
+      await handleUnarchiveTransaction(recentlyArchivedTransaction.id);
+      setRecentlyArchivedTransaction(null);
+      setShowSnackbar(false);
+    } catch (error) {
+      console.error('Failed to undo archive:', error);
+      Alert.alert('Error', 'Failed to restore transaction');
+    }
+  }, [recentlyArchivedTransaction, undoTimeoutId, handleUnarchiveTransaction]);
 
   // Remove redundant wrapper functions - use inline callbacks
   const handleSwipeStart = useCallback(() => setIsAnyCardSwiping(true), []);
@@ -145,6 +166,10 @@ export const TransactionListScreen: React.FC = () => {
         try {
           await handleArchiveTransaction(transaction.id);
           showMessage(`Transaction "${transaction.description}" archived successfully`);
+          setRecentlyArchivedTransaction(transaction);
+          setUndoTimeoutId(setTimeout(() => {
+            setRecentlyArchivedTransaction(null);
+          }, 5000));
         } catch (error) {
           console.error('Failed to archive transaction:', error);
           Alert.alert('Error', 'Failed to archive transaction');
@@ -180,6 +205,14 @@ export const TransactionListScreen: React.FC = () => {
 
     initApp();
   }, [loadTransactions]);
+
+  useEffect(() => {
+    return () => {
+      if (undoTimeoutId) {
+        clearTimeout(undoTimeoutId);
+      }
+    };
+  }, [undoTimeoutId]);
 
   const handleFileSelect = async (file: File) => {
     try {
@@ -576,8 +609,19 @@ export const TransactionListScreen: React.FC = () => {
       <Portal>
         <Snackbar
           visible={showSnackbar}
-          onDismiss={() => setShowSnackbar(false)}
-          duration={4000}
+          onDismiss={() => {
+            setShowSnackbar(false);
+            if (recentlyArchivedTransaction && undoTimeoutId) {
+              clearTimeout(undoTimeoutId);
+              setUndoTimeoutId(null);
+              setRecentlyArchivedTransaction(null);
+            }
+          }}
+          duration={recentlyArchivedTransaction ? 5000 : 4000}
+          action={recentlyArchivedTransaction ? {
+            label: 'Undo',
+            onPress: handleUndo,
+          } : undefined}
         >
           {snackbarMessage}
         </Snackbar>

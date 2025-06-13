@@ -156,6 +156,22 @@ export class TransactionRepository {
     return archivedTransaction;
   }
 
+  async unarchive(id: string): Promise<Transaction> {
+    const existing = await this.findById(id);
+    if (!existing) {
+      throw new Error(`Transaction with id ${id} not found`);
+    }
+
+    const unarchivedTransaction: Transaction = {
+      ...existing,
+      isArchived: false
+    };
+
+    await db.transactions.update(id, unarchivedTransaction);
+    console.log('✅ Transaction unarchived:', id);
+    return unarchivedTransaction;
+  }
+
   async delete(id: string): Promise<void> {
     const deleted = await db.transactions.delete(id);
     const existing = await this.findById(id);

@@ -15,7 +15,7 @@
 | **Phase 3** | ✅ **COMPLETE** | Basic Import System (XLS/XLSX) | 100% |
 | **Phase 4** | ✅ **COMPLETE** | Navigation & Basic Filtering | 100% |
 | **Phase 5** | ✅ **COMPLETE** | Code Quality & UI Polish | 100% |
-| **Phase 6** | 🚧 **IN PROGRESS** | Transaction Editing & Management | 70% |
+| **Phase 6** | 🚧 **IN PROGRESS** | Transaction Editing & Management | 75% |
 | **Phase 7** | 📋 **PLANNED** | Multi-Format Import (CSV, PDF) | 0% |
 | **Phase 8** | 📋 **PLANNED** | Advanced Document Parsing | 0% |
 | **Phase 9** | 📋 **PLANNED** | Analytics & Charts | 0% |
@@ -111,16 +111,19 @@ src/
 
 ---
 
-## 🚧 **PHASE 6: Enhanced Transaction Management** *(In Progress - 70%)*
+## 🚧 **PHASE 6: Enhanced Transaction Management** *(In Progress - 75%)*
 
-### Transaction Editing *(Partially Complete)*
+### Transaction Editing *(Complete)*
 - ✅ **Edit existing transactions** - modify category, description, amount, card, date
 - ✅ **Update transaction details** - change card, date, currency with new DatePickerInput component
 - ✅ **Enhanced comment system** - add/edit/remove comments
+- ✅ **Archive with undo** - soft delete transactions with 5-second undo option
 - ❌ **Bulk edit operations** - modify multiple transactions at once
 - ❌ **Transaction history** - track changes and modifications
 
-### Advanced Management Features *(Missing)*
+### Advanced Management Features *(Partially Complete)*
+- ✅ **Transaction archiving** - soft delete with restore capability
+- ✅ **Undo functionality** - restore recently archived transactions
 - ❌ **Transaction splitting** - divide single transaction into multiple categories
 - ❌ **Merge transactions** - combine related transactions
 - ❌ **Advanced validation** - business rules for transaction modifications

@@ -5,7 +5,7 @@ import { Transaction, CreateTransactionRequest, UpdateTransactionRequest } from 
 import { ImportResult } from '@/features/import/strategies/ImportStrategy';
 
 export const useTransactionActions = (onEditTransaction?: (transaction: Transaction) => void) => {
-  const { deleteTransaction, updateTransaction, loadTransactions, addTransaction, archiveTransaction } = useTransactionStore();
+  const { deleteTransaction, updateTransaction, loadTransactions, addTransaction, archiveTransaction, unarchiveTransaction } = useTransactionStore();
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [showSnackbar, setShowSnackbar] = useState(false);
 
@@ -21,6 +21,16 @@ export const useTransactionActions = (onEditTransaction?: (transaction: Transact
       showMessage('Transaction archived successfully');
     } catch (error) {
       console.error('Failed to archive transaction:', error);
+      throw error;
+    }
+  };
+
+  const handleUnarchiveTransaction = async (transactionId: string) => {
+    try {
+      await unarchiveTransaction(transactionId);
+      showMessage('Transaction restored successfully');
+    } catch (error) {
+      console.error('Failed to unarchive transaction:', error);
       throw error;
     }
   };
@@ -108,6 +118,7 @@ export const useTransactionActions = (onEditTransaction?: (transaction: Transact
     handleTransactionPress,
     handleUpdateTransaction,
     handleArchiveTransaction,
+    handleUnarchiveTransaction,
     handleDeleteTransaction, // Keep for admin functions only
     handleImportConfirm,
     snackbarMessage,

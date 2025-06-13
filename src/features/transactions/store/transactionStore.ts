@@ -66,6 +66,7 @@ interface TransactionStore {
   addTransaction: (request: CreateTransactionRequest) => Promise<void>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
   archiveTransaction: (id: string) => Promise<void>;
+  unarchiveTransaction: (id: string) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   clearAllTransactions: () => Promise<void>;
   setFilters: (newFilters: Partial<TransactionFilters>) => void;
@@ -167,6 +168,21 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => {
         const errorMessage = error instanceof Error ? error.message : 'Failed to archive transaction';
         set({ error: errorMessage, loading: false });
         console.error('❌ Failed to archive transaction:', error);
+        throw error;
+      }
+    },
+
+    unarchiveTransaction: async (id: string) => {
+      set({ loading: true, error: null });
+      try {
+        await transactionRepository.unarchive(id);
+        await get().loadTransactions();
+        set({ loading: false });
+        console.log('✅ Transaction unarchived successfully');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to unarchive transaction';
+        set({ error: errorMessage, loading: false });
+        console.error('❌ Failed to unarchive transaction:', error);
         throw error;
       }
     },
