@@ -26,6 +26,7 @@ import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
 import { useTransactionStore } from '../../store/transactionStore';
 import { categoryService } from '../../service/CategoryService';
+import { useSettingsStore } from '@/shared/store/settingsStore';
 
 interface SettingsScreenProps {
   onClose: () => void;
@@ -54,6 +55,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
 
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+
+  const confirmDeleteTransactions = useSettingsStore(state => state.confirmDeleteTransactions);
+  const setConfirmDeleteTransactions = useSettingsStore(state => state.setConfirmDeleteTransactions);
 
   // Load available categories on component mount
   useEffect(() => {
@@ -249,10 +253,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
               left={(props) => <List.Icon {...props} icon="shield-check" />}
               right={() => (
                 <Switch
-                  value={settings.confirmDeleteTransactions}
-                  onValueChange={(value) => 
-                    setSettings({ ...settings, confirmDeleteTransactions: value })
-                  }
+                  value={confirmDeleteTransactions}
+                  onValueChange={setConfirmDeleteTransactions}
                 />
               )}
             />

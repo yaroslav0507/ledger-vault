@@ -122,8 +122,8 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
             onPress: onClose
           }}
           rightAction={{
-            label: "Clear",
-            onPress: handleClear
+            label: "Filter",
+            onPress: handleApply
           }}
         />
 
@@ -275,9 +275,9 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
             />
           </View>
 
-          {/* Apply All Filters Button */}
-          <TouchableOpacity style={styles.applyAllButton} onPress={handleApply}>
-            <Text style={styles.applyAllButtonText}>Filter Transactions</Text>
+          {/* Clear All Filters Button */}
+          <TouchableOpacity style={styles.applyAllButton} onPress={handleClear}>
+            <Text style={styles.applyAllButtonText}>Clear Filters</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

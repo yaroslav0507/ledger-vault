@@ -25,6 +25,8 @@ import { ImportResult, ImportMapping } from '@/features/import/strategies/Import
 import { Transaction, UpdateTransactionRequest } from '../../model/Transaction';
 import { TimePeriodSelector } from '@/shared/ui/components/TimePeriodSelector';
 import { TimePeriod, DateRange } from '@/shared/utils/dateUtils';
+import { useSettingsStore } from '@/shared/store/settingsStore';
+import { ConfirmationDialog } from '@/shared/ui/components';
 
 export const TransactionListScreen: React.FC = () => {
   const { 
@@ -63,6 +65,8 @@ export const TransactionListScreen: React.FC = () => {
   const [isAnyCardSwiping, setIsAnyCardSwiping] = useState(false);
   const [recentlyArchivedTransaction, setRecentlyArchivedTransaction] = useState<Transaction | null>(null);
   const [undoTimeoutId, setUndoTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [showArchiveConfirmDialog, setShowArchiveConfirmDialog] = useState(false);
+  const [transactionToArchive, setTransactionToArchive] = useState<Transaction | null>(null);
   
   const scrollViewRef = useRef<SectionList>(null);
   
@@ -77,6 +81,8 @@ export const TransactionListScreen: React.FC = () => {
     if (filters.searchQuery) count++;
     return count;
   }, [filters]);
+
+  const confirmDeleteTransactions = useSettingsStore(state => state.confirmDeleteTransactions);
 
   // Load available cards when date range changes
   useEffect(() => {
@@ -157,38 +163,53 @@ export const TransactionListScreen: React.FC = () => {
 
   // Handle archive transaction (soft delete - sets isArchived flag)
   const handleArchiveTransactionLocal = async (transaction: Transaction) => {
-    try {
-      // Start removal animation
-      setRemovingTransactionIds(prev => new Set(prev).add(transaction.id));
-      
-      // Wait for animation to complete, then archive
-      setTimeout(async () => {
-        try {
-          await handleArchiveTransaction(transaction.id);
-          showMessage(`Transaction "${transaction.description}" archived successfully`);
-          setRecentlyArchivedTransaction(transaction);
-          setUndoTimeoutId(setTimeout(() => {
-            setRecentlyArchivedTransaction(null);
-          }, 5000));
-        } catch (error) {
-          console.error('Failed to archive transaction:', error);
-          Alert.alert('Error', 'Failed to archive transaction');
-        } finally {
-          // Remove from removing set
-          setRemovingTransactionIds(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(transaction.id);
-            return newSet;
-          });
-        }
-      }, 300); // Wait for animation duration
-      
-    } catch (error) {
-      console.error('Failed to start archive animation:', error);
-      // Fallback to immediate archive
-      await handleArchiveTransaction(transaction.id);
-      showMessage(`Transaction "${transaction.description}" archived successfully`);
+    if (confirmDeleteTransactions) {
+      setTransactionToArchive(transaction);
+      setShowArchiveConfirmDialog(true);
+      return;
     }
+    archiveWithAnimation(transaction);
+  };
+
+  const handleConfirmArchive = () => {
+    if (transactionToArchive) {
+      archiveWithAnimation(transactionToArchive);
+    }
+    setShowArchiveConfirmDialog(false);
+    setTimeout(() => {
+      setTransactionToArchive(null);
+    }, 300);
+  };
+
+  const handleCancelArchive = () => {
+    setShowArchiveConfirmDialog(false);
+    setTimeout(() => {
+      setTransactionToArchive(null);
+    }, 300);
+  };
+
+  const archiveWithAnimation = async (transaction: Transaction) => {
+    setRemovingTransactionIds(prev => new Set(prev).add(transaction.id));
+    
+    setTimeout(async () => {
+      try {
+        await handleArchiveTransaction(transaction.id);
+        showMessage(`Transaction "${transaction.description}" archived successfully`);
+        setRecentlyArchivedTransaction(transaction);
+        setUndoTimeoutId(setTimeout(() => {
+          setRecentlyArchivedTransaction(null);
+        }, 5000));
+      } catch (error) {
+        console.error('Failed to archive transaction:', error);
+        Alert.alert('Error', 'Failed to archive transaction');
+      } finally {
+        setRemovingTransactionIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(transaction.id);
+          return newSet;
+        });
+      }
+    }, 300);
   };
 
   useEffect(() => {
@@ -603,6 +624,17 @@ export const TransactionListScreen: React.FC = () => {
         sampleData={importState.preview?.sampleData || []}
         fileName={importState.fileName}
         suggestedMapping={importState.preview?.suggestedMapping}
+      />
+
+      {/* Archive Confirmation Dialog */}
+      <ConfirmationDialog
+        visible={showArchiveConfirmDialog}
+        title="Confirm Archive"
+        message={`Are you sure you want to archive "${transactionToArchive?.description || 'this transaction'}"?`}
+        confirmText="Archive"
+        cancelText="Cancel"
+        onConfirm={handleConfirmArchive}
+        onCancel={handleCancelArchive}
       />
 
       {/* Success Snackbar */}
