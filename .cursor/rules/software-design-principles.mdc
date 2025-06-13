@@ -1,0 +1,137 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Software Design Principles and Patterns
+
+## Core Design Principles
+
+### DRY (Don't Repeat Yourself)
+- **Extract common logic** into reusable functions, hooks, or services
+- **Identify patterns** across components and create shared abstractions
+- **Consolidate similar functionality** rather than duplicating code
+- **Use composition** over inheritance to build complex components from simple ones
+
+### Single Responsibility Principle (SRP)
+- Each component, function, or class should have **one clear purpose**
+- **Separate concerns**: UI logic, business logic, and data management
+- **Break down large components** into smaller, focused pieces
+- Example: [AnalyticsService.ts](mdc:src/features/analytics/service/AnalyticsService.ts) handles only analytics calculations
+
+### Separation of Concerns
+- **UI Components**: Focus only on rendering and user interaction
+- **Services**: Handle business logic and data processing like [AnalyticsService.ts](mdc:src/features/analytics/service/AnalyticsService.ts)
+- **Stores**: Manage state and data flow like [transactionStore.ts](mdc:src/features/transactions/store/transactionStore.ts)
+- **Utilities**: Provide common helper functions in [src/shared/utils/](mdc:src/shared/utils)
+
+## Code Reusability Patterns
+
+### Shared Components
+- **Reusable UI components** in [src/shared/ui/components/](mdc:src/shared/ui/components)
+- **Consistent theming** using [theme.ts](mdc:src/shared/ui/theme/theme.ts)
+- **Props-driven design** for maximum flexibility
+- Example: [TimePeriodSelector.tsx](mdc:src/shared/ui/components/TimePeriodSelector.tsx) is used across multiple screens
+
+### Service Layer Pattern
+- **Extract business logic** into service classes
+- **Centralize data processing** and calculations
+- **Make services stateless** and pure when possible
+- Example: [AnalyticsService](mdc:src/features/analytics/service/AnalyticsService.ts) provides reusable analytics calculations
+
+### Custom Hooks Pattern
+- **Extract component logic** into reusable hooks
+- **Share stateful logic** across components
+- **Encapsulate complex state management**
+- Keep hooks focused on a single concern
+
+### Repository Pattern
+- **Abstract data access** through repository interfaces
+- **Centralize database operations** like [TransactionRepository](mdc:src/features/transactions/storage/TransactionRepository.ts)
+- **Provide consistent API** for data operations
+- **Enable easy testing** and mocking
+
+## Anti-Patterns to Avoid
+
+### Code Duplication
+- ❌ **Copying and pasting** similar components or functions
+- ❌ **Hardcoding values** that could be parameterized
+- ❌ **Repeating business logic** across different modules
+- ✅ **Extract common patterns** into shared utilities or components
+
+### Tight Coupling
+- ❌ **Direct dependencies** between unrelated modules
+- ❌ **Hardcoded imports** from specific feature modules
+- ✅ **Use dependency injection** and interfaces
+- ✅ **Communicate through props** and callbacks
+
+### God Components/Functions
+- ❌ **Large components** that handle multiple responsibilities
+- ❌ **Functions with many parameters** or complex logic
+- ✅ **Break down into smaller pieces** with clear responsibilities
+- ✅ **Use composition** to build complex functionality
+
+## Implementation Guidelines
+
+### Before Adding New Code
+1. **Search for existing solutions** in the codebase
+2. **Check shared utilities** in [src/shared/](mdc:src/shared)
+3. **Look for similar patterns** in other features
+4. **Consider if logic can be generalized** for reuse
+
+### When Creating New Components
+1. **Start with props interface** to define the API
+2. **Keep components pure** when possible (no side effects)
+3. **Extract complex logic** into custom hooks or services
+4. **Use composition** to combine simpler components
+
+### When Writing Business Logic
+1. **Place in service classes** like [AnalyticsService](mdc:src/features/analytics/service/AnalyticsService.ts)
+2. **Make functions pure** and testable
+3. **Use consistent patterns** across similar operations
+4. **Document complex algorithms** and business rules
+
+### Code Organization
+- **Feature-based structure**: Group related functionality together
+- **Shared resources**: Common utilities, components, and types in [src/shared/](mdc:src/shared)
+- **Clear boundaries**: Each feature should be self-contained
+- **Consistent naming**: Use descriptive, consistent naming conventions
+
+## Examples of Good Patterns
+
+### Reusable Analytics Components
+- [SummaryCards.tsx](mdc:src/features/analytics/ui/components/SummaryCards.tsx): Displays metrics in a reusable card format
+- [CategoryPieChart.tsx](mdc:src/features/analytics/ui/components/CategoryPieChart.tsx): Reusable chart component with props-driven data
+- [MonthlyTrendsChart.tsx](mdc:src/features/analytics/ui/components/MonthlyTrendsChart.tsx): Configurable trend visualization
+
+### Service Layer Implementation
+- [AnalyticsService.ts](mdc:src/features/analytics/service/AnalyticsService.ts): Centralized analytics calculations
+- Static methods for pure functions
+- Consistent data transformation patterns
+- Reusable across different components
+
+### Shared Theme System
+- [theme.ts](mdc:src/shared/ui/theme/theme.ts): Centralized design tokens
+- Consistent spacing, colors, and typography
+- Used across all components for visual consistency
+
+## Refactoring Guidelines
+
+### When to Extract Common Code
+- **Same logic appears 3+ times**: Extract into shared utility
+- **Similar components**: Create a base component with props
+- **Complex calculations**: Move to service layer
+- **State management patterns**: Create custom hooks
+
+### How to Refactor Safely
+1. **Identify the common pattern** across multiple locations
+2. **Create the abstraction** in appropriate shared location
+3. **Test the abstraction** thoroughly
+4. **Replace usage one by one** to avoid breaking changes
+5. **Remove old duplicated code** after verification
+
+### Continuous Improvement
+- **Regular code reviews** to identify duplication
+- **Refactoring sprints** to improve code quality
+- **Documentation updates** when patterns change
+- **Team knowledge sharing** about established patterns

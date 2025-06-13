@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
-    "fix-paths": "sed -i '' 's|href=\"/|href=\"./|g' dist/index.html && sed -i '' 's|src=\"/|src=\"./|g' dist/index.html && sed -i '' 's|\"/assets/|\"./assets/|g' dist/_expo/static/js/web/index-*.js && mkdir -p dist/fonts && cp \"dist/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.b62641afc9ab487008e996a5c5865e56.ttf\" dist/fonts/MaterialCommunityIcons.ttf && sed -i '' 's|MaterialCommunityIcons\\.b62641afc9ab487008e996a5c5865e56\\.ttf|MaterialCommunityIcons.ttf|g' dist/_expo/static/js/web/index-*.js && sed -i '' 's|\"\\./assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons\\.ttf\"|\"./fonts/MaterialCommunityIcons.ttf\"|g' dist/_expo/static/js/web/index-*.js && touch dist/.nojekyll",
+    "fix-paths": "sed -i '' 's|href=\"/|href=\"./|g' dist/index.html && sed -i '' 's|src=\"/|src=\"./|g' dist/index.html && sed -i '' 's|import\\.meta|({env:{MODE:\"production\",NODE_ENV:\"production\"}})|g' dist/_expo/static/js/web/index-*.js && touch dist/.nojekyll",
     "predeploy": "npm run build:web && npm run fix-paths",
     "deploy": "npx gh-pages -d dist --dotfiles"
   },
