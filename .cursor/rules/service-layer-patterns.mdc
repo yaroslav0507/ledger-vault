@@ -1,0 +1,327 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Service Layer Patterns
+
+## Service Architecture
+
+### Service Class Structure
+Follow the pattern established in [AnalyticsService.ts](mdc:src/features/analytics/service/AnalyticsService.ts):
+
+```typescript
+export class ServiceName {
+  // Static methods for stateless operations
+  static methodName(params: ParamType): ReturnType {
+    // Pure business logic
+    return result;
+  }
+  
+  // Instance methods for stateful operations (if needed)
+  private state: ServiceState;
+  
+  constructor(config?: ServiceConfig) {
+    this.state = initialState;
+  }
+  
+  public instanceMethod(params: ParamType): ReturnType {
+    // Business logic with state
+    return result;
+  }
+}
+```
+
+### Service Responsibilities
+- **Data Processing**: Transform and calculate business metrics
+- **Validation**: Validate business rules and data integrity
+- **Aggregation**: Combine data from multiple sources
+- **Business Logic**: Implement domain-specific algorithms
+- **Pure Functions**: Stateless operations that can be tested easily
+
+## Common Service Patterns
+
+### Analytics Service Pattern
+Extract calculation logic from components like [AnalyticsScreen.tsx](mdc:src/features/analytics/ui/screens/AnalyticsScreen.tsx):
+
+```typescript
+export class AnalyticsService {
+  static calculateSummaryMetrics(transactions: Transaction[]): SummaryMetrics {
+    const totalIncome = transactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const totalExpenses = transactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    return {
+      totalIncome,
+      totalExpenses,
+      netIncome: totalIncome - totalExpenses,
+      transactionCount: transactions.length
+    };
+  }
+  
+  static getCategoryBreakdown(transactions: Transaction[]): CategoryBreakdown[] {
+    const categoryMap = new Map<string, number>();
+    
+    transactions.forEach(transaction => {
+      const current = categoryMap.get(transaction.category) || 0;
+      categoryMap.set(transaction.category, current + transaction.amount);
+    });
+    
+    return Array.from(categoryMap.entries()).map(([category, amount]) => ({
+      category,
+      amount,
+      percentage: (amount / totalAmount) * 100
+    }));
+  }
+}
+```
+
+### Validation Service Pattern
+Extract validation logic from forms and components:
+
+```typescript
+export class ValidationService {
+  static validateTransaction(transaction: Partial<Transaction>): ValidationResult {
+    const errors: ValidationError[] = [];
+    
+    if (!transaction.amount || transaction.amount <= 0) {
+      errors.push({ field: 'amount', message: 'Amount must be greater than 0' });
+    }
+    
+    if (!transaction.description?.trim()) {
+      errors.push({ field: 'description', message: 'Description is required' });
+    }
+    
+    if (!transaction.category) {
+      errors.push({ field: 'category', message: 'Category is required' });
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+  
+  static validateImportData(data: ImportRow[]): ImportValidationResult {
+    const validRows: ImportRow[] = [];
+    const invalidRows: InvalidRow[] = [];
+    
+    data.forEach((row, index) => {
+      const validation = this.validateTransaction(row);
+      if (validation.isValid) {
+        validRows.push(row);
+      } else {
+        invalidRows.push({ row, errors: validation.errors, index });
+      }
+    });
+    
+    return { validRows, invalidRows };
+  }
+}
+```
+
+### Data Transformation Service
+Extract data transformation logic:
+
+```typescript
+export class TransformationService {
+  static normalizeTransactionData(rawData: any[]): Transaction[] {
+    return rawData.map(item => ({
+      id: item.id || generateId(),
+      amount: parseFloat(item.amount) || 0,
+      description: String(item.description || '').trim(),
+      category: this.normalizeCategory(item.category),
+      type: this.determineTransactionType(item),
+      date: this.parseDate(item.date),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }));
+  }
+  
+  static aggregateByPeriod(
+    transactions: Transaction[], 
+    period: 'day' | 'week' | 'month'
+  ): PeriodAggregation[] {
+    const groupedData = new Map<string, Transaction[]>();
+    
+    transactions.forEach(transaction => {
+      const key = this.getPeriodKey(transaction.date, period);
+      const existing = groupedData.get(key) || [];
+      groupedData.set(key, [...existing, transaction]);
+    });
+    
+    return Array.from(groupedData.entries()).map(([period, transactions]) => ({
+      period,
+      totalAmount: transactions.reduce((sum, t) => sum + t.amount, 0),
+      transactionCount: transactions.length,
+      transactions
+    }));
+  }
+  
+  private static getPeriodKey(date: Date, period: 'day' | 'week' | 'month'): string {
+    switch (period) {
+      case 'day':
+        return date.toISOString().split('T')[0];
+      case 'week':
+        return `${date.getFullYear()}-W${this.getWeekNumber(date)}`;
+      case 'month':
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }
+  }
+}
+```
+
+## Import Strategy Pattern
+Follow the pattern from [XlsImportStrategy.ts](mdc:src/features/import/strategies/XlsImportStrategy.ts):
+
+```typescript
+interface ImportStrategy {
+  canHandle(file: File): boolean;
+  parse(file: File): Promise<ImportResult>;
+  validate(data: any[]): ValidationResult;
+}
+
+export class CsvImportStrategy implements ImportStrategy {
+  canHandle(file: File): boolean {
+    return file.type === 'text/csv' || file.name.endsWith('.csv');
+  }
+  
+  async parse(file: File): Promise<ImportResult> {
+    const text = await file.text();
+    const rows = this.parseCsvText(text);
+    const validation = this.validate(rows);
+    
+    return {
+      data: validation.validRows,
+      errors: validation.invalidRows,
+      summary: {
+        totalRows: rows.length,
+        validRows: validation.validRows.length,
+        invalidRows: validation.invalidRows.length
+      }
+    };
+  }
+  
+  validate(data: any[]): ValidationResult {
+    return ValidationService.validateImportData(data);
+  }
+  
+  private parseCsvText(text: string): any[] {
+    // CSV parsing logic
+  }
+}
+```
+
+## Service Composition
+
+### Service Factory Pattern
+Create services that combine multiple strategies:
+
+```typescript
+export class ImportService {
+  private strategies: ImportStrategy[] = [
+    new CsvImportStrategy(),
+    new XlsImportStrategy(),
+    new JsonImportStrategy()
+  ];
+  
+  async importFile(file: File): Promise<ImportResult> {
+    const strategy = this.strategies.find(s => s.canHandle(file));
+    
+    if (!strategy) {
+      throw new Error(`Unsupported file type: ${file.type}`);
+    }
+    
+    return strategy.parse(file);
+  }
+  
+  getSupportedFormats(): string[] {
+    return this.strategies.flatMap(s => s.getSupportedExtensions());
+  }
+}
+```
+
+## Error Handling in Services
+
+### Service Error Types
+Define specific error types for better error handling:
+
+```typescript
+export class ServiceError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'ServiceError';
+  }
+}
+
+export class ValidationError extends ServiceError {
+  constructor(message: string, public field: string, public value: any) {
+    super(message, 'VALIDATION_ERROR', { field, value });
+  }
+}
+
+export class DataProcessingError extends ServiceError {
+  constructor(message: string, public operation: string, public data: any) {
+    super(message, 'DATA_PROCESSING_ERROR', { operation, data });
+  }
+}
+```
+
+### Error Handling Pattern
+```typescript
+export class TransactionService {
+  static async processTransactions(data: any[]): Promise<ProcessingResult> {
+    try {
+      const validated = ValidationService.validateImportData(data);
+      const transformed = TransformationService.normalizeTransactionData(validated.validRows);
+      
+      return {
+        success: true,
+        data: transformed,
+        errors: validated.invalidRows
+      };
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        return {
+          success: false,
+          error: error.message,
+          code: error.code,
+          details: error.details
+        };
+      }
+      
+      throw error; // Re-throw unexpected errors
+    }
+  }
+}
+```
+
+## Testing Services
+
+### Service Testing Pattern
+Services should be easily testable with pure functions:
+
+```typescript
+describe('AnalyticsService', () => {
+  const mockTransactions: Transaction[] = [
+    { id: '1', amount: 100, type: 'income', category: 'salary' },
+    { id: '2', amount: 50, type: 'expense', category: 'food' }
+  ];
+  
+  it('should calculate summary metrics correctly', () => {
+    const result = AnalyticsService.calculateSummaryMetrics(mockTransactions);
+    
+    expect(result.totalIncome).toBe(100);
+    expect(result.totalExpenses).toBe(50);
+    expect(result.netIncome).toBe(50);
+  });
+});
+```

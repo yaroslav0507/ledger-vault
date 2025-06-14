@@ -5,7 +5,7 @@ import { Transaction, CreateTransactionRequest, UpdateTransactionRequest } from 
 import { ImportResult } from '@/features/import/strategies/ImportStrategy';
 
 export const useTransactionActions = (onEditTransaction?: (transaction: Transaction) => void) => {
-  const { deleteTransaction, updateTransaction, loadTransactions, addTransaction, archiveTransaction, unarchiveTransaction } = useTransactionStore();
+  const { updateTransaction, loadTransactions, addTransaction, archiveTransaction, unarchiveTransaction } = useTransactionStore();
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [showSnackbar, setShowSnackbar] = useState(false);
 
@@ -14,7 +14,6 @@ export const useTransactionActions = (onEditTransaction?: (transaction: Transact
     setShowSnackbar(true);
   };
 
-  // Helper function to handle archived transactions gracefully
   const handleArchiveTransaction = async (transactionId: string) => {
     try {
       await archiveTransaction(transactionId);
@@ -35,40 +34,10 @@ export const useTransactionActions = (onEditTransaction?: (transaction: Transact
     }
   };
 
-  // Keep delete function for internal/admin use only (like "Clear all data")
-  const handleDeleteTransaction = async (transactionId: string) => {
-    try {
-      await deleteTransaction(transactionId);
-      showMessage('Transaction deleted successfully');
-    } catch (error) {
-      console.error('Failed to delete transaction:', error);
-      throw error;
+  const handleTransactionPress = (transaction: Transaction) => {
+    if (onEditTransaction) {
+      onEditTransaction(transaction);
     }
-  };
-
-  const handleTransactionPress = (transaction: Transaction, onEdit?: (transaction: Transaction) => void) => {
-    Alert.alert(
-      'Transaction Actions',
-      `What would you like to do with "${transaction.description}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Edit',
-          onPress: () => {
-            if (onEdit) {
-              onEdit(transaction);
-            } else if (onEditTransaction) {
-              onEditTransaction(transaction);
-            }
-          }
-        },
-        {
-          text: 'Archive',
-          style: 'destructive',
-          onPress: () => handleArchiveTransaction(transaction.id)
-        }
-      ]
-    );
   };
 
   const handleUpdateTransaction = async (id: string, updates: UpdateTransactionRequest) => {
@@ -77,6 +46,7 @@ export const useTransactionActions = (onEditTransaction?: (transaction: Transact
       showMessage('Transaction updated successfully');
     } catch (error) {
       console.error('Failed to update transaction:', error);
+      Alert.alert('Error', 'Failed to update transaction');
       throw error;
     }
   };
@@ -119,7 +89,6 @@ export const useTransactionActions = (onEditTransaction?: (transaction: Transact
     handleUpdateTransaction,
     handleArchiveTransaction,
     handleUnarchiveTransaction,
-    handleDeleteTransaction, // Keep for admin functions only
     handleImportConfirm,
     snackbarMessage,
     showSnackbar,

@@ -44,8 +44,12 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
           <Button onPress={onCancel}>{cancelText}</Button>
           <Button 
             onPress={onConfirm} 
-            mode="contained" 
+            mode="contained"
             buttonColor={confirmButtonColor}
+            contentStyle={{
+              marginLeft: 10,
+              marginRight: 10,
+            }}
           >
             {confirmText}
           </Button>

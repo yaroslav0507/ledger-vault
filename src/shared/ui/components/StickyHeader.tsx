@@ -38,7 +38,7 @@ export const StickyHeader: React.FC<StickyHeaderProps> = ({
             <Text style={styles.stickyActionLabel} numberOfLines={1} ellipsizeMode="tail">
               {actionButton.label}
               {actionButton.activeCount !== undefined && actionButton.activeCount > 0 && (
-                <Text style={styles.activeCountText}>{actionButton.activeCount}</Text>
+                <Text style={styles.activeCountText}> {actionButton.activeCount}</Text>
               )}
             </Text>
           </TouchableOpacity>

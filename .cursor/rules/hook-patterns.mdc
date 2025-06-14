@@ -1,0 +1,276 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Custom Hook Patterns
+
+## Hook Creation Guidelines
+
+### Naming Convention
+- Prefix all custom hooks with `use`
+- Use descriptive names that indicate the hook's purpose
+- Examples: `useModal`, `useForm`, `useAsyncData`, `useTransactionActions`
+
+### Hook Structure Template
+```typescript
+export const useCustomHook = (config: HookConfig) => {
+  // 1. State declarations
+  const [state, setState] = useState(initialState);
+  
+  // 2. Refs and derived values
+  const derivedValue = useMemo(() => computeValue(state), [state]);
+  
+  // 3. Effect hooks
+  useEffect(() => {
+    // Side effects
+  }, [dependencies]);
+  
+  // 4. Event handlers (memoized)
+  const handleAction = useCallback((param: string) => {
+    // Action logic
+  }, [dependencies]);
+  
+  // 5. Return object with clear API
+  return {
+    // State
+    state,
+    derivedValue,
+    
+    // Actions
+    handleAction,
+    
+    // Utilities
+    reset: () => setState(initialState)
+  };
+};
+```
+
+## Common Hook Patterns
+
+### Modal Management Hook
+Extract modal state management from components like [TransactionListScreen.tsx](mdc:src/features/transactions/ui/screens/TransactionListScreen.tsx):
+
+```typescript
+export const useModal = (initialState = false) => {
+  const [isOpen, setIsOpen] = useState(initialState);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const open = useCallback(() => setIsOpen(true), []);
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setIsLoading(false);
+  }, []);
+  
+  const setLoading = useCallback((loading: boolean) => {
+    setIsLoading(loading);
+  }, []);
+  
+  return { isOpen, isLoading, open, close, setLoading };
+};
+```
+
+### Form Management Hook
+Extract form logic from components like [AddTransactionModal.tsx](mdc:src/features/transactions/ui/components/AddTransactionModal.tsx):
+
+```typescript
+export const useForm = <T extends Record<string, any>>(
+  initialData: T,
+  validationRules?: ValidationRules<T>
+) => {
+  const [data, setData] = useState<T>(initialData);
+  const [errors, setErrors] = useState<ValidationErrors<T>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  
+  const updateField = useCallback((field: keyof T, value: any) => {
+    setData(prev => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+    
+    // Clear field error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  }, [errors]);
+  
+  const validate = useCallback(() => {
+    if (!validationRules) return true;
+    
+    const newErrors: ValidationErrors<T> = {};
+    let isValid = true;
+    
+    Object.entries(validationRules).forEach(([field, rules]) => {
+      const value = data[field as keyof T];
+      const fieldErrors = validateField(value, rules);
+      if (fieldErrors.length > 0) {
+        newErrors[field as keyof T] = fieldErrors[0];
+        isValid = false;
+      }
+    });
+    
+    setErrors(newErrors);
+    return isValid;
+  }, [data, validationRules]);
+  
+  const reset = useCallback(() => {
+    setData(initialData);
+    setErrors({});
+    setIsSubmitting(false);
+    setIsDirty(false);
+  }, [initialData]);
+  
+  const submit = useCallback(async (onSubmit: (data: T) => Promise<void>) => {
+    if (!validate()) return false;
+    
+    setIsSubmitting(true);
+    try {
+      await onSubmit(data);
+      reset();
+      return true;
+    } catch (error) {
+      console.error('Form submission error:', error);
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [data, validate, reset]);
+  
+  return {
+    data,
+    errors,
+    isSubmitting,
+    isDirty,
+    updateField,
+    validate,
+    reset,
+    submit
+  };
+};
+```
+
+### Async Data Hook
+Extract data loading patterns:
+
+```typescript
+export const useAsyncData = <T>(
+  fetchFn: () => Promise<T>,
+  deps: any[] = []
+) => {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await fetchFn();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchFn]);
+  
+  useEffect(() => {
+    refetch();
+  }, deps);
+  
+  return { data, loading, error, refetch };
+};
+```
+
+## State Management Best Practices
+
+### Reduce useState Hooks
+Instead of multiple useState hooks in components like [TransactionListScreen.tsx](mdc:src/features/transactions/ui/screens/TransactionListScreen.tsx), use:
+
+1. **useReducer** for complex related state
+2. **Custom hooks** to group related state
+3. **Derived state** with useMemo instead of storing computed values
+
+### Example: Import State Hook
+Extract import state management:
+
+```typescript
+export const useImportFlow = () => {
+  const [importState, setImportState] = useState({
+    showModal: false,
+    showColumnMapping: false,
+    isLoading: false,
+    fileName: '',
+    selectedFile: null as File | null,
+    result: null as ImportResult | null,
+    preview: null as FilePreview | null,
+  });
+  
+  const openModal = useCallback(() => {
+    setImportState(prev => ({ ...prev, showModal: true }));
+  }, []);
+  
+  const closeModal = useCallback(() => {
+    setImportState(prev => ({
+      ...prev,
+      showModal: false,
+      result: null,
+      isLoading: false
+    }));
+  }, []);
+  
+  const setLoading = useCallback((loading: boolean) => {
+    setImportState(prev => ({ ...prev, isLoading: loading }));
+  }, []);
+  
+  return {
+    importState,
+    openModal,
+    closeModal,
+    setLoading,
+    updateImportState: setImportState
+  };
+};
+```
+
+## Hook Composition
+
+### Combining Hooks
+Build complex functionality by combining simpler hooks:
+
+```typescript
+export const useTransactionManagement = () => {
+  const addModal = useModal();
+  const editModal = useModal();
+  const archiveModal = useModal();
+  const importFlow = useImportFlow();
+  
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  
+  const openEditModal = useCallback((transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    editModal.open();
+  }, [editModal]);
+  
+  return {
+    addModal,
+    editModal,
+    archiveModal,
+    importFlow,
+    selectedTransaction,
+    openEditModal
+  };
+};
+```
+
+## Performance Considerations
+
+### Memoization
+- Use `useMemo` for expensive calculations
+- Use `useCallback` for event handlers passed to child components
+- Avoid creating new objects/arrays in render
+
+### Dependency Arrays
+- Always include all dependencies in useEffect and useCallback
+- Use ESLint rules to catch missing dependencies
+- Consider using useRef for values that shouldn't trigger re-renders

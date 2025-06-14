@@ -46,7 +46,7 @@ export const TransactionFilter: React.FC<TransactionFilterProps> = ({
         label: 'Filters',
         onPress: onFiltersPress,
         isActive: activeFiltersCount > 0,
-        activeCount: activeFiltersCount
+        ...(activeFiltersCount > 0 && { activeCount: activeFiltersCount })
       }}
     />
   );

@@ -1,0 +1,213 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Refactoring Checklist
+
+## Before Writing New Code
+
+### 🔍 **Search First**
+- [ ] Check [src/shared/ui/components/](mdc:src/shared/ui/components) for existing components
+- [ ] Look for similar patterns in other features
+- [ ] Search for existing utilities in [src/shared/utils/](mdc:src/shared/utils)
+- [ ] Review services in [src/features/*/service/](mdc:src/features) for reusable logic
+
+### 📏 **Size Check**
+- [ ] Component < 300 lines? If not, break it down
+- [ ] Function < 50 lines? If not, extract sub-functions
+- [ ] File < 500 lines? If not, split into multiple files
+- [ ] useState hooks < 5 per component? If not, extract custom hook
+
+## Code Quality Checks
+
+### 🔄 **DRY Violations**
+- [ ] Same logic appears 3+ times? → Extract to shared utility
+- [ ] Similar components? → Create base component with props
+- [ ] Repeated validation? → Move to service layer
+- [ ] Duplicate state patterns? → Create custom hook
+
+### 🎯 **Single Responsibility**
+- [ ] Component has one clear purpose?
+- [ ] Function does one thing well?
+- [ ] Service handles one domain area?
+- [ ] Hook manages one piece of state/logic?
+
+### 🔗 **Coupling Issues**
+- [ ] Direct imports between features? → Use shared interfaces
+- [ ] Hardcoded dependencies? → Use dependency injection
+- [ ] Tight component coupling? → Use props and callbacks
+
+## Immediate Refactoring Opportunities
+
+### 🏗️ **Extract Components**
+When you see:
+```typescript
+// ❌ Large render method with multiple responsibilities
+return (
+  <View>
+    {/* 50+ lines of complex UI */}
+    <View>
+      {/* Another 30+ lines */}
+    </View>
+  </View>
+);
+```
+
+Do this:
+```typescript
+// ✅ Extract sub-components
+return (
+  <View>
+    <HeaderSection {...headerProps} />
+    <ContentSection {...contentProps} />
+    <FooterSection {...footerProps} />
+  </View>
+);
+```
+
+### 🪝 **Extract Custom Hooks**
+When you see multiple useState in components like [TransactionListScreen.tsx](mdc:src/features/transactions/ui/screens/TransactionListScreen.tsx):
+
+```typescript
+// ❌ Multiple related state variables
+const [showAddModal, setShowAddModal] = useState(false);
+const [showEditModal, setShowEditModal] = useState(false);
+const [showArchiveModal, setShowArchiveModal] = useState(false);
+const [selectedTransaction, setSelectedTransaction] = useState(null);
+const [isLoading, setIsLoading] = useState(false);
+```
+
+Extract to:
+```typescript
+// ✅ Custom hook
+const {
+  modals,
+  selectedTransaction,
+  openAddModal,
+  openEditModal,
+  openArchiveModal,
+  closeModals
+} = useTransactionModals();
+```
+
+### 🏭 **Extract Services**
+When you see complex calculations in components like [AnalyticsScreen.tsx](mdc:src/features/analytics/ui/screens/AnalyticsScreen.tsx):
+
+```typescript
+// ❌ Business logic in component
+const calculateMetrics = useMemo(() => {
+  // 20+ lines of calculation logic
+}, [transactions]);
+```
+
+Move to:
+```typescript
+// ✅ Service layer
+const metrics = useMemo(() => 
+  AnalyticsService.calculateMetrics(transactions), 
+  [transactions]
+);
+```
+
+## Specific Refactoring Tasks
+
+### 🎯 **High Priority** (Do First)
+1. **Extract modal management** from [TransactionListScreen.tsx](mdc:src/features/transactions/ui/screens/TransactionListScreen.tsx)
+2. **Create form validation service** for transaction forms
+3. **Extract import flow logic** into custom hook
+4. **Create data transformation utilities** for common operations
+
+### 🔄 **Medium Priority** (Do Next)
+1. **Standardize error handling** across all components
+2. **Create loading state components** for consistent UX
+3. **Extract chart configuration** into reusable utilities
+4. **Consolidate date formatting** functions
+
+### 📈 **Low Priority** (Do Later)
+1. **Optimize re-renders** with React.memo
+2. **Add performance monitoring** for large lists
+3. **Implement virtual scrolling** for transaction lists
+4. **Add component lazy loading**
+
+## Refactoring Patterns
+
+### 🏗️ **Component Extraction Pattern**
+```typescript
+// Before: Large component
+const LargeComponent = () => {
+  // 200+ lines of mixed concerns
+};
+
+// After: Composed components
+const LargeComponent = () => {
+  return (
+    <Container>
+      <Header {...headerProps} />
+      <Content {...contentProps} />
+      <Actions {...actionProps} />
+    </Container>
+  );
+};
+```
+
+### 🪝 **Hook Extraction Pattern**
+```typescript
+// Before: Mixed state in component
+const Component = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Complex fetch logic...
+};
+
+// After: Custom hook
+const Component = () => {
+  const { data, loading, error, refetch } = useAsyncData(fetchData);
+  
+  // Simple render logic...
+};
+```
+
+### 🏭 **Service Extraction Pattern**
+```typescript
+// Before: Logic in component
+const Component = () => {
+  const processData = (rawData) => {
+    // 30+ lines of business logic
+  };
+};
+
+// After: Service class
+const Component = () => {
+  const processedData = useMemo(() => 
+    DataService.process(rawData), 
+    [rawData]
+  );
+};
+```
+
+## Testing After Refactoring
+
+### ✅ **Verification Checklist**
+- [ ] All existing functionality still works
+- [ ] No new TypeScript errors
+- [ ] Performance hasn't degraded
+- [ ] Bundle size hasn't increased significantly
+- [ ] All tests still pass
+
+### 🧪 **Test New Abstractions**
+- [ ] Test extracted components in isolation
+- [ ] Test custom hooks with different inputs
+- [ ] Test service methods with edge cases
+- [ ] Test error handling in new abstractions
+
+## Documentation Updates
+
+### 📝 **Update After Refactoring**
+- [ ] Update component props documentation
+- [ ] Document new service methods
+- [ ] Update import paths in examples
+- [ ] Add usage examples for new hooks
+- [ ] Update [docs/IMPLEMENTATION_PLAN.md](mdc:docs/IMPLEMENTATION_PLAN.md) if architecture changed

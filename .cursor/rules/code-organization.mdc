@@ -1,0 +1,289 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Code Organization Guidelines
+
+## Directory Structure
+
+### Feature-Based Organization
+Follow the established pattern in [src/features/](mdc:src/features):
+
+```
+src/features/[feature-name]/
+├── model/           # Types, interfaces, domain models
+├── service/         # Business logic, data processing
+├── storage/         # Data persistence, local storage
+├── store/           # State management (Zustand stores)
+└── ui/
+    ├── components/  # Feature-specific components
+    ├── hooks/       # Feature-specific custom hooks
+    └── screens/     # Main screen components
+```
+
+### Shared Resources
+Organize shared code in [src/shared/](mdc:src/shared):
+
+```
+src/shared/
+├── constants/       # App-wide constants
+├── contexts/        # React contexts
+├── store/          # Global state management
+├── types/          # Shared TypeScript types
+├── ui/
+│   ├── components/ # Reusable UI components
+│   ├── styles/     # Global styles
+│   └── theme/      # Theme configuration
+└── utils/          # Utility functions
+```
+
+## File Naming Conventions
+
+### Component Files
+- **PascalCase** for component files: `TransactionCard.tsx`
+- **camelCase** for utility files: `dateUtils.ts`
+- **kebab-case** for configuration files: `metro.config.js`
+
+### Directory Names
+- **camelCase** for feature directories: `transactions`, `analytics`
+- **PascalCase** for component directories: `TransactionFilter/`
+
+### File Extensions
+- `.tsx` for React components
+- `.ts` for TypeScript utilities, services, types
+- `.mdc` for Cursor rules
+
+## Import Organization
+
+### Import Order
+1. **React imports** first
+2. **Third-party libraries** (React Native, React Native Paper)
+3. **Internal imports** (services, stores, components)
+4. **Relative imports** (local files)
+
+```typescript
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Text, Button } from 'react-native-paper';
+
+import { AnalyticsService } from '../../service/AnalyticsService';
+import { useTransactionStore } from '../../../transactions/store/transactionStore';
+import { EmptyState } from '../../../../shared/ui/components';
+
+import { LocalComponent } from './LocalComponent';
+```
+
+### Import Aliases
+Use consistent import paths:
+- `@/shared` for shared resources
+- `@/features` for feature modules
+- Relative paths for local files
+
+## Component Organization
+
+### Component File Structure
+```typescript
+// 1. Imports (organized as above)
+import React from 'react';
+
+// 2. Types and interfaces
+interface ComponentProps {
+  title: string;
+  onAction: () => void;
+}
+
+// 3. Component implementation
+export const Component: React.FC<ComponentProps> = ({
+  title,
+  onAction
+}) => {
+  // 4. Hooks and state
+  const [state, setState] = useState(initialState);
+  
+  // 5. Event handlers
+  const handleAction = useCallback(() => {
+    onAction();
+  }, [onAction]);
+  
+  // 6. Render logic
+  return (
+    <View style={styles.container}>
+      <Text>{title}</Text>
+    </View>
+  );
+};
+
+// 7. Styles at the bottom
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
+```
+
+### Component Directory Structure
+For complex components like [TransactionFilter](mdc:src/shared/ui/components/TransactionFilter):
+
+```
+ComponentName/
+├── index.ts              # Clean exports
+├── ComponentName.tsx     # Presentational component
+├── ComponentNameContainer.tsx  # Container with logic
+└── useComponentName.ts   # Custom hook for business logic
+```
+
+## Service Organization
+
+### Service File Structure
+Follow the pattern from [AnalyticsService.ts](mdc:src/features/analytics/service/AnalyticsService.ts):
+
+```typescript
+// 1. Imports
+import { Transaction } from '../model/Transaction';
+
+// 2. Types specific to this service
+interface ServiceResult {
+  data: any[];
+  errors: string[];
+}
+
+// 3. Service class
+export class ServiceName {
+  // 4. Static methods (preferred for stateless operations)
+  static processData(input: any[]): ServiceResult {
+    // Implementation
+  }
+  
+  // 5. Instance methods (only if state is needed)
+  private config: ServiceConfig;
+  
+  constructor(config: ServiceConfig) {
+    this.config = config;
+  }
+}
+```
+
+## Store Organization
+
+### Zustand Store Structure
+Follow the pattern from [transactionStore.ts](mdc:src/features/transactions/store/transactionStore.ts):
+
+```typescript
+interface StoreState {
+  // 1. State properties
+  data: DataType[];
+  loading: boolean;
+  error: string | null;
+  
+  // 2. Actions
+  actions: {
+    fetchData: () => Promise<void>;
+    addItem: (item: DataType) => void;
+    updateItem: (id: string, updates: Partial<DataType>) => void;
+    deleteItem: (id: string) => void;
+    reset: () => void;
+  };
+}
+
+export const useStore = create<StoreState>((set, get) => ({
+  // 3. Initial state
+  data: [],
+  loading: false,
+  error: null,
+  
+  // 4. Actions implementation
+  actions: {
+    fetchData: async () => {
+      set({ loading: true, error: null });
+      try {
+        const data = await fetchDataFromAPI();
+        set({ data, loading: false });
+      } catch (error) {
+        set({ error: error.message, loading: false });
+      }
+    },
+    // ... other actions
+  }
+}));
+```
+
+## Type Organization
+
+### Type File Structure
+```typescript
+// 1. Base types
+export interface BaseEntity {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 2. Main domain types
+export interface Transaction extends BaseEntity {
+  amount: number;
+  description: string;
+  category: string;
+  type: 'income' | 'expense';
+  date: Date;
+}
+
+// 3. Derived types
+export type TransactionType = Transaction['type'];
+export type TransactionFilters = Partial<Pick<Transaction, 'category' | 'type'>>;
+
+// 4. Utility types
+export interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationError[];
+}
+```
+
+## Documentation
+
+### Code Comments
+- **Avoid obvious comments** - code should be self-documenting
+- **Document complex business logic** and algorithms
+- **Explain "why" not "what"** in comments
+- **Use JSDoc** for public APIs
+
+```typescript
+/**
+ * Calculates the compound annual growth rate for a series of transactions
+ * @param transactions - Array of transactions sorted by date
+ * @param startDate - Beginning of the analysis period
+ * @param endDate - End of the analysis period
+ * @returns CAGR as a percentage
+ */
+export const calculateCAGR = (
+  transactions: Transaction[],
+  startDate: Date,
+  endDate: Date
+): number => {
+  // Implementation details...
+};
+```
+
+### README Files
+- **Feature README**: Document complex features in their directories
+- **Component README**: Document reusable component APIs
+- **Service README**: Document business logic and algorithms
+
+## Performance Considerations
+
+### File Size Guidelines
+- **Components**: < 300 lines
+- **Services**: < 500 lines
+- **Utilities**: < 200 lines
+- **Types**: < 100 lines per file
+
+### Bundle Optimization
+- **Tree-shakeable exports**: Use named exports
+- **Lazy loading**: Use React.lazy for large components
+- **Code splitting**: Split by features and routes
+- **Barrel exports**: Use index.ts files for clean imports
+
+### Memory Management
+- **Cleanup effects**: Always cleanup useEffect subscriptions
+- **Memoization**: Use React.memo, useMemo, useCallback appropriately
+- **Large data**: Consider virtualization for large lists
