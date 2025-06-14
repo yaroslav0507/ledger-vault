@@ -7,13 +7,15 @@ interface TransactionFilterProps {
   totalTransactionCount: number;
   filters: TransactionFilters;
   onFiltersPress: () => void;
+  screenTitle?: string;
 }
 
 export const TransactionFilter: React.FC<TransactionFilterProps> = ({
   transactionCount,
   totalTransactionCount,
   filters,
-  onFiltersPress
+  onFiltersPress,
+  screenTitle = 'Transactions'
 }) => {
   // Calculate active filters count
   const activeFiltersCount = React.useMemo(() => {
@@ -28,15 +30,15 @@ export const TransactionFilter: React.FC<TransactionFilterProps> = ({
   // Generate title based on transaction count and filters
   const title = React.useMemo(() => {
     if (totalTransactionCount === 0) {
-      return 'Transactions (0)';
+      return `${screenTitle} (0)`;
     }
     
     if (activeFiltersCount > 0) {
-      return `Transactions (${transactionCount}/${totalTransactionCount})`;
+      return `${screenTitle} (${transactionCount}/${totalTransactionCount})`;
     }
     
-    return `Transactions (${transactionCount})`;
-  }, [transactionCount, totalTransactionCount, activeFiltersCount]);
+    return `${screenTitle} (${transactionCount})`;
+  }, [transactionCount, totalTransactionCount, activeFiltersCount, screenTitle]);
 
   return (
     <StickyHeader

@@ -1,8 +1,5 @@
 export function formatCurrency(amount: number, currency: string = 'USD', digits?: number): string {
-  // Convert from smallest unit (cents) to main currency unit
-  const mainAmount = amount / 100;
-  
-  // Handle currencies that don't have fractional units
+  // Amount is already in main currency unit (no conversion needed)
   const currencyConfig = SUPPORTED_CURRENCIES.find(c => c.code === currency);
   const fractionDigits = digits !== undefined ? digits : (currencyConfig?.fractionDigits ?? 2);
   
@@ -13,7 +10,7 @@ export function formatCurrency(amount: number, currency: string = 'USD', digits?
       currency: currency,
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits
-    }).format(mainAmount)
+    }).format(amount)
       .replace(currency, '')
       .replace(/\s+/g, '')
       .trim();
@@ -28,15 +25,13 @@ export function formatCurrency(amount: number, currency: string = 'USD', digits?
       currencyDisplay: 'symbol',
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits
-    }).format(mainAmount);
+    }).format(amount);
   } catch (error) {
-    // Fallback for unsupported currencies - consistent format with proper number formatting
-    const multiplier = fractionDigits === 0 ? 1 : 100;
-    const displayAmount = amount / multiplier;
+    // Fallback for unsupported currencies
     const formattedNumber = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits
-    }).format(displayAmount);
+    }).format(amount);
     
     const symbol = getCurrencySymbol(currency);
     return `${formattedNumber} ${symbol}`;
@@ -65,37 +60,22 @@ export function parseAmountString(amount: string): number {
   return isNaN(result) ? 0 : result;
 }
 
-export function parseCurrencyToSmallestUnit(amount: string | number, currency: string = 'USD'): number {
+export function parseCurrency(amount: string | number, currency: string = 'USD'): number {
   if (typeof amount === 'string') {
     const numericAmount = parseAmountString(amount);
-    
-    // Handle currencies without fractional units (like JPY, KRW)
-    const currencyConfig = SUPPORTED_CURRENCIES.find(c => c.code === currency);
-    const multiplier = currencyConfig?.fractionDigits === 0 ? 1 : 100;
-    
-    return Math.round(numericAmount * multiplier);
+    return Math.round(numericAmount * 100) / 100; // Round to 2 decimal places
   }
   
-  const currencyConfig = SUPPORTED_CURRENCIES.find(c => c.code === currency);
-  const multiplier = currencyConfig?.fractionDigits === 0 ? 1 : 100;
-  return Math.round(amount * multiplier);
+  return Math.round(amount * 100) / 100; // Round to 2 decimal places
 }
 
 export function formatAmount(amount: number, currency: string = 'USD'): string {
   const currencyConfig = SUPPORTED_CURRENCIES.find(c => c.code === currency);
   const fractionDigits = currencyConfig?.fractionDigits ?? 2;
-  const multiplier = fractionDigits === 0 ? 1 : 100;
-  const mainAmount = amount / multiplier;
-  return mainAmount.toFixed(fractionDigits);
+  return amount.toFixed(fractionDigits);
 }
 
-export function formatCurrencyFromSmallestUnit(amount: number, currency: string = 'USD'): string {
-  const currencyConfig = SUPPORTED_CURRENCIES.find(c => c.code === currency);
-  const fractionDigits = currencyConfig?.fractionDigits ?? 2;
-  const multiplier = fractionDigits === 0 ? 1 : 100;
-  const mainAmount = amount / multiplier;
-  return mainAmount.toString();
-}
+
 
 export function detectCurrencyFromText(text: string): string | null {
   if (!text) return null;

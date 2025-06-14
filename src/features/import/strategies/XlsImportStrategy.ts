@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Transaction } from '@/features/transactions/model/Transaction';
 import { transactionRepository } from '@/features/transactions/storage/TransactionRepository';
 import { 
-  parseCurrencyToSmallestUnit, 
+  parseCurrency, 
   detectCurrencyFromText, 
   addCurrencySupport,
   isSupportedCurrency,
@@ -657,7 +657,7 @@ export class XlsImportStrategy implements ImportStrategy {
           id: uuidv4(),
           date: parsedDate,
           card: card || 'Imported',
-          amount: parseCurrencyToSmallestUnit(finalAmount, detectedCurrency),
+          amount: parseCurrency(finalAmount, detectedCurrency),
           currency: detectedCurrency,
           description: description,
           category: category,

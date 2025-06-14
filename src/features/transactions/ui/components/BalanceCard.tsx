@@ -4,7 +4,7 @@ import { Card, Text } from 'react-native-paper';
 import { formatCurrency } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
 import { TransactionFilters } from '../../model/Transaction';
-import { getCurrentTimePeriod, getTimePeriodLabel } from '@/shared/utils/dateUtils';
+import { getTimePeriodDisplayText } from '@/shared/utils/dateUtils';
 
 interface BalanceInfo {
   total: number;
@@ -45,37 +45,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   };
 
   const getTimePeriodText = () => {
-    if (!currentFilters || !currentFilters.dateRange) {
-      return 'in total';
-    }
-    
-    const currentPeriod = getCurrentTimePeriod(currentFilters.dateRange);
-    const label = getTimePeriodLabel(currentPeriod, currentFilters.dateRange);
-    
-    // Convert to lowercase and add appropriate preposition
-    switch (currentPeriod) {
-      case 'today':
-        return 'today';
-      case 'week':
-        return 'this week';
-      case 'month':
-        return 'this month';
-      case 'lastMonth':
-        return 'previous month';
-      case 'quarter':
-        return 'this quarter';
-      case 'year':
-        return 'this year';
-      case 'spring':
-      case 'summer':
-      case 'autumn':
-      case 'winter':
-        return `in ${label.toLowerCase()}`;
-      case 'custom':
-        return `in selected period`;
-      default:
-        return 'in total';
-    }
+    return getTimePeriodDisplayText(currentFilters);
   };
 
   return (

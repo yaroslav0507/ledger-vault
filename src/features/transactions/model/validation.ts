@@ -12,8 +12,8 @@ export const transactionFormSchema = z.object({
     .min(1, 'Amount is required')
     .refine((val) => {
       const num = parseFloat(val);
-      return !isNaN(num) && num > 0;
-    }, 'Amount must be a valid positive number'),
+      return !isNaN(num) && num !== 0;
+    }, 'Amount must be a valid non-zero number'),
   
   card: z
     .string()

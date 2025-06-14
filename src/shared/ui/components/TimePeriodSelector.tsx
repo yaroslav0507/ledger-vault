@@ -251,6 +251,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E9ECEF',
     minWidth: 100,
+    gap: theme.spacing.xs,
   },
   selectedPeriodButton: {
     backgroundColor: '#6B7280',

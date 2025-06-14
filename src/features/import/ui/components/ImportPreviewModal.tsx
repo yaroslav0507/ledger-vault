@@ -77,7 +77,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                 </View>
                 <View style={styles.summaryRow}>
                   <Text>Successfully Parsed:</Text>
-                  <Chip mode="outlined" textStyle={{ color: '#4CAF50' }}>
+                  <Chip mode="outlined" textStyle={{ color: '#2e7d32' }}>
                     {summary.successfulImports}
                   </Chip>
                 </View>
@@ -199,7 +199,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                         variant="bodyMedium"
                         style={[
                           styles.transactionAmount,
-                          { color: transaction.isIncome ? '#4CAF50' : '#F44336' }
+                          { color: transaction.isIncome ? '#2e7d32' : '#64748b' }
                         ]}
                           numberOfLines={1}
                           ellipsizeMode="tail"

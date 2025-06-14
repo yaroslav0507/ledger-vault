@@ -24,8 +24,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SUPPORTED_CURRENCIES, getCurrencySymbol } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
-import { useTransactionStore } from '../../store/transactionStore';
-import { categoryService } from '../../service/CategoryService';
+import { useTransactionStore } from '@/features/transactions/store/transactionStore';
+import { categoryService } from '@/features/transactions/service/CategoryService';
 import { useSettingsStore } from '@/shared/store/settingsStore';
 
 interface SettingsScreenProps {

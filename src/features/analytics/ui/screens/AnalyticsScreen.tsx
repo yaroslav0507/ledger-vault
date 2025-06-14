@@ -1,83 +1,79 @@
 import React, { useMemo, useCallback } from 'react';
-import { SectionList, StyleSheet, View } from 'react-native';
-import { Text, Card, Chip } from 'react-native-paper';
-import { SummaryCards } from '../components/SummaryCards';
+import { View, StyleSheet } from 'react-native';
 import { CategoryPieChart } from '../components/CategoryPieChart';
 import { MonthlyTrendsChart } from '../components/MonthlyTrendsChart';
+import { KeyInsights } from '../components/KeyInsights';
+import { AnalyticsGridHeader } from '../components/AnalyticsGridHeader';
 import { AnalyticsService } from '../../service/AnalyticsService';
-import { useTransactionStore } from '../../../transactions/store/transactionStore';
-import { StickyHeader } from '../../../../shared/ui/components/StickyHeader';
-import { EmptyState } from '../../../../shared/ui/components';
-import { theme } from '../../../../shared/ui/theme/theme';
+import { useBaseScreen } from '@/shared/hooks';
+import { BaseScreenLayout, CollapsibleSection } from '@/shared/ui/components';
+import { EmptyState } from '@/shared/ui/components/EmptyState';
+import { theme } from '@/shared/ui/theme/theme';
 
 export const AnalyticsScreen: React.FC = () => {
-  const { 
-    transactions, 
-    loading, 
-    filters
-  } = useTransactionStore();
+  const baseScreen = useBaseScreen({
+    screenName: 'Analytics',
+    loadAvailableCards: false,
+    enableScrollToTop: true,
+    enableSwipeHandling: false
+  });
 
-  const filteredTransactions = useMemo(() => {
-    if (!filters.dateRange) return transactions;
-    
-    return transactions.filter(transaction => {
-      const transactionDate = new Date(transaction.date);
-      const startDate = new Date(filters.dateRange!.start);
-      const endDate = new Date(filters.dateRange!.end);
-      
-      return transactionDate >= startDate && transactionDate <= endDate;
-    });
-  }, [transactions, filters.dateRange]);
+  const currency = useMemo(() => {
+    const firstTransaction = baseScreen.filteredTransactions[0];
+    return firstTransaction?.currency || 'UAH';
+  }, [baseScreen.filteredTransactions]);
 
   const analyticsData = useMemo(() => {
-    return AnalyticsService.calculateAnalytics(filteredTransactions);
-  }, [filteredTransactions]);
+    return AnalyticsService.calculateAnalytics(baseScreen.filteredTransactions);
+  }, [baseScreen.filteredTransactions]);
 
   const insights = useMemo(() => {
-    return AnalyticsService.getInsights(analyticsData);
-  }, [analyticsData]);
+    return AnalyticsService.getInsights(analyticsData, currency);
+  }, [analyticsData, currency]);
 
-  const analyticsTitle = useMemo(() => {
-    const count = analyticsData.transactionCount;
-    return count > 0 ? `Analytics (${count} transactions)` : 'Analytics';
-  }, [analyticsData.transactionCount]);
+  // Create header component with grid layout
+  const headerComponent = useMemo(() => {
+    const headerProps = baseScreen.renderListHeader();
+    return (
+      <AnalyticsGridHeader
+        balance={headerProps.balance}
+        transactionCount={baseScreen.filteredTransactions.length}
+        categoryCount={analyticsData.expenseCategories.length}
+        currency={currency}
+      />
+    );
+  }, [baseScreen.renderListHeader, baseScreen.filteredTransactions.length, analyticsData.expenseCategories.length, currency]);
 
   // Create sections for SectionList
   const sectionsData = useMemo(() => [
     {
       title: 'Analytics',
-      data: ['analytics'] // Single item to render all analytics content
+      data: ['analytics']
     }
   ], []);
-
-  // Render sticky header
-  const renderStickyHeader = useCallback(() => (
-    <StickyHeader
-      title={analyticsTitle}
-      actionButton={{
-        icon: '📊',
-        label: 'Export',
-        onPress: () => {
-          // TODO: Implement export functionality
-          console.log('Export analytics data');
-        },
-        isActive: false
-      }}
-    />
-  ), [analyticsTitle]);
 
   // Render analytics content
   const renderAnalyticsItem = useCallback(() => (
     <View style={styles.analyticsContent}>
-      <SummaryCards data={analyticsData} />
-
-      {analyticsData.categoryBreakdown.length > 0 && (
-        <CategoryPieChart data={analyticsData.categoryBreakdown} />
-      )}
-
       {analyticsData.monthlyTrends.length > 0 && (
-        <MonthlyTrendsChart data={analyticsData.monthlyTrends} />
+        <CollapsibleSection 
+          title="Monthly Trends"
+          subtitle={`${analyticsData.monthlyTrends.length} months`}
+        >
+          <MonthlyTrendsChart data={analyticsData.monthlyTrends} currency={currency} />
+        </CollapsibleSection>
       )}
+
+      {analyticsData.expenseCategories.length > 0 && (
+        <CollapsibleSection 
+          title="Category Breakdown"
+          subtitle={`${analyticsData.expenseCategories.length} categories`}
+        >
+          <CategoryPieChart data={analyticsData.expenseCategories} currency={currency} />
+        </CollapsibleSection>
+      )}
+      
+      <KeyInsights insights={insights} />
 
       {analyticsData.transactionCount === 0 && (
         <EmptyState
@@ -86,100 +82,55 @@ export const AnalyticsScreen: React.FC = () => {
         />
       )}
     </View>
-  ), [analyticsData]);
+  ), [analyticsData, insights, currency]);
 
-  // Render header with insights
-  const renderListHeader = useCallback(() => (
-    <View>
-      {insights.length > 0 && (
-        <Card style={styles.insightsCard}>
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.insightsTitle}>Key Insights</Text>
-            <View style={styles.insightsContainer}>
-              {insights.map((insight, index) => (
-                <Chip 
-                  key={index} 
-                  mode="outlined" 
-                  style={styles.insightChip}
-                  textStyle={styles.insightText}
-                >
-                  {insight}
-                </Chip>
-              ))}
-            </View>
-          </Card.Content>
-        </Card>
-      )}
-    </View>
-  ), [insights]);
+  // Sticky header props for BaseScreenLayout
+  const stickyHeaderProps = useMemo(() => ({
+    transactionCount: baseScreen.filteredTransactions.length,
+    totalTransactionCount: baseScreen.transactions.length,
+    filters: baseScreen.filters,
+    setFilters: baseScreen.setFilters,
+    clearFilters: baseScreen.clearFilters,
+    availableCards: baseScreen.availableCards,
+    transactions: baseScreen.transactions,
+    screenTitle: 'Analytics'
+  }), [
+    baseScreen.filteredTransactions.length,
+    baseScreen.transactions.length,
+    baseScreen.filters,
+    baseScreen.setFilters,
+    baseScreen.clearFilters,
+    baseScreen.availableCards,
+    baseScreen.transactions
+  ]);
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <EmptyState
-          loading={true}
-          loadingText="Loading analytics..."
-          title=""
-          description=""
-          showCard={false}
-        />
-      </View>
-    );
-  }
+  const emptyStateProps = baseScreen.renderEmptyState();
 
   return (
-    <View style={styles.container}>
-      <SectionList
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+    <>
+      <BaseScreenLayout
+        isInitialized={baseScreen.isInitialized}
+        screenName="Analytics"
         sections={sectionsData}
-        keyExtractor={(item) => item}
         renderItem={renderAnalyticsItem}
-        renderSectionHeader={renderStickyHeader}
-        ListHeaderComponent={renderListHeader}
-        showsVerticalScrollIndicator={false}
-        stickySectionHeadersEnabled={true}
+        keyExtractor={(item) => item}
+        headerComponent={headerComponent}
+        stickyHeaderProps={stickyHeaderProps}
+        emptyStateProps={emptyStateProps}
+        showScrollToTop={baseScreen.showScrollToTop}
+        onScrollToTop={baseScreen.scrollToTop}
+        sectionListRef={baseScreen.scrollViewRef}
+        sectionListProps={baseScreen.commonSectionListProps}
       />
-    </View>
+
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
   analyticsContent: {
+    padding: theme.spacing.sm,
+    paddingTop: theme.spacing.xs,
     gap: theme.spacing.md,
-  },
-  insightsCard: {
-    backgroundColor: theme.colors.surface,
-    elevation: 2,
-    marginBottom: theme.spacing.md,
-  },
-  insightsTitle: {
-    color: theme.colors.text.primary,
-    fontWeight: '600',
-    marginBottom: theme.spacing.sm,
-  },
-  insightsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.xs,
-  },
-  insightChip: {
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderColor: theme.colors.border,
-  },
-  insightText: {
-    fontSize: 12,
-    color: theme.colors.text.primary,
   },
 }); 

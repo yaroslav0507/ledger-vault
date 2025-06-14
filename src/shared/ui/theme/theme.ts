@@ -6,8 +6,8 @@ export const theme = {
     success: '#10B981',        // Emerald-500
     warning: '#F59E0B',        // Amber-500
     error: '#EF4444',          // Red-500
-    income: '#10B981',         // Green for income
-    expense: '#64748B',        // Slate-500 - Much more neutral than red
+    income: '#2e7d32',         // Green for income
+    expense: '#64748b',        // Slate-500 for expense
     
     background: '#FFFFFF',
     backgroundSecondary: '#F9FAFB',  // Gray-50
@@ -79,6 +79,12 @@ export const theme = {
       fontWeight: '600' as const,
       lineHeight: 20
     }
+  },
+
+  fontFamily: {
+    default: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    ios: 'SF Pro Display',
+    android: 'Roboto',
   },
   
   shadows: {

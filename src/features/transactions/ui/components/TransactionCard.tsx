@@ -299,19 +299,18 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
         >
           {/* Main Content */}
           <View style={styles.mainContent}>
-            {/* Left Section - Transaction Info */}
             <View style={styles.leftSection}>
-              {/* Primary Line - Description */}
               <Text style={styles.description} numberOfLines={1} ellipsizeMode="tail">
-                {transaction.description}
+                {transaction.description || 'No description'}
               </Text>
-              
-              {/* Secondary Line - Metadata */}
+
               <View style={styles.metaRow}>
-                <Text style={styles.date}>{formatDateTime(transaction.date)}</Text>
+                <Text style={styles.date}>
+                  {transaction.date ? formatDateTime(transaction.date) : 'No date'}
+                </Text>
                 <View style={styles.metaDivider} />
                 <Text style={styles.cardText} numberOfLines={1} ellipsizeMode="tail">
-                  {transaction.card.slice(-9)}
+                  {transaction.card?.slice(-9) || 'N/A'}
                 </Text>
                 <View style={styles.metaDivider} />
                 <TouchableOpacity 
@@ -320,16 +319,15 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
                   activeOpacity={0.7}
                 >
                   <Text style={styles.categoryText} numberOfLines={1} ellipsizeMode="tail">
-                    {transaction.category}
+                    {transaction.category || 'Uncategorized'}
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
             
-            {/* Right Section - Amount */}
             <View style={styles.rightSection}>
               <Text style={[styles.amount, { color: amountColor }]} numberOfLines={1}>
-                {formatCurrency(transaction.amount, transaction.currency)}
+                {formatCurrency(transaction.amount || 0, transaction.currency || 'USD')}
               </Text>
               <View style={[styles.incomeIndicator, { backgroundColor: amountColor }]}>
                 <Text style={styles.incomeText}>
@@ -340,12 +338,12 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
           </View>
           
           {/* Comments Section - Simplified */}
-          {transaction.comment && (
-            <View style={[styles.commentSection]}>
+          {transaction.comment && transaction.comment.trim() && (
+            <View style={styles.commentSection}>
               <View style={styles.commentRow}>
                 <Text style={styles.commentIcon}>💬</Text>
                 <Text style={styles.comment} numberOfLines={1} ellipsizeMode="tail">
-                  {transaction.comment}
+                  {transaction.comment.trim()}
                 </Text>
               </View>
             </View>
@@ -457,7 +455,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: theme.spacing.xs,
   },
   date: {
     ...theme.typography.caption,
@@ -473,6 +470,7 @@ const styles = StyleSheet.create({
     width: 1,
     height: 12,
     backgroundColor: theme.colors.border,
+    marginHorizontal: theme.spacing.sm,
   },
   cardText: {
     ...theme.typography.caption,
@@ -522,16 +520,15 @@ const styles = StyleSheet.create({
     borderTopColor: '#E0E0E0',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    gap: theme.spacing.xs,
   },
   commentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
   },
   commentIcon: {
     fontSize: 12,
     lineHeight: 16,
+    marginRight: theme.spacing.md,
   },
   comment: {
     ...theme.typography.body,

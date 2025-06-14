@@ -1,128 +1,184 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { Card, Text } from 'react-native-paper';
-import { LineChart } from 'react-native-chart-kit';
-import { MonthlyTrendData, AnalyticsService } from '../../service/AnalyticsService';
+import { View, StyleSheet } from 'react-native';
+import { Text } from 'react-native-paper';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { MonthlyTrendData } from '../../service/AnalyticsService';
+import { formatCurrency } from '../../../../shared/utils/currencyUtils';
 import { theme } from '../../../../shared/ui/theme/theme';
+import { UI_CONSTANTS } from '../../../../shared/constants/ui';
 
 interface MonthlyTrendsChartProps {
   data: MonthlyTrendData[];
+  currency?: string;
 }
 
-const screenWidth = Dimensions.get('window').width;
-
-export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data }) => {
+export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, currency = 'UAH' }) => {
   if (!data.length) {
     return (
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.title}>Monthly Trends</Text>
-          <View style={styles.emptyState}>
-            <Text variant="bodyMedium" style={styles.emptyText}>
-              No data available for the selected period
-            </Text>
-          </View>
-        </Card.Content>
-      </Card>
+      <View style={styles.emptyState}>
+        <Text variant="bodyMedium" style={styles.emptyText}>
+          No data available for the selected period
+        </Text>
+      </View>
     );
   }
 
-  const chartData = {
-    labels: data.map(item => item.month.split(' ')[0]),
-    datasets: [
-      {
-        data: data.map(item => item.income),
-        color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
-        strokeWidth: 2,
-      },
-      {
-        data: data.map(item => item.expenses),
-        color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`,
-        strokeWidth: 2,
-      },
-    ],
-    legend: ['Income', 'Expenses'],
+  const chartData = data.map(item => ({
+    month: item.month.split(' ')[0], // Short month name
+    income: item.income,
+    expenses: item.expenses,
+    net: item.net,
+  }));
+
+  const formatYAxisValue = (value: number) => {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}M`;
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)}K`;
+    }
+    return value.toFixed(0);
   };
 
-  const chartConfig = {
-    backgroundColor: theme.colors.surface,
-    backgroundGradientFrom: theme.colors.surface,
-    backgroundGradientTo: theme.colors.surface,
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
-    style: {
-      borderRadius: theme.borderRadius.md,
-    },
-    propsForDots: {
-      r: '4',
-      strokeWidth: '2',
-      stroke: theme.colors.surface,
-    },
-    formatYLabel: (value: string) => {
-      const num = parseFloat(value);
-      if (num >= 1000000) {
-        return `${(num / 1000000).toFixed(1)}M`;
-      } else if (num >= 1000) {
-        return `${(num / 1000).toFixed(1)}K`;
-      }
-      return num.toFixed(0);
-    },
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <View style={styles.tooltipContainer}>
+          <Text style={[styles.tooltipLabel, { fontFamily: theme.fontFamily.default }]}>
+            {label}
+          </Text>
+          {payload.map((entry: any, index: number) => (
+            <Text key={index} style={[styles.tooltipValue, { 
+              color: entry.color,
+              fontFamily: theme.fontFamily.default
+            }]}>
+              {entry.name}: {formatCurrency(entry.value, currency)}
+            </Text>
+          ))}
+        </View>
+      );
+    }
+    return null;
   };
 
   return (
-    <Card style={styles.card}>
-      <Card.Content>
-        <Text variant="titleMedium" style={styles.title}>Monthly Trends</Text>
-        
-        <View style={styles.chartContainer}>
-          <LineChart
-            data={chartData}
-            width={screenWidth - 64}
-            height={220}
-            chartConfig={chartConfig}
-            bezier
-            style={styles.chart}
-          />
+    <View style={styles.container}>
+      <View style={styles.chartContainer}>
+        <ResponsiveContainer width="100%" height={220}>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+            <XAxis 
+              dataKey="month" 
+              axisLine={false}
+              tickLine={false}
+              tick={{ 
+                fontSize: 12, 
+                fill: theme.colors.text.secondary,
+                fontFamily: theme.fontFamily.default
+              }}
+            />
+            <YAxis 
+              axisLine={false}
+              tickLine={false}
+              tick={{ 
+                fontSize: 12, 
+                fill: theme.colors.text.secondary,
+                fontFamily: theme.fontFamily.default
+              }}
+              tickFormatter={formatYAxisValue}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend 
+              wrapperStyle={{ 
+                paddingTop: '10px',
+                fontFamily: theme.fontFamily.default
+              }}
+              iconType="line"
+            />
+            <Line 
+              type="monotone" 
+              dataKey="income" 
+              stroke="#2e7d32" 
+              strokeWidth={2}
+              dot={{ fill: '#2e7d32', strokeWidth: 2, r: 4 }}
+              name="Income"
+            />
+            <Line 
+              type="monotone" 
+              dataKey="expenses" 
+              stroke="#64748b" 
+              strokeWidth={2}
+              dot={{ fill: '#64748b', strokeWidth: 2, r: 4 }}
+              name="Expenses"
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </View>
+
+      <View style={styles.summaryContainer}>
+        {/* Table Header */}
+        <View style={[styles.summaryItem, styles.headerRow]}>
+          <View style={styles.monthColumn}>
+            <Text variant="bodySmall" style={[styles.headerText, { textAlign: 'left' }]}>
+              Month
+            </Text>
+          </View>
+          <View style={styles.valuesRow}>
+            <View style={styles.valueColumn}>
+              <Text variant="bodySmall" style={styles.headerText}>
+                Income
+              </Text>
+            </View>
+            <View style={styles.valueColumn}>
+              <Text variant="bodySmall" style={styles.headerText}>
+                Expenses
+              </Text>
+            </View>
+            <View style={styles.valueColumn}>
+              <Text variant="bodySmall" style={styles.headerText}>
+                Net
+              </Text>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.summaryContainer}>
-          {data.slice(-3).map((item, index) => (
-            <View key={item.month} style={styles.summaryItem}>
+        {/* Data Rows */}
+        {data.slice(-3).map((item, index) => (
+          <View key={item.month} style={styles.summaryItem}>
+            <View style={styles.monthColumn}>
               <Text variant="bodySmall" style={styles.summaryMonth}>
                 {item.month}
               </Text>
-              <View style={styles.summaryValues}>
-                <Text variant="bodySmall" style={[styles.summaryValue, { color: theme.colors.success }]}>
-                  ↗ {AnalyticsService.formatCurrency(item.income)}
+            </View>
+            <View style={styles.valuesRow}>
+              <View style={styles.valueColumn}>
+                <Text variant="bodySmall" style={[styles.summaryValue, styles.incomeText]}>
+                  {formatCurrency(item.income, currency)}
                 </Text>
-                <Text variant="bodySmall" style={[styles.summaryValue, { color: theme.colors.error }]}>
-                  ↘ {AnalyticsService.formatCurrency(item.expenses)}
+              </View>
+              <View style={styles.valueColumn}>
+                <Text variant="bodySmall" style={[styles.summaryValue, styles.expenseText]}>
+                  {formatCurrency(item.expenses, currency)}
                 </Text>
+              </View>
+              <View style={styles.valueColumn}>
                 <Text variant="bodySmall" style={[
                   styles.summaryValue, 
-                  { color: item.net >= 0 ? theme.colors.success : theme.colors.error }
+                  item.net >= 0 ? styles.netPositive : styles.netNegative
                 ]}>
-                  Net: {AnalyticsService.formatCurrency(item.net)}
+                  {formatCurrency(item.net, currency)}
                 </Text>
               </View>
             </View>
-          ))}
-        </View>
-      </Card.Content>
-    </Card>
+          </View>
+        ))}
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: theme.colors.surface,
-    elevation: 2,
-  },
-  title: {
-    marginBottom: theme.spacing.md,
-    color: theme.colors.text.primary,
-    fontWeight: '600',
+  container: {
+    flex: 1,
   },
   chartContainer: {
     alignItems: 'center',
@@ -132,31 +188,85 @@ const styles = StyleSheet.create({
     marginVertical: theme.spacing.xs,
     borderRadius: theme.borderRadius.md,
   },
+  tooltipContainer: {
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.sm,
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tooltipLabel: {
+    ...theme.typography.caption,
+    fontWeight: UI_CONSTANTS.FONT_WEIGHTS.BOLD,
+    color: theme.colors.text.primary,
+    marginBottom: 4,
+  },
+  tooltipValue: {
+    ...theme.typography.caption,
+    fontWeight: UI_CONSTANTS.FONT_WEIGHTS.MEDIUM,
+  },
   summaryContainer: {
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   summaryItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: theme.spacing.xs,
+    paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  summaryMonth: {
-    color: theme.colors.text.primary,
-    fontWeight: '500',
-    minWidth: 80,
+  headerRow: {
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  summaryValues: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
+  headerText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.primary,
+    fontWeight: UI_CONSTANTS.FONT_WEIGHTS.BOLD,
+    textAlign: 'right',
+  },
+  monthColumn: {
+    minWidth: 80,
+    justifyContent: 'center',
+  },
+  summaryMonth: {
+    ...theme.typography.body,
+    color: theme.colors.text.primary,
+    fontWeight: UI_CONSTANTS.FONT_WEIGHTS.MEDIUM,
+  },
+  valuesRow: {
     flex: 1,
-    justifyContent: 'flex-end',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  valueColumn: {
+    flex: 1,
+    alignItems: 'flex-end',
   },
   summaryValue: {
-    fontSize: 12,
-    fontWeight: '500',
+    ...theme.typography.caption,
+    fontWeight: UI_CONSTANTS.FONT_WEIGHTS.MEDIUM,
+    textAlign: 'right',
+  },
+  incomeText: {
+    color: theme.colors.success,
+  },
+  expenseText: {
+    color: theme.colors.expense,
+  },
+  netPositive: {
+    color: theme.colors.success,
+  },
+  netNegative: {
+    color: theme.colors.expense,
   },
   emptyState: {
     alignItems: 'center',
@@ -164,6 +274,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.xl,
   },
   emptyText: {
+    ...theme.typography.body,
     color: theme.colors.text.secondary,
     textAlign: 'center',
   },

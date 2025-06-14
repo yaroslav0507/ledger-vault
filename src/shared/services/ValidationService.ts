@@ -25,8 +25,8 @@ export class ValidationService {
   static validateTransaction(transaction: Partial<Transaction>): ValidationResult {
     const errors: ValidationError[] = [];
     
-    if (!transaction.amount || transaction.amount <= 0) {
-      errors.push({ field: 'amount', message: 'Amount must be greater than 0' });
+    if (transaction.amount === undefined || transaction.amount === null || isNaN(transaction.amount)) {
+      errors.push({ field: 'amount', message: 'Amount must be a valid number' });
     }
     
     if (!transaction.description?.trim()) {

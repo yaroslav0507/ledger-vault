@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { TabName, getInitialTabFromUrl, updateUrlWithTab } from '../utils/tabPersistence';
 
 interface AppContextType {
-  currentTabTitle: string;
-  setCurrentTabTitle: (title: string) => void;
+  currentTabTitle: TabName;
+  setCurrentTabTitle: (title: TabName) => void;
+  initialTab: TabName;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -12,10 +14,16 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  const [currentTabTitle, setCurrentTabTitle] = useState('Transactions');
+  const [initialTab] = useState<TabName>(() => getInitialTabFromUrl());
+  const [currentTabTitle, setCurrentTabTitleState] = useState<TabName>(initialTab);
+
+  const setCurrentTabTitle = (title: TabName) => {
+    setCurrentTabTitleState(title);
+    updateUrlWithTab(title);
+  };
 
   return (
-    <AppContext.Provider value={{ currentTabTitle, setCurrentTabTitle }}>
+    <AppContext.Provider value={{ currentTabTitle, setCurrentTabTitle, initialTab }}>
       {children}
     </AppContext.Provider>
   );

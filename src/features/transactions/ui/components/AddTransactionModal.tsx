@@ -13,7 +13,7 @@ import {
 import { CreateTransactionRequest, Transaction, UpdateTransactionRequest } from '../../model/Transaction';
 import { validateTransactionForm, ValidationErrors, TransactionFormData } from '../../model/validation';
 import { getCurrentDateISO } from '@/shared/utils/dateUtils';
-import { parseCurrencyToSmallestUnit, formatCurrencyFromSmallestUnit, SUPPORTED_CURRENCIES, getCurrencySymbol, parseAmountString } from '@/shared/utils/currencyUtils';
+import { parseCurrency, formatAmount, SUPPORTED_CURRENCIES, getCurrencySymbol, parseAmountString } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
 import { categoryService } from '../../service/CategoryService';
@@ -62,7 +62,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         const absoluteAmount = Math.abs(transactionToEdit.amount);
         setFormData({
           description: transactionToEdit.description,
-          amount: formatCurrencyFromSmallestUnit(absoluteAmount, transactionToEdit.currency),
+          amount: formatAmount(absoluteAmount, transactionToEdit.currency),
           card: transactionToEdit.card,
           category: transactionToEdit.category,
           comment: transactionToEdit.comment || '',
@@ -119,7 +119,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         return;
       }
       
-      const amount = parseCurrencyToSmallestUnit(parseAmountString(data.amount), data.currency);
+      const amount = parseCurrency(parseAmountString(data.amount), data.currency);
       
       // Apply negative sign for expenses, positive for income
       const signedAmount = data.isIncome ? Math.abs(amount) : -Math.abs(amount);

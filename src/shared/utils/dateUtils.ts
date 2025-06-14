@@ -217,3 +217,36 @@ export function getCurrentTimePeriod(dateRange?: DateRange): TimePeriod {
   
   return 'custom';
 }
+
+export function getTimePeriodDisplayText(filters?: { dateRange?: DateRange }): string {
+  if (!filters || !filters.dateRange) {
+    return 'in total';
+  }
+  
+  const currentPeriod = getCurrentTimePeriod(filters.dateRange);
+  const label = getTimePeriodLabel(currentPeriod, filters.dateRange);
+  
+  switch (currentPeriod) {
+    case 'today':
+      return 'today';
+    case 'week':
+      return 'this week';
+    case 'month':
+      return 'this month';
+    case 'lastMonth':
+      return 'previous month';
+    case 'quarter':
+      return 'this quarter';
+    case 'year':
+      return 'this year';
+    case 'spring':
+    case 'summer':
+    case 'autumn':
+    case 'winter':
+      return `in ${label.toLowerCase()}`;
+    case 'custom':
+      return `in selected period`;
+    default:
+      return 'in total';
+  }
+}

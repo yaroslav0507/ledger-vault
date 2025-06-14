@@ -12,6 +12,7 @@ interface TransactionFilterContainerProps {
   clearFilters: () => void;
   availableCards: string[];
   transactions: Transaction[];
+  screenTitle?: string;
 }
 
 export const TransactionFilterContainer: React.FC<TransactionFilterContainerProps> = ({
@@ -21,7 +22,8 @@ export const TransactionFilterContainer: React.FC<TransactionFilterContainerProp
   setFilters,
   clearFilters,
   availableCards,
-  transactions
+  transactions,
+  screenTitle
 }) => {
   const {
     openFiltersModal,
@@ -41,6 +43,7 @@ export const TransactionFilterContainer: React.FC<TransactionFilterContainerProp
         totalTransactionCount={totalTransactionCount}
         filters={filters}
         onFiltersPress={openFiltersModal}
+        screenTitle={screenTitle}
       />
       
       <TransactionFiltersModal {...modalProps} />

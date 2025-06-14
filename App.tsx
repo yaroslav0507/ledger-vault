@@ -5,9 +5,11 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Provider as PaperProvider, DefaultTheme, Icon } from 'react-native-paper';
 import { TransactionListScreen } from './src/features/transactions/ui/screens/TransactionListScreen';
 import { AnalyticsScreen } from './src/features/analytics/ui/screens/AnalyticsScreen';
-import { SettingsScreen } from './src/features/transactions/ui/screens/SettingsScreen';
+import { SettingsScreen } from './src/features/settings/ui/screens/SettingsScreen';
 import { AppProvider, useAppContext } from './src/shared/contexts/AppContext';
+import { TransactionManagementProvider } from './src/shared/contexts/TransactionManagementContext';
 import { AppHeader } from './src/shared/ui/components/AppHeader';
+import { TransactionModalsContainer } from './src/shared/ui/components/TransactionModalsContainer';
 
 // Custom theme based on our design
 const theme = {
@@ -26,20 +28,20 @@ const Tab = createBottomTabNavigator();
 
 function SettingsWrapper({ navigation }: any) {
   const handleClose = () => {
-    // Navigate back to the Transactions tab
-    navigation.navigate('Transactions');
+    navigation.navigate('transactions');
   };
   
   return <SettingsScreen onClose={handleClose} />;
 }
 
 function AppNavigator() {
-  const { setCurrentTabTitle } = useAppContext();
+  const { setCurrentTabTitle, initialTab } = useAppContext();
 
   return (
     <View style={styles.container}>
       <AppHeader />
       <Tab.Navigator
+        initialRouteName={initialTab}
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: theme.colors.primary,
@@ -54,61 +56,54 @@ function AppNavigator() {
         }}
         screenListeners={{
           tabPress: (e) => {
-            // Update title based on tab name
-            const routeName = e.target?.split('-')[0];
-            switch (routeName) {
-              case 'Transactions':
-                setCurrentTabTitle('Transactions');
-                break;
-              case 'Analytics':
-                setCurrentTabTitle('Analytics');
-                break;
-              case 'Settings':
-                setCurrentTabTitle('Settings');
-                break;
-              default:
-                setCurrentTabTitle('Transactions');
+            const routeName = e.target?.split('-')[0] as any;
+            if (routeName === 'transactions' || routeName === 'analytics' || routeName === 'settings') {
+              setCurrentTabTitle(routeName);
             }
           },
         }}
       >
         <Tab.Screen
-          name="Transactions"
+          name="transactions"
           component={TransactionListScreen}
           options={{
+            tabBarLabel: 'Transactions',
             tabBarIcon: ({ color, size }) => (
               <Icon source="format-list-bulleted" size={size} color={color} />
             ),
           }}
           listeners={{
-            focus: () => setCurrentTabTitle('Transactions'),
+            focus: () => setCurrentTabTitle('transactions'),
           }}
         />
         <Tab.Screen
-          name="Analytics"
+          name="analytics"
           component={AnalyticsScreen}
           options={{
+            tabBarLabel: 'Analytics',
             tabBarIcon: ({ color, size }) => (
               <Icon source="chart-line" size={size} color={color} />
             ),
           }}
           listeners={{
-            focus: () => setCurrentTabTitle('Analytics'),
+            focus: () => setCurrentTabTitle('analytics'),
           }}
         />
         <Tab.Screen
-          name="Settings"
+          name="settings"
           component={SettingsWrapper}
           options={{
+            tabBarLabel: 'Settings',
             tabBarIcon: ({ color, size }) => (
               <Icon source="cog" size={size} color={color} />
             ),
           }}
           listeners={{
-            focus: () => setCurrentTabTitle('Settings'),
+            focus: () => setCurrentTabTitle('settings'),
           }}
         />
       </Tab.Navigator>
+      <TransactionModalsContainer />
     </View>
   );
 }
@@ -117,9 +112,11 @@ export default function App() {
   return (
     <PaperProvider theme={theme}>
       <AppProvider>
-        <NavigationContainer>
-          <AppNavigator />
-        </NavigationContainer>
+        <TransactionManagementProvider>
+          <NavigationContainer>
+            <AppNavigator />
+          </NavigationContainer>
+        </TransactionManagementProvider>
       </AppProvider>
     </PaperProvider>
   );

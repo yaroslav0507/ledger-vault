@@ -48,12 +48,16 @@ export const useImportFlow = () => {
       selectedFile: file,
       fileName,
       preview,
-      showModal: true
+      showColumnMapping: true
     }));
   }, []);
   
   const setImportResult = useCallback((result: ImportResult) => {
-    setImportState(prev => ({ ...prev, result }));
+    setImportState(prev => ({ 
+      ...prev, 
+      result, 
+      showModal: true 
+    }));
   }, []);
   
   const openColumnMapping = useCallback(() => {
@@ -64,9 +68,6 @@ export const useImportFlow = () => {
     setImportState(prev => ({
       ...prev,
       showColumnMapping: false,
-      preview: null,
-      selectedFile: null,
-      fileName: '',
     }));
   }, []);
   

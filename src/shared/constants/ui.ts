@@ -13,5 +13,25 @@ export const UI_CONSTANTS = {
     BATCH_SIZE: 20,
     WINDOW_SIZE: 10,
     UPDATE_BATCHING_PERIOD: 100,
-  }
+  },
+  BUTTON_HEIGHT: {
+    SMALL: 42,
+    MEDIUM: 44,
+    LARGE: 48,
+    EXTRA_LARGE: 56,
+  },
+  CARD_HEIGHT: {
+    SMALL: 60,
+    MEDIUM: 70,
+    LARGE: 80,
+  },
+  FONT_WEIGHTS: {
+    MEDIUM: '500' as const,
+    SEMIBOLD: '600' as const,
+    BOLD: '700' as const,
+  },
+  CHART: {
+    HEIGHT: 220,
+    CONTAINER_BUFFER: 40,
+  },
 } as const; 
