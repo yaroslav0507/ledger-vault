@@ -149,7 +149,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
         contentContainerStyle={styles.modal}
       >
         <Surface style={styles.surface}>
-          <ScrollView style={styles.scrollView}>
+          <ScrollView>
             {/* Header */}
             <View style={styles.header}>
               <Text variant="headlineSmall">Map Columns</Text>
@@ -343,9 +343,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.lg,
     maxHeight: '100%',
-  },
-  scrollView: {
-    maxHeight: '85%',
   },
   header: {
     padding: theme.spacing.lg,

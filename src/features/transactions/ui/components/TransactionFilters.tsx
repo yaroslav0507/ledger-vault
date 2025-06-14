@@ -274,7 +274,6 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
               placeholderTextColor={theme.colors.text.disabled}
             />
 
-                      {/* Clear All Filters Button */}
             <TouchableOpacity style={styles.applyAllButton} onPress={handleClear}>
               <Text style={styles.applyAllButtonText}>Clear Filters</Text>
             </TouchableOpacity>
