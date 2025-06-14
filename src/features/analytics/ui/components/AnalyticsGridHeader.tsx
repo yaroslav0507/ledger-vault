@@ -136,7 +136,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     fontWeight: UI_CONSTANTS.FONT_WEIGHTS.SEMIBOLD,
     textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   cardValue: {
     fontWeight: UI_CONSTANTS.FONT_WEIGHTS.BOLD,
