@@ -192,13 +192,14 @@ export class AnalyticsService {
 
     return Array.from(monthMap.entries())
       .map(([monthKey, data]) => ({
+        monthKey,
         month: format(new Date(monthKey + '-01'), 'MMM yyyy'),
         income: data.income,
         expenses: data.expenses,
         net: data.income - data.expenses
       }))
-      .sort((a, b) => a.month.localeCompare(b.month))
-      .slice(-6);
+      .sort((a, b) => new Date(a.monthKey + '-01').getTime() - new Date(b.monthKey + '-01').getTime())
+      .map(({ monthKey, ...rest }) => rest);
   }
 
   static getInsights(data: AnalyticsData, currency: string = 'UAH'): string[] {

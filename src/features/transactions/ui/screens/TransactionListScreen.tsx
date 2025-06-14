@@ -75,25 +75,22 @@ export const TransactionListScreen: React.FC = () => {
   const emptyStateProps = baseScreen.renderEmptyState();
 
   return (
-    <>
-      <BaseScreenLayout
-        isInitialized={baseScreen.isInitialized}
-        screenName="Transactions"
-        sections={sectionsData}
-        renderItem={renderSectionItem}
-        keyExtractor={(item) => item.id}
-        headerComponent={headerComponent}
-        stickyHeaderProps={stickyHeaderProps}
-        emptyStateProps={emptyStateProps}
-        showScrollToTop={baseScreen.showScrollToTop}
-        onScrollToTop={baseScreen.scrollToTop}
-        sectionListRef={baseScreen.scrollViewRef}
-        sectionListProps={{
-          ...baseScreen.commonSectionListProps,
-          getItemLayout
-        }}
-      />
-
-    </>
+    <BaseScreenLayout
+      isInitialized={baseScreen.isInitialized}
+      screenName="Transactions"
+      sections={sectionsData}
+      renderItem={renderSectionItem}
+      keyExtractor={(item) => item.id}
+      headerComponent={headerComponent}
+      stickyHeaderProps={stickyHeaderProps}
+      emptyStateProps={emptyStateProps}
+      showScrollToTop={baseScreen.showScrollToTop}
+      onScrollToTop={baseScreen.scrollToTop}
+      sectionListRef={baseScreen.scrollViewRef}
+      sectionListProps={{
+        ...baseScreen.commonSectionListProps,
+        getItemLayout
+      }}
+    />
   );
 }; 

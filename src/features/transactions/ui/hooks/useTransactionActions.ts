@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useTransactionStore } from '../../store/transactionStore';
 import { Transaction, CreateTransactionRequest, UpdateTransactionRequest } from '../../model/Transaction';
-import { ImportResult } from '@/features/import/strategies/ImportStrategy';
+import { transactionRepository } from '@/features/transactions/storage/TransactionRepository';
 
 export const useTransactionActions = (onEditTransaction?: (transaction: Transaction) => void) => {
-  const { updateTransaction, loadTransactions, addTransaction, archiveTransaction, unarchiveTransaction } = useTransactionStore();
+  const { updateTransaction, loadTransactions, archiveTransaction, unarchiveTransaction } = useTransactionStore();
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [showSnackbar, setShowSnackbar] = useState(false);
 
@@ -51,31 +51,28 @@ export const useTransactionActions = (onEditTransaction?: (transaction: Transact
     }
   };
 
-  const handleImportConfirm = async (transactions: Transaction[], ignoreDuplicates: boolean = false): Promise<boolean> => {
+  const handleImportConfirm = async (
+    transactions: Transaction[],
+    ignoreDuplicates = false
+  ): Promise<boolean> => {
     try {
-      let successCount = 0;
-      let errorCount = 0;
-      
-      for (const transaction of transactions) {
-        try {
-          const { id, createdAt, isDuplicate, isArchived, ...createRequest } = transaction;
-          await addTransaction(createRequest as CreateTransactionRequest);
-          successCount++;
-        } catch (error) {
-          console.error('Failed to import transaction:', error);
-          errorCount++;
-          if (!ignoreDuplicates) {
-            throw error;
-          }
-        }
-      }
-      
-      if (errorCount > 0 && ignoreDuplicates) {
-        showMessage(`Import completed: ${successCount} transactions imported, ${errorCount} duplicates ignored`);
-      } else {
-        showMessage(`Successfully imported ${successCount} transactions`);
-      }
-      
+      const filtered = ignoreDuplicates
+        ? transactions.filter((t) => !t.isDuplicate)
+        : transactions;
+
+      const createRequests: CreateTransactionRequest[] = filtered.map(
+        ({ id, createdAt, isDuplicate, isArchived, ...rest }) => rest as CreateTransactionRequest
+      );
+
+      await transactionRepository.bulkCreate(createRequests);
+      await loadTransactions();
+
+      showMessage(
+        `Successfully imported ${createRequests.length} transaction${
+          createRequests.length === 1 ? '' : 's'
+        }${ignoreDuplicates ? ' (duplicates skipped)' : ''}`
+      );
+
       return true;
     } catch (error) {
       console.error('Import failed:', error);

@@ -55,7 +55,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
         <View style={styles.balanceHeader}>
           <View style={styles.balanceMainRow}>
             <Text variant="bodyMedium" style={styles.balanceLabel}>
-              💰 Cash Flow
+              💰 Cashflow
             </Text>
             <Text variant="headlineMedium" style={[
               styles.balanceAmount, 

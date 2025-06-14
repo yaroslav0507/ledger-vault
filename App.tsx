@@ -10,6 +10,8 @@ import { AppProvider, useAppContext } from './src/shared/contexts/AppContext';
 import { TransactionManagementProvider } from './src/shared/contexts/TransactionManagementContext';
 import { AppHeader } from './src/shared/ui/components/AppHeader';
 import { TransactionModalsContainer } from './src/shared/ui/components/TransactionModalsContainer';
+import { useFonts } from 'expo-font';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Custom theme based on our design
 const theme = {
@@ -109,6 +111,14 @@ function AppNavigator() {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    ...MaterialCommunityIcons.font,
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <PaperProvider theme={theme}>
       <AppProvider>

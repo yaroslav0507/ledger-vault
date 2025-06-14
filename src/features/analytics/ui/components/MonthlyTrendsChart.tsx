@@ -135,14 +135,14 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
             </View>
             <View style={styles.valueColumn}>
               <Text variant="bodySmall" style={styles.headerText}>
-                Net
+                Cashflow
               </Text>
             </View>
           </View>
         </View>
 
         {/* Data Rows */}
-        {data.slice(-3).map((item, index) => (
+        {data.map((item, index) => (
           <View key={item.month} style={styles.summaryItem}>
             <View style={styles.monthColumn}>
               <Text variant="bodySmall" style={styles.summaryMonth}>

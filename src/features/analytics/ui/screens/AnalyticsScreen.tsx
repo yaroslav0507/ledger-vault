@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { CategoryPieChart } from '../components/CategoryPieChart';
 import { MonthlyTrendsChart } from '../components/MonthlyTrendsChart';
@@ -31,6 +31,33 @@ export const AnalyticsScreen: React.FC = () => {
     return AnalyticsService.getInsights(analyticsData, currency);
   }, [analyticsData, currency]);
 
+  const listItems = useMemo(() => {
+    const items: string[] = [];
+    items.push('trends');
+    items.push('categories');
+    items.push('insights');
+    return items;
+  }, [analyticsData]);
+
+  const scrollToKey = useCallback((key: string) => {
+    const index = listItems.indexOf(key);
+    if (index === -1) return;
+    
+    // Delay to ensure list has finished layout (especially on web)
+    setTimeout(() => {
+      const list = baseScreen.scrollViewRef.current as any;
+      list?.scrollToLocation({
+        sectionIndex: 0,
+        itemIndex: index,
+        viewPosition: 0,
+        animated: true,
+      });
+    }, 100);
+  }, [listItems, baseScreen.scrollViewRef]);
+
+  const handleTrendsPress = useCallback(() => scrollToKey('trends'), [scrollToKey]);
+  const handleCategoriesPress = useCallback(() => scrollToKey('categories'), [scrollToKey]);
+
   // Create header component with grid layout
   const headerComponent = useMemo(() => {
     const headerProps = baseScreen.renderListHeader();
@@ -40,49 +67,56 @@ export const AnalyticsScreen: React.FC = () => {
         transactionCount={baseScreen.filteredTransactions.length}
         categoryCount={analyticsData.expenseCategories.length}
         currency={currency}
+        onTrendsPress={handleTrendsPress}
+        onCategoriesPress={handleCategoriesPress}
       />
     );
-  }, [baseScreen.renderListHeader, baseScreen.filteredTransactions.length, analyticsData.expenseCategories.length, currency]);
+  }, [baseScreen.renderListHeader, baseScreen.filteredTransactions.length, analyticsData.expenseCategories.length, currency, handleTrendsPress, handleCategoriesPress]);
 
   // Create sections for SectionList
-  const sectionsData = useMemo(() => [
-    {
-      title: 'Analytics',
-      data: ['analytics']
+  const sectionsData = useMemo(() => [{ title: 'Analytics', data: listItems }], [listItems]);
+
+  // Render analytics list rows
+  const renderAnalyticsItem = useCallback(({ item }: { item: string }) => {
+    switch (item) {
+      case 'trends':
+        return (
+          <View style={styles.analyticsContent}>
+            <CollapsibleSection
+              title="Monthly Trends"
+              subtitle={`${analyticsData.monthlyTrends.length} months`}
+            >
+              <MonthlyTrendsChart data={analyticsData.monthlyTrends} currency={currency} />
+            </CollapsibleSection>
+          </View>
+        );
+      case 'categories':
+        return (
+          <View style={styles.analyticsContent}>
+            <CollapsibleSection
+              title="Category Breakdown"
+              subtitle={`${analyticsData.expenseCategories.length} categories`}
+            >
+              <CategoryPieChart data={analyticsData.expenseCategories} currency={currency} />
+            </CollapsibleSection>
+          </View>
+        );
+      case 'insights':
+        return (
+          <View style={styles.analyticsContent}>
+            <KeyInsights insights={insights} />
+            {analyticsData.transactionCount === 0 && (
+              <EmptyState
+                title="No Data Available"
+                description="No transactions found for the selected time period. Try selecting a different date range or add some transactions to see your analytics."
+              />
+            )}
+          </View>
+        );
+      default:
+        return <View />;
     }
-  ], []);
-
-  // Render analytics content
-  const renderAnalyticsItem = useCallback(() => (
-    <View style={styles.analyticsContent}>
-      {analyticsData.monthlyTrends.length > 0 && (
-        <CollapsibleSection 
-          title="Monthly Trends"
-          subtitle={`${analyticsData.monthlyTrends.length} months`}
-        >
-          <MonthlyTrendsChart data={analyticsData.monthlyTrends} currency={currency} />
-        </CollapsibleSection>
-      )}
-
-      {analyticsData.expenseCategories.length > 0 && (
-        <CollapsibleSection 
-          title="Category Breakdown"
-          subtitle={`${analyticsData.expenseCategories.length} categories`}
-        >
-          <CategoryPieChart data={analyticsData.expenseCategories} currency={currency} />
-        </CollapsibleSection>
-      )}
-      
-      <KeyInsights insights={insights} />
-
-      {analyticsData.transactionCount === 0 && (
-        <EmptyState
-          title="No Data Available"
-          description="No transactions found for the selected time period. Try selecting a different date range or add some transactions to see your analytics."
-        />
-      )}
-    </View>
-  ), [analyticsData, insights, currency]);
+  }, [analyticsData, insights, currency]);
 
   // Sticky header props for BaseScreenLayout
   const stickyHeaderProps = useMemo(() => ({

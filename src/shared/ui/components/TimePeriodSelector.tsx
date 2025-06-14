@@ -44,6 +44,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
     { period: 'summer', label: 'Summer', icon: '☀️' },
     { period: 'autumn', label: 'Autumn', icon: '🍂' },
     { period: 'year', label: 'This Year', icon: '📆' },
+    { period: 'lastYear', label: 'Last Year', icon: '📅' },
     { period: 'custom', label: 'Custom Range', icon: '⚙️' }
   ];
 

@@ -281,6 +281,31 @@ export class TransactionRepository {
       .toArray();
   }
 
+  async bulkCreate(requests: CreateTransactionRequest[]): Promise<Transaction[]> {
+    if (requests.length === 0) {
+      return [];
+    }
+
+    const now = new Date().toISOString();
+
+    const transactions: Transaction[] = requests.map((r) => ({
+      id: uuidv4(),
+      date: r.date,
+      card: r.card,
+      amount: r.amount,
+      currency: r.currency,
+      description: r.description,
+      category: r.category,
+      comment: r.comment,
+      isDuplicate: false,
+      isIncome: r.isIncome,
+      createdAt: now,
+    }));
+
+    await db.transactions.bulkAdd(transactions);
+    console.log(`✅ Bulk created ${transactions.length} transactions`);
+    return transactions;
+  }
 
 }
 

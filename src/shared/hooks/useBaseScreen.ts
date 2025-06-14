@@ -202,7 +202,6 @@ export const useBaseScreen = (config: BaseScreenConfig) => {
 
   // Common SectionList props
   const commonSectionListProps = useMemo(() => ({
-    ref: scrollViewRef,
     scrollEventThrottle: UI_CONSTANTS.PERFORMANCE.SCROLL_THROTTLE,
     showsVerticalScrollIndicator: true,
     initialNumToRender: UI_CONSTANTS.PERFORMANCE.INITIAL_RENDER_COUNT,
@@ -213,7 +212,7 @@ export const useBaseScreen = (config: BaseScreenConfig) => {
     stickySectionHeadersEnabled: true,
     onScroll: config.enableScrollToTop ? handleScroll : undefined,
     scrollEnabled: config.enableSwipeHandling ? !isAnyCardSwiping : true
-  }), [scrollViewRef, config.enableScrollToTop, config.enableSwipeHandling, handleScroll, isAnyCardSwiping]);
+  }), [config.enableScrollToTop, config.enableSwipeHandling, handleScroll, isAnyCardSwiping]);
 
   return {
     // State

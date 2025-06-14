@@ -53,10 +53,10 @@ export class ImportService {
       ? transactions.filter(t => !t.isDuplicate)
       : transactions;
 
-    // Save transactions
-    for (const transaction of transactionsToSave) {
-      await transactionRepository.create(transaction);
-    }
+    // Bulk save for better performance
+    await transactionRepository.bulkCreate(
+      transactionsToSave.map(({ id, createdAt, isDuplicate, isArchived, ...rest }) => rest)
+    );
 
     console.log(`✅ Imported ${transactionsToSave.length} transactions`);
   }

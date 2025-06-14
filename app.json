@@ -26,7 +26,7 @@
       "edgeToEdgeEnabled": true
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./favicon.png",
       "bundler": "metro",
       "fonts": ["https://cdn.jsdelivr.net/npm/@expo/vector-icons@14.1.0/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf"]
     }

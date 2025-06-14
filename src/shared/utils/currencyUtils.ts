@@ -1,7 +1,9 @@
 export function formatCurrency(amount: number, currency: string = 'USD', digits?: number): string {
   // Amount is already in main currency unit (no conversion needed)
   const currencyConfig = SUPPORTED_CURRENCIES.find(c => c.code === currency);
-  const fractionDigits = digits !== undefined ? digits : (currencyConfig?.fractionDigits ?? 2);
+  const fractionDigits = Math.abs(amount) > 1_00_000
+    ? 0
+    : (digits !== undefined ? digits : (currencyConfig?.fractionDigits ?? 2));
   
   // Special formatting for UAH - Ukrainian convention places ₴ after amount
   if (currency === 'UAH') {

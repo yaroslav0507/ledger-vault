@@ -24,7 +24,7 @@ export function getMonthRange(date: Date = new Date()): { start: string; end: st
   };
 }
 
-export type TimePeriod = 'today' | 'week' | 'month' | 'lastMonth' | 'quarter' | 'year' | 'spring' | 'summer' | 'autumn' | 'winter' | 'custom';
+export type TimePeriod = 'today' | 'week' | 'month' | 'lastMonth' | 'quarter' | 'year' | 'lastYear' | 'spring' | 'summer' | 'autumn' | 'winter' | 'custom';
 
 export interface DateRange {
   start: string;
@@ -96,6 +96,15 @@ export function getDateRangeForPeriod(period: TimePeriod, customRange?: DateRang
       return {
         start: toISODate(startOfYear),
         end: toISODate(endOfYear)
+      };
+
+    case 'lastYear':
+      const lastYear = today.getFullYear() - 1;
+      const startOfLastYear = new Date(lastYear, 0, 1);
+      const endOfLastYear = new Date(lastYear, 11, 31);
+      return {
+        start: toISODate(startOfLastYear),
+        end: toISODate(endOfLastYear)
       };
 
     case 'spring':
@@ -171,6 +180,8 @@ export function getTimePeriodLabel(period: TimePeriod, customRange?: DateRange):
       return 'This Quarter';
     case 'year':
       return 'This Year';
+    case 'lastYear':
+      return 'Last Year';
     case 'spring':
       return 'Spring';
     case 'summer':
@@ -207,7 +218,7 @@ export function getCurrentTimePeriod(dateRange?: DateRange): TimePeriod {
   if (!dateRange) return 'month'; // Default period
   
   // Check against each period
-  const periods: TimePeriod[] = ['today', 'week', 'month', 'lastMonth', 'quarter', 'year', 'spring', 'summer', 'autumn', 'winter'];
+  const periods: TimePeriod[] = ['today', 'week', 'month', 'lastMonth', 'quarter', 'year', 'lastYear', 'spring', 'summer', 'autumn', 'winter'];
   
   for (const period of periods) {
     if (isDateRangeForPeriod(dateRange, period)) {
@@ -239,6 +250,8 @@ export function getTimePeriodDisplayText(filters?: { dateRange?: DateRange }): s
       return 'this quarter';
     case 'year':
       return 'this year';
+    case 'lastYear':
+      return 'last year';
     case 'spring':
     case 'summer':
     case 'autumn':
