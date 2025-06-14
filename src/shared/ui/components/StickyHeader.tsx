@@ -18,6 +18,10 @@ export const StickyHeader: React.FC<StickyHeaderProps> = ({
   title,
   actionButton
 }) => {
+  const actionButtonLabel = actionButton?.activeCount !== undefined && actionButton.activeCount > 0
+    ? `${actionButton.label} (${actionButton.activeCount})`
+    : actionButton?.label;
+
   return (
     <View style={styles.stickyHeader}>
       <View style={styles.stickyHeaderContent}>
@@ -34,12 +38,11 @@ export const StickyHeader: React.FC<StickyHeaderProps> = ({
             onPress={actionButton.onPress}
             activeOpacity={0.8}
           >
-            <Text style={styles.actionIcon}>{actionButton.icon}</Text>
+            <Text style={styles.actionIcon}>
+              {actionButton.icon}
+            </Text>
             <Text style={styles.stickyActionLabel} numberOfLines={1} ellipsizeMode="tail">
-              {actionButton.label}
-              {actionButton.activeCount !== undefined && actionButton.activeCount > 0 && (
-                <Text style={styles.activeCountText}> {actionButton.activeCount}</Text>
-              )}
+              {actionButtonLabel}
             </Text>
           </TouchableOpacity>
         )}
@@ -90,11 +93,6 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing.sm,
   },
   stickyActionLabel: {
-    fontSize: 13,
-    color: theme.colors.text.primary,
-    fontWeight: '600',
-  },
-  activeCountText: {
     fontSize: 13,
     color: theme.colors.text.primary,
     fontWeight: '600',

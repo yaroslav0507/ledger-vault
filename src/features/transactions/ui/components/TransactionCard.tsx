@@ -243,7 +243,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
 
   return (
     <View style={styles.container}>
-      {/* Left Action - Archive */}
       <View style={[styles.leftActionContainer, styles.actionContainer]}>
         <Animated.View
           style={[
@@ -263,7 +262,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
         </Animated.View>
       </View>
 
-      {/* Right Action - Edit */}
       <View style={[styles.rightActionContainer, styles.actionContainer]}>
         <Animated.View
           style={[
@@ -283,7 +281,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
         </Animated.View>
       </View>
 
-      {/* Main Card */}
       <Animated.View
         style={[
           styles.cardWrapper,
@@ -297,7 +294,6 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
           onLongPress={onLongPress}
           activeOpacity={0.9}
         >
-          {/* Main Content */}
           <View style={styles.mainContent}>
             <View style={styles.leftSection}>
               <Text style={styles.description} numberOfLines={1} ellipsizeMode="tail">
@@ -308,11 +304,15 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
                 <Text style={styles.date}>
                   {transaction.date ? formatDateTime(transaction.date) : 'No date'}
                 </Text>
+                
                 <View style={styles.metaDivider} />
+
                 <Text style={styles.cardText} numberOfLines={1} ellipsizeMode="tail">
                   {transaction.card?.slice(-9) || 'N/A'}
                 </Text>
+
                 <View style={styles.metaDivider} />
+
                 <TouchableOpacity 
                   style={styles.categoryBadge}
                   onPress={() => onCategoryPress?.(transaction.category)}
@@ -337,8 +337,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
             </View>
           </View>
           
-          {/* Comments Section - Simplified */}
-          {transaction.comment && transaction.comment.trim() && (
+          {transaction.comment ? (
             <View style={styles.commentSection}>
               <View style={styles.commentRow}>
                 <Text style={styles.commentIcon}>💬</Text>
@@ -347,7 +346,7 @@ export const TransactionCard: React.FC<TransactionCardProps> = React.memo(({
                 </Text>
               </View>
             </View>
-          )}
+          ) : null}
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -452,6 +451,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   metaRow: {
+    gap: theme.spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
@@ -470,7 +470,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: 12,
     backgroundColor: theme.colors.border,
-    marginHorizontal: theme.spacing.sm,
   },
   cardText: {
     ...theme.typography.caption,

@@ -94,7 +94,9 @@ export const BaseScreenLayout: React.FC<BaseScreenLayoutProps> = ({
     return (
       <View style={styles.container}>
         <View style={styles.centerContent}>
-          <Text style={styles.loadingText}>Initializing {screenName}...</Text>
+          <Text style={styles.loadingText}>
+            {`Initializing ${screenName}...`}
+          </Text>
         </View>
       </View>
     );

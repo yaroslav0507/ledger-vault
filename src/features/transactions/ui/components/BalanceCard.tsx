@@ -73,12 +73,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
                 {isBalanceMasked ? '👁️' : (balance.total >= 0 ? '📈' : '📉')}
               </Text>
               <Text style={[styles.trendText, { color: balance.total >= 0 ? '#2E7D32' : '#64748B' }]}>
-                {isBalanceMasked ? '***' : (
-                  <>
-                    {balance.total >= 0 ? '+' : ''}
-                    {balance.income > 0 ? Math.round(((balance.total / balance.income) * 100)) : 0}%
-                  </>
-                )}
+                {isBalanceMasked ? '***' : `${balance.total >= 0 ? '+' : ''}${balance.income > 0 ? Math.round(((balance.total / balance.income) * 100)) : 0}%`}
               </Text>
             </TouchableOpacity>
           </View>
@@ -137,16 +132,16 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
         {/* Enhanced Insights Row */}
         <View style={styles.insightsRow}>
           <Text style={styles.insightText}>
-            💡 {transactionCount} transaction{transactionCount !== 1 ? 's' : ''} {getTimePeriodText()}
+            {`💡 ${transactionCount} transaction${transactionCount !== 1 ? 's' : ''} ${getTimePeriodText()}`}
           </Text>
           {balance.expenses === 0 && transactionCount > 0 && (
             <Text style={styles.insightText}>
-              • All income transactions ✨
+              {`• All income transactions ✨`}
             </Text>
           )}
           {isBalanceMasked && (
             <Text style={styles.insightText}>
-              • Tap 👁️ to show amounts
+              {`• Tap 👁️ to show amounts`}
             </Text>
           )}
         </View>

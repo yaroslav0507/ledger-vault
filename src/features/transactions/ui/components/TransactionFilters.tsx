@@ -273,12 +273,12 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
               placeholder="Search descriptions, comments..."
               placeholderTextColor={theme.colors.text.disabled}
             />
-          </View>
 
-          {/* Clear All Filters Button */}
-          <TouchableOpacity style={styles.applyAllButton} onPress={handleClear}>
-            <Text style={styles.applyAllButtonText}>Clear Filters</Text>
-          </TouchableOpacity>
+                      {/* Clear All Filters Button */}
+            <TouchableOpacity style={styles.applyAllButton} onPress={handleClear}>
+              <Text style={styles.applyAllButtonText}>Clear Filters</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </View>
     </Modal>
