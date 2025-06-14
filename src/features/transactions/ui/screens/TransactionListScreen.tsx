@@ -5,7 +5,7 @@ import {
   StatusBar,
   SectionList
 } from 'react-native';
-import { Portal, Snackbar, Text, FAB, Button } from 'react-native-paper';
+import { Portal, Snackbar, Text, FAB } from 'react-native-paper';
 import { useTransactionStore } from '../../store/transactionStore';
 import { useTransactionActions } from '../hooks/useTransactionActions';
 import { useTransactionManagement } from '../hooks/useTransactionManagement';
@@ -17,13 +17,11 @@ import { ImportPreviewModal } from '@/features/import/ui/components/ImportPrevie
 import { ColumnMappingModal } from '@/features/import/ui/components/ColumnMappingModal';
 import { Transaction } from '../../model/Transaction';
 import { useSettingsStore } from '@/shared/store/settingsStore';
-import { ConfirmationDialog } from '@/shared/ui/components';
+import { ConfirmationDialog, TransactionListHeader } from '@/shared/ui/components';
 import { UI_CONSTANTS } from '@/shared/constants/ui';
 import { TransactionCard } from '../components/TransactionCard';
 import { EmptyState } from '@/shared/ui/components/EmptyState';
 import { TransactionFilterContainer } from '@/shared/ui/components/TransactionFilter/TransactionFilterContainer';
-import { ImportButton } from '@/features/import/ui/components/ImportButton';
-import { BalanceCard } from '../components/BalanceCard';
 
 export const TransactionListScreen: React.FC = () => {
   const { 
@@ -214,42 +212,17 @@ export const TransactionListScreen: React.FC = () => {
   ), [filteredTransactions.length, transactions.length, filters, setFilters, clearFilters, availableCards, transactions]);
 
   const renderListHeader = useCallback(() => (
-    <View>
-      <BalanceCard 
-        balance={balanceData} 
-        transactionCount={filteredTransactions.length}
-        currency={transactions.length > 0 ? transactions[0].currency : 'USD'}
-        currentFilters={filters}
-        onIncomeFilter={() => handleIncomeExpenseFilter(true)}
-        onExpenseFilter={() => handleIncomeExpenseFilter(false)}
-      />
-
-      <View style={styles.actionButtons}>
-        <Button
-          mode="contained"
-          icon="plus"
-          onPress={transactionManagement.addModal.open}
-          style={styles.actionButton}
-          labelStyle={styles.actionButtonLabel}
-          contentStyle={styles.actionButtonContent}
-        >
-          Add Transaction
-        </Button>
-
-        <ImportButton 
-          onFileSelect={handleFileSelect} 
-          style={styles.actionButton}
-          contentStyle={styles.actionButtonContent}
-          labelStyle={styles.actionButtonLabel}
-        />
-      </View>
-
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-    </View>
+    <TransactionListHeader
+      balance={balanceData}
+      transactionCount={filteredTransactions.length}
+      currency={transactions.length > 0 ? transactions[0].currency : 'USD'}
+      currentFilters={filters}
+      error={error}
+      onIncomeFilter={() => handleIncomeExpenseFilter(true)}
+      onExpenseFilter={() => handleIncomeExpenseFilter(false)}
+      onAddTransaction={transactionManagement.addModal.open}
+      onFileSelect={handleFileSelect}
+    />
   ), [
     balanceData,
     filteredTransactions.length,
@@ -314,7 +287,6 @@ export const TransactionListScreen: React.FC = () => {
       {showScrollToTop && (
         <FAB
           style={styles.scrollToTopFab}
-          color={theme.colors.text.inverse}
           icon="arrow-up"
           onPress={() => scrollViewRef.current?.scrollToLocation({ sectionIndex: 0, itemIndex: 0, animated: true })}
         />
@@ -410,38 +382,5 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     elevation: 2,
     shadowOpacity: 0.2,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-    alignItems: 'center',
-  },
-  actionButton: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: theme.borderRadius.md,
-    ...theme.shadows.sm,
-  },
-  actionButtonLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  actionButtonContent: {
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  errorContainer: {
-    backgroundColor: theme.colors.error,
-    marginHorizontal: theme.spacing.md,
-    marginVertical: theme.spacing.sm,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-  },
-  errorText: {
-    ...theme.typography.body,
-    color: theme.colors.text.inverse,
-    textAlign: 'center',
   },
 }); 
