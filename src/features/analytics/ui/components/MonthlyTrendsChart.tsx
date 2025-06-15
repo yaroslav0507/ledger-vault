@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Text } from 'react-native-paper';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine, ResponsiveContainer } from 'recharts';
@@ -18,6 +18,8 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
   const currentMonthShort = format(new Date(), 'MMM');
   const initialIndex = data.findIndex(item => item.month.startsWith(currentMonthShort))
   const [selectedMonthIndex, setSelectedMonthIndex] = useState<number | null>(initialIndex);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number, y: number } | null>(null);
+  const chartRef = useRef<any>(null);
 
   const chartData = useMemo(() => data.map(item => ({
     month: item.month.split(' ')[0], // Short month name
@@ -30,6 +32,27 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
     const idx = data.findIndex(item => item.month.startsWith(currentMonthShort));
     setSelectedMonthIndex(idx !== -1 ? idx : null);
   }, [data, currentMonthShort]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && chartRef.current && selectedMonthIndex !== null) {
+      const svg = chartRef.current.querySelector('svg');
+      if (svg) {
+        // Find all expense dots (assume second set of circles are expenses)
+        const circles = svg.querySelectorAll('circle');
+        // If you have two lines, income and expenses, and each has N dots, expenses are after income
+        const expenseDotIndex = selectedMonthIndex + data.length; // income dots first, then expenses
+        const dot = circles[expenseDotIndex];
+        if (dot) {
+          const dotRect = dot.getBoundingClientRect();
+          const containerRect = chartRef.current.getBoundingClientRect();
+          setTooltipPos({
+            x: dotRect.left - containerRect.left + dotRect.width / 2,
+            y: dotRect.top - containerRect.top + dotRect.height / 2,
+          });
+        }
+      }
+    }
+  }, [selectedMonthIndex, data]);
 
   const handleSelectMonth = useCallback((index: number) => {
     setSelectedMonthIndex(index);
@@ -67,103 +90,98 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
 
   // Custom tooltip content
   const tooltipContent = periodData && (
-    <View style={styles.tooltipContainer}>
-      <Text style={[styles.tooltipLabel, { fontFamily: theme.fontFamily.default }]}>{periodData.month}</Text>
-      <Text style={[styles.tooltipValue, { color: '#2e7d32', fontFamily: theme.fontFamily.default }]}>Income: {formatCurrency(periodData.income, currency)}</Text>
-      <Text style={[styles.tooltipValue, { color: '#64748b', fontFamily: theme.fontFamily.default }]}>Expenses: {formatCurrency(periodData.expenses, currency)}</Text>
-      <Text style={[styles.tooltipValue, { color: periodData.net >= 0 ? theme.colors.success : theme.colors.expense, fontFamily: theme.fontFamily.default }]}>Cashflow: {formatCurrency(periodData.net, currency)}</Text>
+    <View style={[styles.tooltipContainer, { top: tooltipPos?.y, right: 0 }]}>
+      <Text style={[styles.tooltipLabel, { fontFamily: theme.fontFamily.default }]}>
+        {periodData.month}
+      </Text>
+      <Text style={[styles.tooltipValue, { color: '#2e7d32', fontFamily: theme.fontFamily.default }]}>
+        <View style={{ width: 8, height: 8, backgroundColor: '#2e7d32', borderRadius: 4 }} />
+        Income: {formatCurrency(periodData.income, currency)}
+      </Text>
+      <Text style={[styles.tooltipValue, { color: '#64748b', fontFamily: theme.fontFamily.default }]}>
+        <View style={{ width: 8, height: 8, backgroundColor: '#64748b', borderRadius: 4 }} />
+        Expenses: {formatCurrency(periodData.expenses, currency)}
+      </Text>
+      <Text style={[styles.tooltipValue, { color: periodData.net >= 0 ? theme.colors.success : theme.colors.expense, fontFamily: theme.fontFamily.default }]}>
+        <View style={{ width: 8, height: 8, backgroundColor: theme.colors.success, borderRadius: 4 }} /> 
+        Cashflow: {formatCurrency(periodData.net, currency)}
+      </Text>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {/* Custom Tooltip (fixed position above chart) */}
       {tooltipContent}
   
-    <View style={[styles.chartContainer]}> 
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData} onClick={handleChartClick}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-          <XAxis 
-            dataKey="month" 
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: 12, fill: theme.colors.text.secondary, fontFamily: theme.fontFamily.default }}
-          />
-          <YAxis 
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: 12, fill: theme.colors.text.secondary, fontFamily: theme.fontFamily.default }}
-            tickFormatter={formatYAxisValue}
-          />
-          {periodData && (
-            <ReferenceLine
-              x={periodData.month.split(' ')[0]}
-              stroke={theme.colors.secondary}
-              strokeDasharray="5 5"
-              strokeWidth={1}
+      <View ref={Platform.OS === 'web' ? chartRef : undefined} style={[styles.chartContainer]}> 
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} onClick={handleChartClick}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+            <XAxis 
+              dataKey="month" 
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: theme.colors.text.secondary, fontFamily: theme.fontFamily.default }}
             />
-          )}
-          <Line 
-            type="monotone" 
-            dataKey="income" 
-            stroke="#2e7d32" 
-            strokeWidth={2}
-            dot={(props: any) => {
-              const isSelected = selectedMonthIndex !== null && props.index === selectedMonthIndex;
-              return (
-                <circle
-                  key={`income-dot-${props.index}`}
-                  cx={props.cx}
-                  cy={props.cy}
-                  r={isSelected ? 8 : 4}
-                  fill="#2e7d32"
-                  stroke={isSelected ? '#fff' : '#2e7d32'}
-                  strokeWidth={isSelected ? 3 : 2}
-                />
-              );
-            }}
-            name="Income"
-          />
-          <Line 
-            type="monotone" 
-            dataKey="expenses" 
-            stroke="#64748b" 
-            strokeWidth={2}
-            dot={(props: any) => {
-              const isSelected = selectedMonthIndex !== null && props.index === selectedMonthIndex;
-              return (
-                <circle
-                  key={`expenses-dot-${props.index}`}
-                  cx={props.cx}
-                  cy={props.cy}
-                  r={isSelected ? 8 : 4}
-                  fill="#64748b"
-                  stroke={isSelected ? '#fff' : '#64748b'}
-                  strokeWidth={isSelected ? 3 : 2}
-                />
-              );
-            }}
-            name="Expenses"
-          />
-        </LineChart>
-      </ResponsiveContainer>
-      {/* Custom Legend */}
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 24, marginTop: 8 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <View style={{ width: 16, height: 4, backgroundColor: '#2e7d32', borderRadius: 2 }} />
-          <Text style={{ fontFamily: theme.fontFamily.default, color: theme.colors.text.primary }}>Income</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <View style={{ width: 16, height: 4, backgroundColor: '#64748b', borderRadius: 2 }} />
-          <Text style={{ fontFamily: theme.fontFamily.default, color: theme.colors.text.primary }}>Expenses</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <View style={{ width: 16, height: 4, backgroundColor: theme.colors.success, borderRadius: 2 }} />
-          <Text style={{ fontFamily: theme.fontFamily.default, color: theme.colors.text.primary }}>Cashflow</Text>
-        </View>
+            <YAxis 
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: theme.colors.text.secondary, fontFamily: theme.fontFamily.default }}
+              tickFormatter={formatYAxisValue}
+            />
+            {periodData && (
+              <ReferenceLine
+                x={periodData.month.split(' ')[0]}
+                stroke={theme.colors.secondary}
+                strokeDasharray="5 5"
+                strokeWidth={1}
+              />
+            )}
+            <Line 
+              type="monotone" 
+              dataKey="income" 
+              stroke="#2e7d32" 
+              strokeWidth={2}
+              dot={(props: any) => {
+                const isSelected = selectedMonthIndex !== null && props.index === selectedMonthIndex;
+                return (
+                  <circle
+                    key={`income-dot-${props.index}`}
+                    cx={props.cx}
+                    cy={props.cy}
+                    r={isSelected ? 4 : 2}
+                    fill="#2e7d32"
+                    stroke={isSelected ? '#fff' : '#2e7d32'}
+                    strokeWidth={isSelected ? 2 : 1}
+                  />
+                );
+              }}
+              name="Income"
+            />
+            <Line 
+              type="monotone" 
+              dataKey="expenses" 
+              stroke="#64748b" 
+              strokeWidth={2}
+              dot={(props: any) => {
+                const isSelected = selectedMonthIndex !== null && props.index === selectedMonthIndex;
+                return (
+                  <circle
+                    key={`expenses-dot-${props.index}`}
+                    cx={props.cx}
+                    cy={props.cy}
+                    r={isSelected ? 4 : 2}
+                    fill="#64748b"
+                    stroke={isSelected ? '#fff' : '#64748b'}
+                    strokeWidth={isSelected ? 2 : 1}
+                  />
+                );
+              }}
+              name="Expenses"
+            />
+          </LineChart>
+        </ResponsiveContainer>
       </View>
-    </View>
 
       <View style={styles.summaryContainer}>
         {/* Table Header */}
@@ -241,8 +259,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     position: 'absolute',
-    top: 10,
-    right: 10,
+    // top: 10,
+    // right: 10,
     zIndex: 1,
   },
   tooltipLabel: {
@@ -253,6 +271,10 @@ const styles = StyleSheet.create({
   },
   tooltipValue: {
     ...theme.typography.caption,
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 4,
+    alignItems: 'center',
     fontWeight: UI_CONSTANTS.FONT_WEIGHTS.MEDIUM,
   },
   summaryItem: {
