@@ -36,7 +36,7 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, curren
     );
   }
 
-  const chartData = data.slice(0, 8).map(item => ({
+  const chartData = data.map(item => ({
     name: item.category.length > 15 ? `${item.category.substring(0, 15)}...` : item.category,
     fullName: item.category,
     value: item.amount,
@@ -172,7 +172,6 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, curren
                   }
                 }}
                 onLongPress={() => onCategoryLongPress?.(item.category)}
-                disabled={chartIndex === -1}
               >
                 <View style={[styles.legendItem, isActive ? { backgroundColor: '#e0f2fe' } : undefined]}>
                   <View style={styles.legendLeft}>
@@ -295,7 +294,7 @@ const styles = StyleSheet.create({
   },
   legendPercentage: {
     ...theme.typography.caption,
-    color: theme.colors.primary,
+    color: theme.colors.secondary,
     fontWeight: UI_CONSTANTS.FONT_WEIGHTS.SEMIBOLD,
   },
   buttonContainer: {
