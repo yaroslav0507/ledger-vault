@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useTransactionStore } from '../../store/transactionStore';
 import { Transaction, CreateTransactionRequest, UpdateTransactionRequest } from '../../model/Transaction';
-import { transactionRepository } from '@/features/transactions/storage/TransactionRepository';
+import { WatermelonTransactionRepository } from '../../storage/WatermelonTransactionRepository';
+
+// Create repository instance
+const transactionRepository = new WatermelonTransactionRepository();
 
 export const useTransactionActions = (onEditTransaction?: (transaction: Transaction) => void) => {
   const { updateTransaction, loadTransactions, archiveTransaction, unarchiveTransaction } = useTransactionStore();

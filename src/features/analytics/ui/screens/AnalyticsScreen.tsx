@@ -49,7 +49,7 @@ export const AnalyticsScreen: React.FC = () => {
       const list = baseScreen.scrollViewRef.current as any;
       list?.scrollToLocation({
         sectionIndex: 0,
-        itemIndex: index,
+        itemIndex: index + 1,
         viewPosition: 0,
         animated: true,
       });

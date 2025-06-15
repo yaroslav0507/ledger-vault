@@ -1,7 +1,8 @@
 import { Transaction } from '../model/Transaction';
-import { db } from '../storage/TransactionDatabase';
+import { WatermelonTransactionRepository } from '../storage/WatermelonTransactionRepository';
 
 class CategoryService {
+  private repository = new WatermelonTransactionRepository();
 
   private isDateInRange(date: string, start: string, end: string): boolean {
     const startDate = new Date(start);
@@ -35,15 +36,11 @@ class CategoryService {
     let transactionCategories: string[] = [];
     
     if (dateRange) {
-      // Use the same date filtering logic as TransactionRepository
-      const filteredTransactions = await db.transactions
-        .toArray()
-        .then(transactions => 
-          transactions.filter(t => this.isDateInRange(t.date, dateRange.start, dateRange.end))
-        );
+      // Use the repository to get filtered transactions
+      const filteredTransactions = await this.repository.findAll({ dateRange });
       
       transactionCategories = Array.from(new Set(
-        filteredTransactions.map(t => t.category).filter(Boolean)
+        filteredTransactions.map((t: Transaction) => t.category).filter(Boolean)
       ));
       
       console.log(`📋 Found ${transactionCategories.length} categories in date range:`, transactionCategories);
@@ -59,7 +56,7 @@ class CategoryService {
    * Get distinct categories from transactions in database
    */
   async getTransactionCategories(): Promise<string[]> {
-    const transactions = await db.transactions.toArray();
+    const transactions = await this.repository.findAll();
     const categories = Array.from(new Set(
       transactions.map((t: Transaction) => t.category).filter(Boolean)
     ));

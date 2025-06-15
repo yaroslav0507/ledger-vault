@@ -251,7 +251,9 @@ export function getTimePeriodDisplayText(filters?: { dateRange?: DateRange }): s
  * Extract all unique years from a list of transactions (sorted descending)
  */
 export function getAllTransactionYears(transactions: { date: string }[]): number[] {
-  const years = Array.from(new Set(transactions.map(t => new Date(t.date).getFullYear())));
+  const years = Array.from(new Set(transactions
+    .map(t => new Date(t.date).getFullYear())
+    .filter(y => !isNaN(y))));
   return years.sort((a, b) => b - a);
 }
 

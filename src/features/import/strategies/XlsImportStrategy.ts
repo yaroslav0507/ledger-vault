@@ -1,7 +1,7 @@
 import { read, utils, WorkBook } from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 import { Transaction } from '@/features/transactions/model/Transaction';
-import { transactionRepository } from '@/features/transactions/storage/TransactionRepository';
+import { WatermelonTransactionRepository } from '@/features/transactions/storage/WatermelonTransactionRepository';
 import { 
   parseCurrency, 
   detectCurrencyFromText, 
@@ -12,6 +12,8 @@ import {
 import { format } from 'date-fns';
 import { ImportStrategy, ImportFile, ImportResult, ImportMapping, ImportError } from './ImportStrategy';
 import * as XLSX from 'xlsx';
+
+const transactionRepository = new WatermelonTransactionRepository();
 
 export interface FilePreview {
   columns: string[];

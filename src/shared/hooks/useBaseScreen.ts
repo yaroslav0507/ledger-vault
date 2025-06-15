@@ -4,7 +4,7 @@ import { useTransactionStore } from '@/features/transactions/store/transactionSt
 import { useTransactionActions } from '@/features/transactions/ui/hooks/useTransactionActions';
 import { useTransactionManagementContext } from '@/shared/contexts/TransactionManagementContext';
 import { useTransactionCallbacks } from '@/features/transactions/ui/hooks/useTransactionCallbacks';
-import { initializeDatabase } from '@/features/transactions/storage/TransactionDatabase';
+import { initializeDatabase } from '@/db';
 import { useSettingsStore } from '@/shared/store/settingsStore';
 import { UI_CONSTANTS } from '@/shared/constants/ui';
 

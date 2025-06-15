@@ -41,8 +41,9 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
         if (svg) {
           const circles = svg.querySelectorAll('circle');
           const dotsPerLine = chartData.length;
+          const incomeDotIndex = selectedMonthIndex;
           const expenseDotIndex = dotsPerLine + selectedMonthIndex;
-          const dot = circles[expenseDotIndex || expenseDotIndex];
+          const dot = circles[incomeDotIndex || expenseDotIndex];
           if (dot) {
             const dotRect = dot.getBoundingClientRect();
             const containerRect = chartRef.current.getBoundingClientRect();
@@ -65,13 +66,10 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
   }, []);
 
   const handleChartClick = useCallback((e: any) => {
-    if (e && e.activeLabel) {
-      const idx = chartData.findIndex(d => d.month === e.activeLabel);
-      if (idx !== -1) {
-        setSelectedMonthIndex(idx);
-      }
+    if (e && e.activeTooltipIndex != null) {
+      setSelectedMonthIndex(e.activeTooltipIndex);
     }
-  }, [chartData]);
+  }, []);
 
   const periodData = selectedMonthIndex !== null && data[selectedMonthIndex] ? data[selectedMonthIndex] : null;
 

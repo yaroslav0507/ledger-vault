@@ -1,10 +1,13 @@
 import { create } from 'zustand';
-import { transactionRepository } from '../storage/TransactionRepository';
+import { WatermelonTransactionRepository } from '../storage/WatermelonTransactionRepository';
 import { 
   Transaction, 
   CreateTransactionRequest, 
   TransactionFilters 
 } from '../model/Transaction';
+
+// Create repository instance
+const transactionRepository = new WatermelonTransactionRepository();
 import { getDateRangeForPeriod, TimePeriod, DateRange, getAllTransactionYears } from '@/shared/utils/dateUtils';
 import { updateUrlWithFilters, loadFiltersFromUrl } from '@/shared/utils/filterPersistence';
 

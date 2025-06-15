@@ -1,7 +1,9 @@
 import { ImportStrategy, ImportFile, ImportResult, ImportMapping } from '../strategies/ImportStrategy';
 import { XlsImportStrategy, FilePreview } from '../strategies/XlsImportStrategy';
-import { transactionRepository } from '@/features/transactions/storage/TransactionRepository';
+import { WatermelonTransactionRepository } from '@/features/transactions/storage/WatermelonTransactionRepository';
 import { Transaction } from '@/features/transactions/model/Transaction';
+
+const transactionRepository = new WatermelonTransactionRepository();
 
 export { FilePreview };
 

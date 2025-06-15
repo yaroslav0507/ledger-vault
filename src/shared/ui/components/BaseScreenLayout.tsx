@@ -90,6 +90,8 @@ export const BaseScreenLayout: React.FC<BaseScreenLayoutProps> = ({
     return <EmptyState {...emptyStateProps} />;
   };
 
+  const hasData = sections.some((s: any) => Array.isArray(s.data) && s.data.length > 0);
+
   if (!isInitialized) {
     return (
       <View style={styles.container}>
@@ -115,7 +117,7 @@ export const BaseScreenLayout: React.FC<BaseScreenLayoutProps> = ({
         renderItem={renderItem}
         renderSectionHeader={renderStickyHeader}
         ListHeaderComponent={renderListHeader}
-        ListEmptyComponent={renderEmptyComponent}
+        ListFooterComponent={!hasData ? renderEmptyComponent : null}
         {...sectionListProps}
       />
 

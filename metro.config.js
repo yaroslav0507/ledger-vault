@@ -9,6 +9,8 @@ config.resolver.alias = {
   '@/shared': path.resolve(__dirname, 'src/shared'),
   '@/features': path.resolve(__dirname, 'src/features'),
   '@/app': path.resolve(__dirname, 'src/app'),
+  'better-sqlite3': path.resolve(__dirname, 'shimEmpty.js'),
+  '@nozbe/watermelondb/adapters/sqlite/sqlite-node/Database': path.resolve(__dirname, 'shimEmpty.js'),
 };
 
 // GitHub Pages configuration
@@ -26,5 +28,10 @@ if (process.env.NODE_ENV === 'production') {
     },
   };
 }
+
+const extraModules = config.resolver.extraNodeModules || {};
+extraModules['better-sqlite3'] = path.resolve(__dirname, 'shimEmpty.js');
+extraModules['@nozbe/watermelondb/adapters/sqlite/sqlite-node/Database'] = path.resolve(__dirname, 'shimEmpty.js');
+config.resolver.extraNodeModules = extraModules;
 
 module.exports = config; 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -12,6 +12,7 @@ import { AppHeader } from './src/shared/ui/components/AppHeader';
 import { TransactionModalsContainer } from './src/shared/ui/components/TransactionModalsContainer';
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { initializeDatabase } from './src/db';
 
 // Custom theme based on our design
 const theme = {
@@ -114,6 +115,11 @@ export default function App() {
   const [fontsLoaded] = useFonts({
     ...MaterialCommunityIcons.font,
   });
+
+  // Initialize WatermelonDB
+  useEffect(() => {
+    initializeDatabase().catch(console.error);
+  }, []);
 
   if (!fontsLoaded) {
     return null;
