@@ -16,21 +16,21 @@ interface MonthlyTrendsChartProps {
 export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, currency = 'UAH' }) => {
   // Always call hooks at the top level, before any return or conditional
   const currentMonthShort = format(new Date(), 'MMM');
-  const initialIndex = data.findIndex(item => item.month.startsWith(currentMonthShort))
+  const initialIndex = data.findIndex((item: MonthlyTrendData) => item.month.startsWith(currentMonthShort))
   const [selectedMonthIndex, setSelectedMonthIndex] = useState<number | null>(initialIndex);
   const [tooltipPos, setTooltipPos] = useState<{ x: number, y: number } | null>(null);
   const chartRef = useRef<any>(null);
   const [containerWidth, setContainerWidth] = useState<number>(0);
 
-  const chartData = useMemo(() => data.map(item => ({
-    month: item.month.split(' ')[0], // Short month name
+  const chartData = useMemo(() => data.map((item: MonthlyTrendData) => ({
+    month: item.month, // Full month and year, e.g. 'Jun 2024'
     income: item.income,
     expenses: item.expenses,
     net: item.net,
   })), [data]);
 
   useEffect(() => {
-    const idx = data.findIndex(item => item.month.startsWith(currentMonthShort));
+    const idx = data.findIndex((item: MonthlyTrendData) => item.month.startsWith(currentMonthShort));
     setSelectedMonthIndex(idx !== -1 ? idx : null);
   }, [data, currentMonthShort]);
 
@@ -139,7 +139,7 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
             />
             {periodData && (
               <ReferenceLine
-                x={periodData.month.split(' ')[0]}
+                x={periodData.month}
                 stroke={theme.colors.secondary}
                 strokeDasharray="5 5"
                 strokeWidth={1}

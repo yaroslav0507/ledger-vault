@@ -1,13 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  Switch,
-  TouchableOpacity,
-  Platform
-} from 'react-native';
+import React from 'react';
+import { View, ScrollView, StyleSheet, Switch } from 'react-native';
 import {
   Card,
   Text,
@@ -21,150 +13,31 @@ import {
   Dialog
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SUPPORTED_CURRENCIES, getCurrencySymbol } from '@/shared/utils/currencyUtils';
+import { getCurrencySymbol } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
-import { useTransactionStore } from '@/features/transactions/store/transactionStore';
-import { categoryService } from '@/features/transactions/service/CategoryService';
-import { useSettingsStore } from '@/shared/store/settingsStore';
+import { useSettingsScreen } from '../hooks/useSettingsScreen';
 
 interface SettingsScreenProps {
   onClose: () => void;
 }
 
-interface AppSettings {
-  defaultCurrency: string;
-  defaultCategory: string;
-  autoDetectCurrency: boolean;
-  confirmDeleteTransactions: boolean;
-  defaultTransactionType: 'expense' | 'income';
-}
-
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
-  const { clearAllTransactions, transactions, loading, loadTransactions } = useTransactionStore();
-  
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
-  
-  const [settings, setSettings] = useState<AppSettings>({
-    defaultCurrency: 'UAH',
-    defaultCategory: 'General',
-    autoDetectCurrency: true,
-    confirmDeleteTransactions: true,
-    defaultTransactionType: 'expense'
-  });
-
-  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-
-  const confirmDeleteTransactions = useSettingsStore(state => state.confirmDeleteTransactions);
-  const setConfirmDeleteTransactions = useSettingsStore(state => state.setConfirmDeleteTransactions);
-
-  // Load available categories on component mount
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const categories = await categoryService.getAllCategories();
-        setAvailableCategories(categories);
-        
-        if (categories.length > 0) {
-          setSettings(prev => ({
-            ...prev,
-            defaultCategory: prev.defaultCategory === 'General' ? categories[0] : prev.defaultCategory
-          }));
-        }
-      } catch (error) {
-        console.error('Failed to load categories:', error);
-        setAvailableCategories(['General']);
-      }
-    };
-    
-    loadCategories();
-  }, []);
-
-  // Cross-platform alert function
-  const showAlert = (title: string, message: string, buttons?: Array<{text: string, onPress?: () => void, style?: 'default' | 'cancel' | 'destructive'}>) => {
-    if (Platform.OS === 'web') {
-      if (buttons && buttons.length > 1) {
-        const confirmed = window.confirm(`${title}\n\n${message}`);
-        if (confirmed) {
-          const confirmButton = buttons.find(b => b.style === 'destructive' || b.text === 'Delete All' || b.text === 'Export');
-          confirmButton?.onPress?.();
-        } else {
-          const cancelButton = buttons.find(b => b.style === 'cancel' || b.text === 'Cancel');
-          cancelButton?.onPress?.();
-        }
-      } else {
-        window.alert(`${title}\n\n${message}`);
-        buttons?.[0]?.onPress?.();
-      }
-    } else {
-      // For native, use React Native Alert
-      Alert.alert(title, message, buttons);
-    }
-  };
-
-  const handleSaveSettings = () => {
-    showAlert('Success', 'Settings saved successfully!');
-    onClose();
-  };
-
-  const handleExportData = () => {
-    if (transactions.length === 0) {
-      showAlert('No Data', 'There are no transactions to export.');
-      return;
-    }
-
-    showAlert(
-      'Export Data',
-      `This will export all ${transactions.length} transactions to a CSV file.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Export', onPress: () => {
-          try {
-            const csvHeader = 'Date,Card,Amount,Currency,Description,Category,Type,Comment\n';
-            const csvContent = transactions.map(t => 
-              `${t.date},"${t.card}",${t.amount},"${t.currency}","${t.description}","${t.category}","${t.isIncome ? 'Income' : 'Expense'}","${t.comment || ''}"`
-            ).join('\n');
-            
-            const fullCsv = csvHeader + csvContent;
-            showAlert('Export Successful', 'Transaction data has been exported to CSV format.');
-          } catch (error) {
-            showAlert('Export Failed', 'Failed to export data. Please try again.');
-            console.error('Export error:', error);
-          }
-        }}
-      ]
-    );
-  };
-
-  const handleClearData = () => {
-    if (transactions.length === 0) {
-      showAlert('No Data', 'There are no transactions to clear.');
-      return;
-    }
-
-    showAlert(
-      'Clear All Data',
-      `This will permanently delete all ${transactions.length} transactions. This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete All', style: 'destructive', onPress: async () => {
-          try {
-            await clearAllTransactions();
-            await loadTransactions();
-            
-            showAlert('Success', 'All transaction data has been cleared.');
-          } catch (error) {
-            console.error('❌ Clear data error:', error);
-            showAlert(
-              'Error', 
-              `Failed to clear data: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`
-            );
-          }
-        }}
-      ]
-    );
-  };
+  const {
+    availableCategories,
+    settings,
+    setSettings,
+    showCurrencyModal,
+    setShowCurrencyModal,
+    showCategoryModal,
+    setShowCategoryModal,
+    confirmDeleteTransactions,
+    setConfirmDeleteTransactions,
+    handleSaveSettings,
+    handleExportData,
+    handleClearData,
+    SUPPORTED_CURRENCIES,
+  } = useSettingsScreen(onClose);
 
   return (
     <SafeAreaView style={styles.container}>

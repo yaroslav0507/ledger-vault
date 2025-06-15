@@ -373,8 +373,8 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => {
     },
 
     getAvailableYears: async () => {
-      const allTransactions = await transactionRepository.getAllTransactionDates();
-      return getAllTransactionYears(allTransactions);
+      const allTransactionDates = await transactionRepository.getAllTransactionDates();
+      return getAllTransactionYears(allTransactionDates);
     }
   };
 }); 

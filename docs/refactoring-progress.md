@@ -163,10 +163,42 @@ This document tracks the comprehensive refactoring of the LedgerVault React Nati
 
 ## Next Steps (Future Phases)
 
-### Phase 4: Additional Components
-- Apply similar refactoring to AnalyticsScreen
-- Refactor remaining large components
-- Extract more reusable patterns
+### Phase 4: Additional Components ✅
+
+### AnalyticsScreen Refactoring
+**File**: `src/features/analytics/ui/screens/AnalyticsScreen.tsx`
+**Original Size**: 179 lines
+**Techniques Applied**:
+- Extract Method (moved complex logic to a custom hook)
+- Extract Class → Custom Hook (`useAnalyticsScreen`)
+- Replace Temp with Query (memoized derived data)
+- Move Method (business calculations remain in `AnalyticsService`)
+
+**Key Improvements**:
+1. **Custom Hook**: Encapsulated analytics-specific state, derived data, and callbacks in `useAnalyticsScreen`
+2. **Component Simplification**: Screen component now focuses on layout; reduced line count to ~120
+3. **Separation of Concerns**: Business calculations and data processing are handled by hook and service layer
+
+### Remaining Tasks
+- Refactor other analytics-related components if necessary
+- Continue extracting reusable patterns in smaller components
+
+### SettingsScreen Refactoring ✅
+**File**: `src/features/settings/ui/screens/SettingsScreen.tsx`
+**Original Size**: 420 lines
+**Techniques Applied**:
+- Extract Method / Logic to Custom Hook (`useSettingsScreen`)
+- Remove Duplicated Logic (cross-platform alerts)
+- Replace Temp with Query (state derived in hook)
+
+**Key Improvements**:
+1. Screen component reduced complexity, focuses on UI layout.
+2. Logic centralized in reusable hook, enabling easier testing.
+3. Eliminated redundant imports and improved readability.
+
+### Remaining Tasks
+- Review smaller utility components for potential refactoring
+- Performance optimizations and type safety phases
 
 ### Phase 5: Performance Optimization
 - Implement React.memo where appropriate

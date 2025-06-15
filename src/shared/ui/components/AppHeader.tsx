@@ -10,14 +10,15 @@ export const AppHeader: React.FC = () => {
     filters,
     selectedTimePeriod,
     setTimePeriod,
-    getAvailableYears
+    getAvailableYears,
+    transactions
   } = useTransactionStore();
 
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   useEffect(() => {
     getAvailableYears().then(setAvailableYears);
-  }, [getAvailableYears]);
+  }, [getAvailableYears, transactions.length]);
 
   const handlePeriodChange = (period: TimePeriod, dateRange: DateRange) => {
     setTimePeriod(period, dateRange);
@@ -31,10 +32,10 @@ export const AppHeader: React.FC = () => {
 
   return (
     <TimePeriodSelector 
-        currentDateRange={filters.dateRange}
-        selectedPeriod={selectedTimePeriod}
-        onPeriodChange={handlePeriodChange}
-        availableYears={availableYears}
+      currentDateRange={filters.dateRange}
+      selectedPeriod={selectedTimePeriod}
+      onPeriodChange={handlePeriodChange}
+      availableYears={availableYears}
     />
   );
 };

@@ -33,7 +33,6 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
   const scrollViewRef = useRef<ScrollView>(null);
   const hasAutoScrolledRef = useRef(false);
   const lastScrolledPeriodRef = useRef<TimePeriod | null>(null);
-  const currentPeriod = selectedPeriod || 'lastMonth';
 
   const allTimePeriods: { period: TimePeriod; label: string; icon: string }[] = [
     { period: 'today', label: 'Today', icon: '📅' },
@@ -55,6 +54,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
     icon: '📆',
     year
   }));
+  
   const timePeriods = [
     ...allTimePeriods.filter(({ period }) => period !== 'custom'),
     ...yearButtons,
@@ -80,7 +80,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
 
   // Auto-scroll to selected item (smooth, no interruption)
   const scrollToSelectedItem = useCallback((targetPeriod?: TimePeriod, immediate = false) => {
-    const periodToFind = targetPeriod || currentPeriod;
+    const periodToFind = targetPeriod || selectedPeriod;
     const selectedIndex = timePeriodsFiltered.findIndex(({ period }) => period === periodToFind);
     
     if (selectedIndex >= 0 && scrollViewRef.current) {
@@ -101,7 +101,29 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
       // Track that we scrolled to this period
       lastScrolledPeriodRef.current = periodToFind;
     }
-  }, [currentPeriod, timePeriodsFiltered]);
+  }, [selectedPeriod, timePeriodsFiltered]);
+
+  // Compute the active period based on currentDateRange and selectedPeriod
+  function getActivePeriod(currentDateRange: DateRange | undefined, selectedPeriod: TimePeriod | undefined, availableYears: number[]) {
+    for (const year of availableYears) {
+      if (
+        currentDateRange &&
+        currentDateRange.start === `${year}-01-01` &&
+        currentDateRange.end === `${year}-12-31`
+      ) {
+        return `year-${year}`;
+      }
+    }
+    const standardPeriods = [
+      'today', 'week', 'month', 'lastMonth', 'quarter', 'winter', 'spring', 'summer', 'autumn'
+    ];
+    if (selectedPeriod && standardPeriods.includes(selectedPeriod)) {
+      return selectedPeriod;
+    }
+    return 'custom';
+  }
+
+  const currentPeriod = availableYears.length && getActivePeriod(currentDateRange, selectedPeriod, availableYears);
 
   const handlePeriodSelect = (period: TimePeriod | string) => {
     if (typeof period === 'string' && period.startsWith('year-')) {
@@ -149,7 +171,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
   useEffect(() => {
     // Auto-scroll once when component is first initialized
     // This includes both when we have a date range OR when defaulting to 'month'
-    if (!hasAutoScrolledRef.current) {
+    if (!hasAutoScrolledRef.current && currentPeriod) {
       const timeoutId = setTimeout(() => {
         scrollToSelectedItem(currentPeriod, false);
         hasAutoScrolledRef.current = true;
@@ -157,7 +179,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
       
       return () => clearTimeout(timeoutId);
     }
-  }, []); // Empty dependency array - only run once on mount
+  }, [currentPeriod]); // Empty dependency array - only run once on mount
 
   // Helper to check if a year button should be selected
   const isYearSelected = (period: string, label: string) => {
@@ -179,18 +201,13 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
         ref={scrollViewRef}
       >
         {timePeriodsFiltered.map(({ period, label, icon }) => {
-          const isSelected =
-            (typeof period === 'string' && period.startsWith('year-')
-              ? isYearSelected(period, label)
-              : period === currentPeriod);
-          const isCustomSelected = period === 'custom' && currentPeriod === 'custom';
-          
+          const isSelected = period === currentPeriod;
           return (
             <TouchableOpacity
               key={period}
               style={[
                 styles.periodButton,
-                (isSelected || isCustomSelected) && styles.selectedPeriodButton
+                isSelected && styles.selectedPeriodButton
               ]}
               onPress={() => handlePeriodSelect(period)}
               activeOpacity={0.7}
@@ -198,7 +215,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
               <Text style={styles.periodIcon}>{icon}</Text>
               <Text style={[
                 styles.periodLabel,
-                (isSelected || isCustomSelected) && styles.selectedPeriodLabel
+                isSelected && styles.selectedPeriodLabel
               ]}>
                 {label}
               </Text>
