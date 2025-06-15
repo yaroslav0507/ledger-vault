@@ -72,7 +72,7 @@ export const useTransactionActions = (onEditTransaction?: (transaction: Transact
           createRequests.length === 1 ? '' : 's'
         }${ignoreDuplicates ? ' (duplicates skipped)' : ''}`
       );
-
+      
       return true;
     } catch (error) {
       console.error('Import failed:', error);

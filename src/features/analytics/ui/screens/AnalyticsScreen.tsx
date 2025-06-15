@@ -82,42 +82,42 @@ export const AnalyticsScreen: React.FC = () => {
     switch (item) {
       case 'trends':
         return (
-          <View style={styles.analyticsContent}>
-            <CollapsibleSection
-              title="Monthly Trends"
-              subtitle={`${analyticsData.monthlyTrends.length} months`}
-            >
-              <MonthlyTrendsChart data={analyticsData.monthlyTrends} currency={currency} />
-            </CollapsibleSection>
+    <View style={styles.analyticsContent}>
+        <CollapsibleSection 
+          title="Monthly Trends"
+          subtitle={`${analyticsData.monthlyTrends.length} months`}
+        >
+          <MonthlyTrendsChart data={analyticsData.monthlyTrends} currency={currency} />
+        </CollapsibleSection>
           </View>
         );
       case 'categories':
         return (
           <View style={styles.analyticsContent}>
-            <CollapsibleSection
-              title="Category Breakdown"
-              subtitle={`${analyticsData.expenseCategories.length} categories`}
-            >
+        <CollapsibleSection 
+          title="Category Breakdown"
+          subtitle={`${analyticsData.expenseCategories.length} categories`}
+        >
               <CategoryPieChart
                 data={analyticsData.expenseCategories}
                 currency={currency}
                 onCategoryLongPress={toggleCategoryFilter}
                 activeCategories={filters.categories || []}
               />
-            </CollapsibleSection>
+        </CollapsibleSection>
           </View>
         );
       case 'insights':
         return (
           <View style={styles.analyticsContent}>
-            <KeyInsights insights={insights} />
-            {analyticsData.transactionCount === 0 && (
-              <EmptyState
-                title="No Data Available"
-                description="No transactions found for the selected time period. Try selecting a different date range or add some transactions to see your analytics."
-              />
-            )}
-          </View>
+      <KeyInsights insights={insights} />
+      {analyticsData.transactionCount === 0 && (
+        <EmptyState
+          title="No Data Available"
+          description="No transactions found for the selected time period. Try selecting a different date range or add some transactions to see your analytics."
+        />
+      )}
+    </View>
         );
       default:
         return <View />;

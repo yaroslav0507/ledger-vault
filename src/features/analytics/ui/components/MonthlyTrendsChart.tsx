@@ -20,6 +20,7 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
   const [selectedMonthIndex, setSelectedMonthIndex] = useState<number | null>(initialIndex);
   const [tooltipPos, setTooltipPos] = useState<{ x: number, y: number } | null>(null);
   const chartRef = useRef<any>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   const chartData = useMemo(() => data.map(item => ({
     month: item.month.split(' ')[0], // Short month name
@@ -35,22 +36,26 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
 
   useEffect(() => {
     if (Platform.OS === 'web' && chartRef.current && selectedMonthIndex !== null) {
-      const svg = chartRef.current.querySelector('svg');
-      if (svg) {
-        // Find all expense dots (assume second set of circles are expenses)
-        const circles = svg.querySelectorAll('circle');
-        // If you have two lines, income and expenses, and each has N dots, expenses are after income
-        const expenseDotIndex = selectedMonthIndex + data.length; // income dots first, then expenses
-        const dot = circles[expenseDotIndex];
-        if (dot) {
-          const dotRect = dot.getBoundingClientRect();
-          const containerRect = chartRef.current.getBoundingClientRect();
-          setTooltipPos({
-            x: dotRect.left - containerRect.left + dotRect.width / 2,
-            y: dotRect.top - containerRect.top + dotRect.height / 2,
-          });
+      const updateTooltip = () => {
+        const svg = chartRef.current.querySelector('svg');
+        if (svg) {
+          const circles = svg.querySelectorAll('circle');
+          const incomeDotIndex = selectedMonthIndex;
+          const dot = circles[incomeDotIndex];
+          if (dot) {
+            const dotRect = dot.getBoundingClientRect();
+            const containerRect = chartRef.current.getBoundingClientRect();
+            setTooltipPos({
+              x: dotRect.left - containerRect.left + dotRect.width / 2,
+              y: dotRect.top - containerRect.top + dotRect.height / 2,
+            });
+          } else {
+            // Retry after a short delay if dot is not found
+            setTimeout(updateTooltip, 100);
+          }
         }
-      }
+      };
+      updateTooltip();
     }
   }, [selectedMonthIndex, data]);
 
@@ -88,24 +93,24 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
     return value.toFixed(0);
   };
 
-  // Custom tooltip content
+  const minWidth = 180;
+  let left = tooltipPos ? tooltipPos.x - minWidth / 2 : undefined;
+  if (left !== undefined) {
+    if (left < 8) left = 8;
+    if (containerWidth && left + minWidth > containerWidth - 8) {
+      left = containerWidth - minWidth - 8;
+    }
+  }
+  const tooltipStyle = tooltipPos
+    ? { top: tooltipPos.y - 100, left, minWidth }
+    : { top: 16, right: 16, minWidth };
+
   const tooltipContent = periodData && (
-    <View style={[styles.tooltipContainer, { top: tooltipPos?.y, right: 0 }]}>
-      <Text style={[styles.tooltipLabel, { fontFamily: theme.fontFamily.default }]}>
-        {periodData.month}
-      </Text>
-      <Text style={[styles.tooltipValue, { color: '#2e7d32', fontFamily: theme.fontFamily.default }]}>
-        <View style={{ width: 8, height: 8, backgroundColor: '#2e7d32', borderRadius: 4 }} />
-        Income: {formatCurrency(periodData.income, currency)}
-      </Text>
-      <Text style={[styles.tooltipValue, { color: '#64748b', fontFamily: theme.fontFamily.default }]}>
-        <View style={{ width: 8, height: 8, backgroundColor: '#64748b', borderRadius: 4 }} />
-        Expenses: {formatCurrency(periodData.expenses, currency)}
-      </Text>
-      <Text style={[styles.tooltipValue, { color: periodData.net >= 0 ? theme.colors.success : theme.colors.expense, fontFamily: theme.fontFamily.default }]}>
-        <View style={{ width: 8, height: 8, backgroundColor: theme.colors.success, borderRadius: 4 }} /> 
-        Cashflow: {formatCurrency(periodData.net, currency)}
-      </Text>
+    <View style={[styles.tooltipContainer, tooltipStyle]}>
+      <Text style={[styles.tooltipLabel, { fontFamily: theme.fontFamily.default }]}> {periodData.month} </Text>
+      <Text style={[styles.tooltipValue, { color: '#2e7d32', fontFamily: theme.fontFamily.default }]}> <View style={{ width: 8, height: 8, backgroundColor: '#2e7d32', borderRadius: 4 }} /> Income: {formatCurrency(periodData.income, currency)} </Text>
+      <Text style={[styles.tooltipValue, { color: '#64748b', fontFamily: theme.fontFamily.default }]}> <View style={{ width: 8, height: 8, backgroundColor: '#64748b', borderRadius: 4 }} /> Expenses: {formatCurrency(periodData.expenses, currency)} </Text>
+      <Text style={[styles.tooltipValue, { color: periodData.net >= 0 ? theme.colors.success : theme.colors.expense, fontFamily: theme.fontFamily.default }]}> <View style={{ width: 8, height: 8, backgroundColor: theme.colors.success, borderRadius: 4 }} /> Cashflow: {formatCurrency(periodData.net, currency)} </Text>
     </View>
   );
 
@@ -113,7 +118,11 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
     <View style={styles.container}>
       {tooltipContent}
   
-      <View ref={Platform.OS === 'web' ? chartRef : undefined} style={[styles.chartContainer]}> 
+      <View
+        ref={Platform.OS === 'web' ? chartRef : undefined}
+        style={[styles.chartContainer]}
+        onLayout={e => setContainerWidth(e.nativeEvent.layout.width)}
+      > 
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} onClick={handleChartClick}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -248,7 +257,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
   },
   tooltipContainer: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, .9)',
     padding: theme.spacing.sm,
     borderRadius: theme.borderRadius.sm,
     borderWidth: 1,
@@ -259,9 +268,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     position: 'absolute',
-    // top: 10,
-    // right: 10,
     zIndex: 1,
+    minWidth: 180,
+    // @ts-ignore
+    transition: 'all 0.3s ease',
   },
   tooltipLabel: {
     ...theme.typography.caption,
