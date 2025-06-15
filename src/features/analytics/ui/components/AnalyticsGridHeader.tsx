@@ -11,7 +11,8 @@ interface AnalyticsGridHeaderProps {
     expenses: number;
     total: number;
   };
-  transactionCount: number;
+  incomeTransactionCount: number;
+  expenseTransactionCount: number;
   categoryCount: number;
   currency?: string;
 }
@@ -53,7 +54,8 @@ export interface AnalyticsGridHeaderExtendedProps extends AnalyticsGridHeaderPro
 
 export const AnalyticsGridHeader: React.FC<AnalyticsGridHeaderExtendedProps> = ({
   balance,
-  transactionCount,
+  incomeTransactionCount,
+  expenseTransactionCount,
   categoryCount,
   currency = 'UAH',
   onCategoriesPress,
@@ -70,7 +72,7 @@ export const AnalyticsGridHeader: React.FC<AnalyticsGridHeaderExtendedProps> = (
           iconColor={theme.colors.income}
           title="TOTAL INCOME"
           value={formatCurrency(balance.income, currency)}
-          subtitle={`${transactionCount} transactions`}
+          subtitle={`${incomeTransactionCount} transactions`}
           onPress={onTrendsPress}
         />
         <GridCard
@@ -78,6 +80,7 @@ export const AnalyticsGridHeader: React.FC<AnalyticsGridHeaderExtendedProps> = (
           iconColor={theme.colors.expense}
           title="TOTAL EXPENSES"
           value={formatCurrency(balance.expenses, currency)}
+          subtitle={`${expenseTransactionCount} transactions`}
           onPress={onTrendsPress}
         />
       </View>

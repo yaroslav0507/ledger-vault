@@ -62,17 +62,20 @@ export const AnalyticsScreen: React.FC = () => {
   // Create header component with grid layout
   const headerComponent = useMemo(() => {
     const headerProps = baseScreen.renderListHeader();
+    const incomeTransactionCount = baseScreen.filteredTransactions.filter(t => t.isIncome).length;
+    const expenseTransactionCount = baseScreen.filteredTransactions.filter(t => !t.isIncome).length;
     return (
       <AnalyticsGridHeader
         balance={headerProps.balance}
-        transactionCount={baseScreen.filteredTransactions.length}
+        incomeTransactionCount={incomeTransactionCount}
+        expenseTransactionCount={expenseTransactionCount}
         categoryCount={analyticsData.expenseCategories.length}
         currency={currency}
         onTrendsPress={handleTrendsPress}
         onCategoriesPress={handleCategoriesPress}
       />
     );
-  }, [baseScreen.renderListHeader, baseScreen.filteredTransactions.length, analyticsData.expenseCategories.length, currency, handleTrendsPress, handleCategoriesPress]);
+  }, [baseScreen.renderListHeader, baseScreen.filteredTransactions, analyticsData.expenseCategories.length, currency, handleTrendsPress, handleCategoriesPress]);
 
   // Create sections for SectionList
   const sectionsData = useMemo(() => [{ title: 'Analytics', data: listItems }], [listItems]);
