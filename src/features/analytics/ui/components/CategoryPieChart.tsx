@@ -14,17 +14,24 @@ interface CategoryPieChartProps {
   activeCategories?: string[];
 }
 
-export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, currency = 'UAH', onCategoryLongPress, activeCategories = [] }) => {
+export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, currency = 'UAH', onCategoryLongPress, activeCategories: propActiveCategories = [] }) => {
   const [showAllCategories, setShowAllCategories] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState<number | null>(data.length > 0 ? 0 : null);
+  const [activeCategories, setActiveCategories] = React.useState<string[]>(propActiveCategories);
   const [hoverIndex, setHoverIndex] = React.useState<number | null>(null);
 
-  const finalActiveIndex = hoverIndex ?? activeIndex;
-  
-  // Reset activeIndex when data changes
   React.useEffect(() => {
     setActiveIndex(data.length > 0 ? 0 : null);
-  }, [data]);
+    setActiveCategories(propActiveCategories);
+  }, [data, propActiveCategories]);
+
+  const handleLegendPress = (category: string, chartIndex: number) => {
+    setActiveIndex(chartIndex);
+  };
+
+  const finalActiveIndex = hoverIndex ?? (activeCategories.length > 0
+    ? data.findIndex(item => item.category === activeCategories[0])
+    : activeIndex);
   
   if (!data.length) {
     return (
@@ -131,6 +138,11 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, curren
 
   const displayedCategories = showAllCategories ? data : data.slice(0, 6);
 
+  // Pie chart slice click handler
+  const handlePieEnter = (_: any, index: number) => {
+    setActiveIndex(index);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.contentContainer}>
@@ -147,7 +159,7 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, curren
                 dataKey="value"
                 activeIndex={finalActiveIndex !== null ? finalActiveIndex : undefined}
                 activeShape={renderActiveShape}
-                onMouseEnter={(_, index) => setHoverIndex(index)}
+                onMouseEnter={handlePieEnter}
                 onMouseLeave={() => setHoverIndex(null)}
               >
                 {chartData.map((entry, index) => (
@@ -162,15 +174,11 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, curren
         <View style={styles.legendContainer}>
           {displayedCategories.map((item) => {
             const chartIndex = chartData.findIndex(d => d.fullName === item.category);
-            const isActive = activeCategories.includes(item.category);
+            const isActive = finalActiveIndex === chartIndex;
             return (
               <TouchableOpacity
                 key={item.category}
-                onPress={() => {
-                  if (chartIndex !== -1) {
-                    setActiveIndex(chartIndex);
-                  }
-                }}
+                onPress={() => handleLegendPress(item.category, chartIndex)}
                 onLongPress={() => onCategoryLongPress?.(item.category)}
               >
                 <View style={[styles.legendItem, isActive ? { backgroundColor: '#e0f2fe' } : undefined]}>
