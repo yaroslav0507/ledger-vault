@@ -98,15 +98,6 @@ export function getDateRangeForPeriod(period: TimePeriod, customRange?: DateRang
         end: toISODate(endOfYear)
       };
 
-    case 'lastYear':
-      const lastYear = today.getFullYear() - 1;
-      const startOfLastYear = new Date(lastYear, 0, 1);
-      const endOfLastYear = new Date(lastYear, 11, 31);
-      return {
-        start: toISODate(startOfLastYear),
-        end: toISODate(endOfLastYear)
-      };
-
     case 'spring':
       // March - May (meteorological spring)
       const springStart = new Date(today.getFullYear(), 2, 1); // March 1
@@ -178,10 +169,6 @@ export function getTimePeriodLabel(period: TimePeriod, customRange?: DateRange):
       return 'Previous Month';
     case 'quarter':
       return 'This Quarter';
-    case 'year':
-      return 'This Year';
-    case 'lastYear':
-      return 'Last Year';
     case 'spring':
       return 'Spring';
     case 'summer':
@@ -248,18 +235,30 @@ export function getTimePeriodDisplayText(filters?: { dateRange?: DateRange }): s
       return 'previous month';
     case 'quarter':
       return 'this quarter';
-    case 'year':
-      return 'this year';
-    case 'lastYear':
-      return 'last year';
     case 'spring':
     case 'summer':
     case 'autumn':
     case 'winter':
       return `in ${label.toLowerCase()}`;
     case 'custom':
-      return `in selected period`;
+      return getDateRangeDisplayText(filters.dateRange)
     default:
       return 'in total';
   }
+}
+
+/**
+ * Extract all unique years from a list of transactions (sorted descending)
+ */
+export function getAllTransactionYears(transactions: { date: string }[]): number[] {
+  const years = Array.from(new Set(transactions.map(t => new Date(t.date).getFullYear())));
+  return years.sort((a, b) => b - a);
+}
+
+export function getDateRangeDisplayText(dateRange?: DateRange): string {
+  if (!dateRange) return '';
+  if (dateRange.start === dateRange.end) {
+    return formatDate(dateRange.start);
+  }
+  return `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`;
 }

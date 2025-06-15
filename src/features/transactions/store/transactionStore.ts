@@ -5,7 +5,7 @@ import {
   CreateTransactionRequest, 
   TransactionFilters 
 } from '../model/Transaction';
-import { getDateRangeForPeriod, TimePeriod, DateRange } from '@/shared/utils/dateUtils';
+import { getDateRangeForPeriod, TimePeriod, DateRange, getAllTransactionYears } from '@/shared/utils/dateUtils';
 import { updateUrlWithFilters, loadFiltersFromUrl } from '@/shared/utils/filterPersistence';
 
 // Export the type for use in other files
@@ -78,6 +78,7 @@ interface TransactionStore {
   
   // Computed values
   getBalance: () => { income: number; expenses: number; total: number };
+  getAvailableYears: () => Promise<number[]>;
 }
 
 export const useTransactionStore = create<TransactionStore>()((set, get) => {
@@ -366,6 +367,11 @@ export const useTransactionStore = create<TransactionStore>()((set, get) => {
         expenses,
         total: income + expenses
       };
+    },
+
+    getAvailableYears: async () => {
+      const allTransactions = await transactionRepository.getAllTransactionDates();
+      return getAllTransactionYears(allTransactions);
     }
   };
 }); 

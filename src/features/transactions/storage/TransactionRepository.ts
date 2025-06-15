@@ -307,6 +307,11 @@ export class TransactionRepository {
     return transactions;
   }
 
+  async getAllTransactionDates(): Promise<{ date: string }[]> {
+    const transactions = await db.transactions.toArray();
+    return transactions.map(t => ({ date: t.date }));
+  }
+
 }
 
 // Export singleton instance

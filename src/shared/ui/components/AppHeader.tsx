@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { TimePeriodSelector } from './TimePeriodSelector';
 import { useTransactionStore } from '../../../features/transactions/store/transactionStore';
 import { useAppContext } from '../../contexts/AppContext';
@@ -9,13 +9,19 @@ export const AppHeader: React.FC = () => {
   const { 
     filters,
     selectedTimePeriod,
-    setTimePeriod 
+    setTimePeriod,
+    getAvailableYears
   } = useTransactionStore();
+
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+
+  useEffect(() => {
+    getAvailableYears().then(setAvailableYears);
+  }, [getAvailableYears]);
 
   const handlePeriodChange = (period: TimePeriod, dateRange: DateRange) => {
     setTimePeriod(period, dateRange);
   };
-
 
   const shouldShowTimePeriodSelector = currentTabTitle !== 'settings';
 
@@ -28,6 +34,7 @@ export const AppHeader: React.FC = () => {
         currentDateRange={filters.dateRange}
         selectedPeriod={selectedTimePeriod}
         onPeriodChange={handlePeriodChange}
+        availableYears={availableYears}
     />
   );
 };

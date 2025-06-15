@@ -14,13 +14,15 @@ import { ModalHeader } from './ModalHeader';
 interface TimePeriodSelectorProps {
   currentDateRange?: DateRange;
   selectedPeriod?: TimePeriod;
+  availableYears?: number[];
   onPeriodChange: (period: TimePeriod, dateRange: DateRange) => void;
 }
 
 export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
   currentDateRange,
   selectedPeriod,
-  onPeriodChange
+  onPeriodChange,
+  availableYears = []
 }) => {
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customRange, setCustomRange] = useState<DateRange>({
@@ -43,12 +45,23 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
     { period: 'spring', label: 'Spring', icon: '🌸' },
     { period: 'summer', label: 'Summer', icon: '☀️' },
     { period: 'autumn', label: 'Autumn', icon: '🍂' },
-    { period: 'year', label: 'This Year', icon: '📆' },
-    { period: 'lastYear', label: 'Last Year', icon: '📅' },
     { period: 'custom', label: 'Custom Range', icon: '⚙️' }
   ];
 
-  const timePeriods = allTimePeriods.filter(({ period }) => {
+  // Compose time periods with dynamic years
+  const yearButtons = availableYears.map(year => ({
+    period: `year-${year}` as TimePeriod,
+    label: year.toString(),
+    icon: '📆',
+    year
+  }));
+  const timePeriods = [
+    ...allTimePeriods.filter(({ period }) => period !== 'custom'),
+    ...yearButtons,
+    allTimePeriods.find(({ period }) => period === 'custom')!
+  ];
+
+  const timePeriodsFiltered = timePeriods.filter(({ period }) => {
     // Filter out seasons that haven't started yet
     const seasonStartMonths = {
       spring: 2,  // March (month 2)
@@ -68,7 +81,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
   // Auto-scroll to selected item (smooth, no interruption)
   const scrollToSelectedItem = useCallback((targetPeriod?: TimePeriod, immediate = false) => {
     const periodToFind = targetPeriod || currentPeriod;
-    const selectedIndex = timePeriods.findIndex(({ period }) => period === periodToFind);
+    const selectedIndex = timePeriodsFiltered.findIndex(({ period }) => period === periodToFind);
     
     if (selectedIndex >= 0 && scrollViewRef.current) {
       // More precise calculation based on actual button styling
@@ -88,9 +101,17 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
       // Track that we scrolled to this period
       lastScrolledPeriodRef.current = periodToFind;
     }
-  }, [currentPeriod, timePeriods]);
+  }, [currentPeriod, timePeriodsFiltered]);
 
-  const handlePeriodSelect = (period: TimePeriod) => {
+  const handlePeriodSelect = (period: TimePeriod | string) => {
+    if (typeof period === 'string' && period.startsWith('year-')) {
+      const year = parseInt(period.replace('year-', ''));
+      const start = `${year}-01-01`;
+      const end = `${year}-12-31`;
+      onPeriodChange(period as TimePeriod, { start, end });
+      scrollToSelectedItem(period as TimePeriod, false);
+      return;
+    }
     if (period === 'custom') {
       // Initialize custom range with current date range or suggest a 5-year range
       if (currentDateRange) {
@@ -111,7 +132,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
       scrollToSelectedItem(period, false);
       
       const dateRange = getDateRangeForPeriod(period);
-      onPeriodChange(period, dateRange);
+      onPeriodChange(period as TimePeriod, dateRange);
     }
   };
 
@@ -138,6 +159,17 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
     }
   }, []); // Empty dependency array - only run once on mount
 
+  // Helper to check if a year button should be selected
+  const isYearSelected = (period: string, label: string) => {
+    if (typeof period === 'string' && period.startsWith('year-') && currentDateRange) {
+      return (
+        currentDateRange.start === `${label}-01-01` &&
+        currentDateRange.end === `${label}-12-31`
+      );
+    }
+    return false;
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView 
@@ -146,8 +178,11 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
         style={styles.scrollView} 
         ref={scrollViewRef}
       >
-        {timePeriods.map(({ period, label, icon }) => {
-          const isSelected = period === currentPeriod;
+        {timePeriodsFiltered.map(({ period, label, icon }) => {
+          const isSelected =
+            (typeof period === 'string' && period.startsWith('year-')
+              ? isYearSelected(period, label)
+              : period === currentPeriod);
           const isCustomSelected = period === 'custom' && currentPeriod === 'custom';
           
           return (

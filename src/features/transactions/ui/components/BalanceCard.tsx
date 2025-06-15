@@ -4,7 +4,7 @@ import { Card, Text } from 'react-native-paper';
 import { formatCurrency } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
 import { TransactionFilters } from '../../model/Transaction';
-import { getTimePeriodDisplayText } from '@/shared/utils/dateUtils';
+import { getTimePeriodDisplayText, getDateRangeDisplayText, getCurrentTimePeriod } from '@/shared/utils/dateUtils';
 
 interface BalanceInfo {
   total: number;
@@ -42,10 +42,6 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
 
   const getDisplayAmount = (amount: number, currency: string) => {
     return isBalanceMasked ? maskAmount(amount, currency) : formatCurrency(amount, currency);
-  };
-
-  const getTimePeriodText = () => {
-    return getTimePeriodDisplayText(currentFilters);
   };
 
   return (
@@ -132,7 +128,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
         {/* Enhanced Insights Row */}
         <View style={styles.insightsRow}>
           <Text style={styles.insightText}>
-            {`💡 ${transactionCount} transaction${transactionCount !== 1 ? 's' : ''} ${getTimePeriodText()}`}
+            {`💡 ${transactionCount} transaction${transactionCount !== 1 ? 's' : ''} ${getTimePeriodDisplayText()}`}
           </Text>
           {balance.expenses === 0 && transactionCount > 0 && (
             <Text style={styles.insightText}>

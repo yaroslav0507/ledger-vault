@@ -17,6 +17,7 @@ export const AnalyticsScreen: React.FC = () => {
     enableScrollToTop: true,
     enableSwipeHandling: false
   });
+  const { toggleCategoryFilter, filters } = baseScreen;
 
   const currency = useMemo(() => {
     const firstTransaction = baseScreen.filteredTransactions[0];
@@ -97,7 +98,12 @@ export const AnalyticsScreen: React.FC = () => {
               title="Category Breakdown"
               subtitle={`${analyticsData.expenseCategories.length} categories`}
             >
-              <CategoryPieChart data={analyticsData.expenseCategories} currency={currency} />
+              <CategoryPieChart
+                data={analyticsData.expenseCategories}
+                currency={currency}
+                onCategoryLongPress={toggleCategoryFilter}
+                activeCategories={filters.categories || []}
+              />
             </CollapsibleSection>
           </View>
         );
@@ -116,7 +122,7 @@ export const AnalyticsScreen: React.FC = () => {
       default:
         return <View />;
     }
-  }, [analyticsData, insights, currency]);
+  }, [analyticsData, insights, currency, toggleCategoryFilter, filters.categories]);
 
   // Sticky header props for BaseScreenLayout
   const stickyHeaderProps = useMemo(() => ({

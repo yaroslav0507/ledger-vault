@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Text } from 'react-native-paper';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine, ResponsiveContainer } from 'recharts';
 import { MonthlyTrendData } from '../../service/AnalyticsService';
 import { formatCurrency } from '../../../../shared/utils/currencyUtils';
 import { theme } from '../../../../shared/ui/theme/theme';
 import { UI_CONSTANTS } from '../../../../shared/constants/ui';
+import { format } from 'date-fns';
 
 interface MonthlyTrendsChartProps {
   data: MonthlyTrendData[];
@@ -13,6 +14,38 @@ interface MonthlyTrendsChartProps {
 }
 
 export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, currency = 'UAH' }) => {
+  // Always call hooks at the top level, before any return or conditional
+  const currentMonthShort = format(new Date(), 'MMM');
+  const initialIndex = data.findIndex(item => item.month.startsWith(currentMonthShort))
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState<number | null>(initialIndex);
+
+  const chartData = useMemo(() => data.map(item => ({
+    month: item.month.split(' ')[0], // Short month name
+    income: item.income,
+    expenses: item.expenses,
+    net: item.net,
+  })), [data]);
+
+  useEffect(() => {
+    const idx = data.findIndex(item => item.month.startsWith(currentMonthShort));
+    setSelectedMonthIndex(idx !== -1 ? idx : null);
+  }, [data, currentMonthShort]);
+
+  const handleSelectMonth = useCallback((index: number) => {
+    setSelectedMonthIndex(index);
+  }, []);
+
+  const handleChartClick = useCallback((e: any) => {
+    if (e && e.activeLabel) {
+      const idx = chartData.findIndex(d => d.month === e.activeLabel);
+      if (idx !== -1) {
+        setSelectedMonthIndex(idx);
+      }
+    }
+  }, [chartData]);
+
+  const periodData = selectedMonthIndex !== null && data[selectedMonthIndex] ? data[selectedMonthIndex] : null;
+
   if (!data.length) {
     return (
       <View style={styles.emptyState}>
@@ -23,13 +56,6 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
     );
   }
 
-  const chartData = data.map(item => ({
-    month: item.month.split(' ')[0], // Short month name
-    income: item.income,
-    expenses: item.expenses,
-    net: item.net,
-  }));
-
   const formatYAxisValue = (value: number) => {
     if (value >= 1000000) {
       return `${(value / 1000000).toFixed(1)}M`;
@@ -39,137 +65,149 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
     return value.toFixed(0);
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <View style={styles.tooltipContainer}>
-          <Text style={[styles.tooltipLabel, { fontFamily: theme.fontFamily.default }]}>
-            {label}
-          </Text>
-          {payload.map((entry: any, index: number) => (
-            <Text key={index} style={[styles.tooltipValue, { 
-              color: entry.color,
-              fontFamily: theme.fontFamily.default
-            }]}>
-              {entry.name}: {formatCurrency(entry.value, currency)}
-            </Text>
-          ))}
-        </View>
-      );
-    }
-    return null;
-  };
+  // Custom tooltip content
+  const tooltipContent = periodData && (
+    <View style={styles.tooltipContainer}>
+      <Text style={[styles.tooltipLabel, { fontFamily: theme.fontFamily.default }]}>{periodData.month}</Text>
+      <Text style={[styles.tooltipValue, { color: '#2e7d32', fontFamily: theme.fontFamily.default }]}>Income: {formatCurrency(periodData.income, currency)}</Text>
+      <Text style={[styles.tooltipValue, { color: '#64748b', fontFamily: theme.fontFamily.default }]}>Expenses: {formatCurrency(periodData.expenses, currency)}</Text>
+      <Text style={[styles.tooltipValue, { color: periodData.net >= 0 ? theme.colors.success : theme.colors.expense, fontFamily: theme.fontFamily.default }]}>Cashflow: {formatCurrency(periodData.net, currency)}</Text>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      <View style={styles.chartContainer}>
-        <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-            <XAxis 
-              dataKey="month" 
-              axisLine={false}
-              tickLine={false}
-              tick={{ 
-                fontSize: 12, 
-                fill: theme.colors.text.secondary,
-                fontFamily: theme.fontFamily.default
-              }}
+      {/* Custom Tooltip (fixed position above chart) */}
+      {tooltipContent}
+  
+    <View style={[styles.chartContainer]}> 
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={chartData} onClick={handleChartClick}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+          <XAxis 
+            dataKey="month" 
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: theme.colors.text.secondary, fontFamily: theme.fontFamily.default }}
+          />
+          <YAxis 
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: theme.colors.text.secondary, fontFamily: theme.fontFamily.default }}
+            tickFormatter={formatYAxisValue}
+          />
+          {periodData && (
+            <ReferenceLine
+              x={periodData.month.split(' ')[0]}
+              stroke={theme.colors.secondary}
+              strokeDasharray="5 5"
+              strokeWidth={1}
             />
-            <YAxis 
-              axisLine={false}
-              tickLine={false}
-              tick={{ 
-                fontSize: 12, 
-                fill: theme.colors.text.secondary,
-                fontFamily: theme.fontFamily.default
-              }}
-              tickFormatter={formatYAxisValue}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend 
-              wrapperStyle={{ 
-                paddingTop: '10px',
-                fontFamily: theme.fontFamily.default
-              }}
-              iconType="line"
-            />
-            <Line 
-              type="monotone" 
-              dataKey="income" 
-              stroke="#2e7d32" 
-              strokeWidth={2}
-              dot={{ fill: '#2e7d32', strokeWidth: 2, r: 4 }}
-              name="Income"
-            />
-            <Line 
-              type="monotone" 
-              dataKey="expenses" 
-              stroke="#64748b" 
-              strokeWidth={2}
-              dot={{ fill: '#64748b', strokeWidth: 2, r: 4 }}
-              name="Expenses"
-            />
-          </LineChart>
-        </ResponsiveContainer>
+          )}
+          <Line 
+            type="monotone" 
+            dataKey="income" 
+            stroke="#2e7d32" 
+            strokeWidth={2}
+            dot={(props: any) => {
+              const isSelected = selectedMonthIndex !== null && props.index === selectedMonthIndex;
+              return (
+                <circle
+                  key={`income-dot-${props.index}`}
+                  cx={props.cx}
+                  cy={props.cy}
+                  r={isSelected ? 8 : 4}
+                  fill="#2e7d32"
+                  stroke={isSelected ? '#fff' : '#2e7d32'}
+                  strokeWidth={isSelected ? 3 : 2}
+                />
+              );
+            }}
+            name="Income"
+          />
+          <Line 
+            type="monotone" 
+            dataKey="expenses" 
+            stroke="#64748b" 
+            strokeWidth={2}
+            dot={(props: any) => {
+              const isSelected = selectedMonthIndex !== null && props.index === selectedMonthIndex;
+              return (
+                <circle
+                  key={`expenses-dot-${props.index}`}
+                  cx={props.cx}
+                  cy={props.cy}
+                  r={isSelected ? 8 : 4}
+                  fill="#64748b"
+                  stroke={isSelected ? '#fff' : '#64748b'}
+                  strokeWidth={isSelected ? 3 : 2}
+                />
+              );
+            }}
+            name="Expenses"
+          />
+        </LineChart>
+      </ResponsiveContainer>
+      {/* Custom Legend */}
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 24, marginTop: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <View style={{ width: 16, height: 4, backgroundColor: '#2e7d32', borderRadius: 2 }} />
+          <Text style={{ fontFamily: theme.fontFamily.default, color: theme.colors.text.primary }}>Income</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <View style={{ width: 16, height: 4, backgroundColor: '#64748b', borderRadius: 2 }} />
+          <Text style={{ fontFamily: theme.fontFamily.default, color: theme.colors.text.primary }}>Expenses</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <View style={{ width: 16, height: 4, backgroundColor: theme.colors.success, borderRadius: 2 }} />
+          <Text style={{ fontFamily: theme.fontFamily.default, color: theme.colors.text.primary }}>Cashflow</Text>
+        </View>
       </View>
+    </View>
 
       <View style={styles.summaryContainer}>
         {/* Table Header */}
         <View style={[styles.summaryItem, styles.headerRow]}>
           <View style={styles.monthColumn}>
-            <Text variant="bodySmall" style={[styles.headerText, { textAlign: 'left' }]}>
-              Month
-            </Text>
+            <Text variant="bodySmall" style={[styles.headerText, { textAlign: 'left' }]}> Month </Text>
           </View>
           <View style={styles.valuesRow}>
             <View style={styles.valueColumn}>
-              <Text variant="bodySmall" style={styles.headerText}>
-                Income
-              </Text>
+              <Text variant="bodySmall" style={styles.headerText}> Income </Text>
             </View>
             <View style={styles.valueColumn}>
-              <Text variant="bodySmall" style={styles.headerText}>
-                Expenses
-              </Text>
+              <Text variant="bodySmall" style={styles.headerText}> Expenses </Text>
             </View>
             <View style={styles.valueColumn}>
-              <Text variant="bodySmall" style={styles.headerText}>
-                Cashflow
-              </Text>
+              <Text variant="bodySmall" style={styles.headerText}> Cashflow </Text>
             </View>
           </View>
         </View>
 
         {/* Data Rows */}
         {data.map((item, index) => (
-          <View key={item.month} style={styles.summaryItem}>
+          <TouchableOpacity
+            key={item.month}
+            style={[styles.summaryItem, selectedMonthIndex === index && { backgroundColor: theme.colors.primary + '22' }]}
+            onPress={() => handleSelectMonth(index)}
+            accessibilityLabel={selectedMonthIndex === index ? 'Selected month' : undefined}
+            activeOpacity={0.8}
+          >
             <View style={styles.monthColumn}>
-              <Text variant="bodySmall" style={styles.summaryMonth}>
-                {item.month}
-              </Text>
+              <Text variant="bodySmall" style={styles.summaryMonth}> {item.month} </Text>
             </View>
             <View style={styles.valuesRow}>
               <View style={styles.valueColumn}>
-                <Text variant="bodySmall" style={[styles.summaryValue, styles.incomeText]}>
-                  {formatCurrency(item.income, currency)}
-                </Text>
+                <Text variant="bodySmall" style={[styles.summaryValue, styles.incomeText]}> {formatCurrency(item.income, currency)} </Text>
               </View>
               <View style={styles.valueColumn}>
-                <Text variant="bodySmall" style={[styles.summaryValue, styles.expenseText]}>
-                  {formatCurrency(item.expenses, currency)}
-                </Text>
+                <Text variant="bodySmall" style={[styles.summaryValue, styles.expenseText]}> {formatCurrency(item.expenses, currency)} </Text>
               </View>
               <View style={styles.valueColumn}>
-                <Text variant="bodySmall" style={[
-                  styles.summaryValue, 
-                  item.net >= 0 ? styles.netPositive : styles.netNegative
-                ]}>
-                  {formatCurrency(item.net, currency)}
-                </Text>
+                <Text variant="bodySmall" style={[styles.summaryValue, item.net >= 0 ? styles.netPositive : styles.netNegative]}> {formatCurrency(item.net, currency)} </Text>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </View>
     </View>
@@ -183,6 +221,9 @@ const styles = StyleSheet.create({
   chartContainer: {
     alignItems: 'center',
     marginBottom: theme.spacing.md,
+    minHeight: 300,
+    maxHeight: 350,
+    flex: 1,
   },
   chart: {
     marginVertical: theme.spacing.xs,
@@ -199,6 +240,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 1,
   },
   tooltipLabel: {
     ...theme.typography.caption,
@@ -209,9 +254,6 @@ const styles = StyleSheet.create({
   tooltipValue: {
     ...theme.typography.caption,
     fontWeight: UI_CONSTANTS.FONT_WEIGHTS.MEDIUM,
-  },
-  summaryContainer: {
-    gap: theme.spacing.xs,
   },
   summaryItem: {
     flexDirection: 'row',
@@ -277,5 +319,8 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.text.secondary,
     textAlign: 'center',
+  },
+  summaryContainer: {
+    flex: 1,
   },
 }); 

@@ -10,9 +10,11 @@ import { UI_CONSTANTS } from '../../../../shared/constants/ui';
 interface CategoryPieChartProps {
   data: CategoryData[];
   currency?: string;
+  onCategoryLongPress?: (category: string) => void;
+  activeCategories?: string[];
 }
 
-export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, currency = 'UAH' }) => {
+export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, currency = 'UAH', onCategoryLongPress, activeCategories = [] }) => {
   const [showAllCategories, setShowAllCategories] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState<number | null>(data.length > 0 ? 0 : null);
   const [hoverIndex, setHoverIndex] = React.useState<number | null>(null);
@@ -160,7 +162,7 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, curren
         <View style={styles.legendContainer}>
           {displayedCategories.map((item) => {
             const chartIndex = chartData.findIndex(d => d.fullName === item.category);
-            
+            const isActive = activeCategories.includes(item.category);
             return (
               <TouchableOpacity
                 key={item.category}
@@ -169,9 +171,10 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, curren
                     setActiveIndex(chartIndex);
                   }
                 }}
+                onLongPress={() => onCategoryLongPress?.(item.category)}
                 disabled={chartIndex === -1}
               >
-                <View style={styles.legendItem}>
+                <View style={[styles.legendItem, isActive ? { backgroundColor: '#e0f2fe' } : undefined]}>
                   <View style={styles.legendLeft}>
                     <View style={[styles.legendColor, { backgroundColor: item.color }]} />
                     <Text style={styles.legendCategory} numberOfLines={2}>
