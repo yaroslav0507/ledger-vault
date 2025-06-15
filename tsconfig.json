@@ -11,7 +11,9 @@
     },
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "jsx": "react-jsx",
+    "types": ["react", "react-native"]
   },
   "include": ["src/**/*", "App.tsx", "index.ts"],
   "exclude": ["node_modules"]
