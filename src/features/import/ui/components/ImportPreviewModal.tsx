@@ -12,7 +12,7 @@ import {
   IconButton
 } from 'react-native-paper';
 import { View, ScrollView, StyleSheet } from 'react-native';
-import { formatCurrency } from '@/shared/utils/currencyUtils';
+import { formatCurrency, SUPPORTED_CURRENCIES } from '@/shared/utils/currencyUtils';
 import { formatDate } from '@/shared/utils/dateUtils';
 import { ImportResult } from '../../strategies/ImportStrategy';
 import { Transaction } from '@/features/transactions/model/Transaction';
@@ -36,6 +36,13 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
 }) => {
   const [ignoreDuplicates, setIgnoreDuplicates] = React.useState(true);
   const [showDetails, setShowDetails] = React.useState(false);
+  const [selectedCurrency, setSelectedCurrency] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (result && result.transactions.length > 0) {
+      setSelectedCurrency(result.transactions[0].currency || SUPPORTED_CURRENCIES[0].code);
+    }
+  }, [result]);
 
   if (!result) return null;
 
@@ -45,7 +52,8 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
     : transactions;
 
   const handleConfirm = () => {
-    onConfirm(transactions, ignoreDuplicates);
+    const updated = transactions.map(t => ({ ...t, currency: selectedCurrency || t.currency }));
+    onConfirm(updated, ignoreDuplicates);
   };
 
   return (
@@ -63,6 +71,21 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
               <Text variant="bodyMedium" style={styles.subtitle}>
                 {fileName}
               </Text>
+              <View style={{ marginTop: 12 }}>
+                <Text variant="bodySmall" style={{ marginBottom: 4 }}>Currency for Imported Transactions</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {SUPPORTED_CURRENCIES.map((c) => (
+                    <Chip
+                      key={c.code}
+                      selected={selectedCurrency === c.code}
+                      onPress={() => setSelectedCurrency(c.code)}
+                      style={{ marginRight: 8 }}
+                    >
+                      {c.code} {c.symbol}
+                    </Chip>
+                  ))}
+                </ScrollView>
+              </View>
             </View>
 
             {/* Summary */}

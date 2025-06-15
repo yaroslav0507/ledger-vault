@@ -43,7 +43,13 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
           const dotsPerLine = chartData.length;
           const incomeDotIndex = selectedMonthIndex;
           const expenseDotIndex = dotsPerLine + selectedMonthIndex;
-          const dot = circles[incomeDotIndex || expenseDotIndex];
+          const income = chartData[selectedMonthIndex]?.income ?? 0;
+          const expenses = chartData[selectedMonthIndex]?.expenses ?? 0;
+          let dotIndex = expenseDotIndex;
+          if (income >= expenses) {
+            dotIndex = incomeDotIndex;
+          }
+          const dot = circles[dotIndex];
           if (dot) {
             const dotRect = dot.getBoundingClientRect();
             const containerRect = chartRef.current.getBoundingClientRect();
