@@ -1,6 +1,6 @@
 {
-    "name": "LedgerVault",
-    "short_name": "Vault",
+    "name": "Ledger Vault",
+    "short_name": "LedgerVault",
     "start_url": "/ledger-vault",
     "theme_color": "#FFFFFF",
     "background_color": "#FFFFFF",
