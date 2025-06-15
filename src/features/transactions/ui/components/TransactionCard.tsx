@@ -449,6 +449,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: theme.spacing.xs,
     lineHeight: 22,
+    textTransform: 'none',
   },
   metaRow: {
     gap: theme.spacing.sm,

@@ -143,6 +143,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
     // @ts-ignore
-    paddingBottom: 'env(safe-area-inset-bottom, 10px)'
+    paddingBottom: 8
   },
 });

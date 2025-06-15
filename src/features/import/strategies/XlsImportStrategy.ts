@@ -715,7 +715,7 @@ export class XlsImportStrategy implements ImportStrategy {
     if (!desc || desc.length === 0) {
       return 'Imported transaction';
     }
-    return this.cleanDescription(desc);
+    return desc;
   }
 
   private extractComment(rawComment: any, rawDescription: any, cleanedDescription: string): string | null {
@@ -952,37 +952,6 @@ export class XlsImportStrategy implements ImportStrategy {
     }
     
     return null;
-  }
-  
-  private cleanDescription(description: string): string {
-    // Enhanced cleaning for various bank statement formats
-    let cleaned = description
-      .replace(/^(POS|ATM|DIR|TFR|DD|SO|CHQ|FEE|INT|PAYMENT|PURCHASE|WITHDRAWAL)\s+/i, '')
-      .replace(/\s+\d{2}[\/\.-]\d{2}[\/\.-]\d{4}$/, '') // Remove trailing dates
-      .replace(/\s+\d{2}[\/\.-]\d{2}$/, '') // Remove trailing MM/DD
-      .replace(/\s+\d{4}$/, '') // Remove trailing year
-      .replace(/^\w{3}\s+\d{1,2}\s+/, '') // Remove "JAN 15 " style prefixes
-      .replace(/\s{2,}/g, ' ') // Normalize multiple spaces
-      .trim();
-    
-    // Remove redundant bank codes and references
-    cleaned = cleaned
-      .replace(/^REF:\s*/i, '')
-      .replace(/\s+REF\s+\w+$/i, '')
-      .replace(/\s+TXN\s+\w+$/i, '')
-      .replace(/\s+AUTH\s+\w+$/i, '');
-    
-    // Capitalize properly
-    if (cleaned.length > 0) {
-      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
-      
-      // Capitalize after certain punctuation
-      cleaned = cleaned.replace(/([.!?]\s+)([a-z])/g, (match, punct, letter) => 
-        punct + letter.toUpperCase()
-      );
-    }
-    
-    return cleaned || 'Imported transaction';
   }
   
   private isDocumentInfoRow(row: any[]): boolean {
