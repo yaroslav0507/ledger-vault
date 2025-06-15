@@ -19,7 +19,7 @@ if (Platform.OS === 'web') {
   adapter = new SQLiteAdapter({
     schema,
     dbName: 'LedgerVaultDB',
-    jsi: true,
+    jsi: false,
     onSetUpError: (error: any) => {
       console.error('❌ WatermelonDB setup error:', error);
     },
@@ -29,7 +29,6 @@ if (Platform.OS === 'web') {
 export const database = new Database({
   adapter,
   modelClasses: [Transaction],
-  actionsEnabled: true,
 });
 
 export async function initializeDatabase() {

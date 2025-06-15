@@ -46,6 +46,7 @@ target 'ledgervault' do
   )
 
   pod 'simdjson', :path => './simdjson.podspec'
+  pod 'WatermelonDB', :path => '../node_modules/@nozbe/watermelondb'
 
   post_install do |installer|
     react_native_post_install(
@@ -63,6 +64,12 @@ target 'ledgervault' do
         resource_bundle_target.build_configurations.each do |config|
           config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
         end
+      end
+    end
+
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings["EXCLUDED_ARCHS[sdk=iphonesimulator*]"] = "arm64"
       end
     end
   end

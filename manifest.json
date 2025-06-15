@@ -1,0 +1,11 @@
+{
+    "name": "LedgerVault",
+    "short_name": "Vault",
+    "start_url": "/",
+    "theme_color": "#8936FF",
+    "background_color": "#2EC6FE",
+    "orientation": "any",
+    "display": "standalone",
+    "dir": "auto",
+    "lang": "en"
+}

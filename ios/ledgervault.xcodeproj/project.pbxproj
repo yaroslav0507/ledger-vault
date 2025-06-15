@@ -370,6 +370,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ledgervault/ledgervault.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QRS4T2463Y;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -408,6 +409,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ledgervault/ledgervault.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QRS4T2463Y;
 				INFOPLIST_FILE = ledgervault/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Ledger Vault";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";

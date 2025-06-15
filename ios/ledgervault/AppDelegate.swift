@@ -1,6 +1,7 @@
 import Expo
 import React
 import ReactAppDependencyProvider
+import WatermelonDB
 
 @UIApplicationMain
 public class AppDelegate: ExpoAppDelegate {
@@ -16,6 +17,9 @@ public class AppDelegate: ExpoAppDelegate {
     let delegate = ReactNativeDelegate()
     let factory = ExpoReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
+
+    // Initialize WatermelonDB
+    WatermelonDB.initialize()
 
     reactNativeDelegate = delegate
     reactNativeFactory = factory

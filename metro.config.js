@@ -1,5 +1,11 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
+const os = require('os');
+
+// Workaround for availableParallelism
+if (!os.availableParallelism) {
+  os.availableParallelism = () => os.cpus().length;
+}
 
 const config = getDefaultConfig(__dirname);
 
