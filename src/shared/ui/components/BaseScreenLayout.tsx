@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, StatusBar, SectionList } from 'react-native';
+import { View, StyleSheet, StatusBar, SectionList, Platform } from 'react-native';
 import { FAB, Text } from 'react-native-paper';
 import { EmptyState } from '@/shared/ui/components/EmptyState';
 import { MetricsSummaryHeader } from '@/shared/ui/components';
@@ -123,7 +123,10 @@ export const BaseScreenLayout: React.FC<BaseScreenLayoutProps> = ({
 
       {showScrollToTop && onScrollToTop && (
         <FAB
-          style={styles.scrollToTopFab}
+          style={[
+            styles.scrollToTopFab,
+            Platform.OS === 'web' && { paddingBottom: 'env(safe-area-inset-bottom, 16px)' }
+          ]}
           icon="arrow-up"
           color={theme.colors.text.inverse}
           onPress={onScrollToTop}

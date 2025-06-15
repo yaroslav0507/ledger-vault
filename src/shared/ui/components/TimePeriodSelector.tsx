@@ -123,7 +123,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
     return 'custom';
   }
 
-  const currentPeriod = availableYears.length && getActivePeriod(currentDateRange, selectedPeriod, availableYears);
+  const currentPeriod = getActivePeriod(currentDateRange, selectedPeriod, availableYears);
 
   const handlePeriodSelect = (period: TimePeriod | string) => {
     if (typeof period === 'string' && period.startsWith('year-')) {

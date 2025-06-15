@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { Button } from 'react-native-paper';
 import { ImportButton } from '@/features/import/ui/components/ImportButton';
 import { theme } from '@/shared/ui/theme/theme';
@@ -21,7 +21,11 @@ export const ActionButtonRow: React.FC<ActionButtonRowProps> = ({
   }
 
   return (
-    <View style={[styles.actionButtons, style]}>
+    <View style={[
+      styles.actionButtons,
+      Platform.OS === 'web' && { paddingBottom: 'env(safe-area-inset-bottom, 16px)' },
+      style
+    ]}>
       {onAddTransaction && (
         <Button
           mode="contained"
