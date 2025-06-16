@@ -56,6 +56,10 @@ if (fs.existsSync(indexPath)) {
   let html = fs.readFileSync(indexPath, 'utf8');
   const manifestTag = '<link rel="manifest" href="./manifest.json" />';
   const appleIconTag = '<link rel="apple-touch-icon" href="./icon-192.png" />';
-  html = html.replace(/(<title>.*<\/title>)/, `$1\n    ${manifestTag}\n    ${appleIconTag}`);
+  const iosMetaTags = [
+    '<meta name="apple-mobile-web-app-capable" content="yes">',
+    '<meta name="apple-mobile-web-app-orientation" content="portrait">'
+  ].join('\n    ');
+  html = html.replace(/(<title>.*<\/title>)/, `$1\n    ${manifestTag}\n    ${appleIconTag}\n    ${iosMetaTags}`);
   fs.writeFileSync(indexPath, html, 'utf8');
 } 
