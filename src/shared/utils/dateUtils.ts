@@ -31,160 +31,199 @@ export interface DateRange {
   end: string;
 }
 
+// Helper function to create date range
+function createDateRange(startDate: Date, endDate: Date): DateRange {
+  return {
+    start: toISODate(startDate),
+    end: toISODate(endDate)
+  };
+}
+
+// Helper function to get today's date components
+function getTodayComponents() {
+  const now = new Date();
+  return {
+    now,
+    today: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+    year: now.getFullYear(),
+    month: now.getMonth(),
+    date: now.getDate()
+  };
+}
+
+// Helper function for week calculation
+function getWeekRange(today: Date): DateRange {
+  const startOfWeekDate = new Date(today);
+  const dayOfWeek = today.getDay();
+  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  startOfWeekDate.setDate(today.getDate() - daysToSubtract);
+  
+  const endOfWeekDate = new Date(startOfWeekDate);
+  endOfWeekDate.setDate(startOfWeekDate.getDate() + 6);
+  
+  return createDateRange(startOfWeekDate, endOfWeekDate);
+}
+
+// Helper function for month calculation
+function getMonthRangeForYear(year: number, month: number): DateRange {
+  const startOfMonthDate = new Date(year, month, 1);
+  const endOfMonthDate = new Date(year, month + 1, 0);
+  return createDateRange(startOfMonthDate, endOfMonthDate);
+}
+
+// Helper function for quarter calculation
+function getQuarterRange(year: number, month: number): DateRange {
+  const quarterStartMonth = Math.floor(month / 3) * 3;
+  const startOfQuarter = new Date(year, quarterStartMonth, 1);
+  const endOfQuarter = new Date(year, quarterStartMonth + 3, 0);
+  return createDateRange(startOfQuarter, endOfQuarter);
+}
+
+// Helper function for year calculation
+function getYearRange(year: number): DateRange {
+  const startOfYear = new Date(year, 0, 1);
+  const endOfYear = new Date(year, 11, 31);
+  return createDateRange(startOfYear, endOfYear);
+}
+
+// Helper function for seasonal ranges
+function getSeasonalRange(year: number, season: 'spring' | 'summer' | 'autumn' | 'winter'): DateRange {
+  const seasonalRanges = {
+    spring: { startMonth: 2, startDay: 1, endMonth: 4, endDay: 31 }, // March - May
+    summer: { startMonth: 5, startDay: 1, endMonth: 7, endDay: 31 }, // June - August
+    autumn: { startMonth: 8, startDay: 1, endMonth: 10, endDay: 30 }, // September - November
+    winter: { startMonth: 11, startDay: 1, endMonth: 1, endDay: 28 } // December - February (inverted)
+  };
+
+  const range = seasonalRanges[season];
+  const startDate = new Date(year, range.startMonth, range.startDay);
+  const endDate = new Date(year, range.endMonth, range.endDay);
+  
+  return createDateRange(startDate, endDate);
+}
+
 /**
  * Get date range for a specific time period
  */
 export function getDateRangeForPeriod(period: TimePeriod, customRange?: DateRange): DateRange {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const { today, year, month } = getTodayComponents();
   
   switch (period) {
     case 'today':
-      return {
-        start: toISODate(today),
-        end: toISODate(today)
-      };
+      return createDateRange(today, today);
       
     case 'week':
-      const startOfWeekDate = new Date(today);
-      const dayOfWeek = today.getDay();
-      // Adjust to Monday as start of week (0 = Sunday, 1 = Monday)
-      const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      startOfWeekDate.setDate(today.getDate() - daysToSubtract);
-      
-      const endOfWeekDate = new Date(startOfWeekDate);
-      endOfWeekDate.setDate(startOfWeekDate.getDate() + 6);
-      
-      return {
-        start: toISODate(startOfWeekDate),
-        end: toISODate(endOfWeekDate)
-      };
+      return getWeekRange(today);
       
     case 'month':
-      const startOfMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
-      const endOfMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      
-      return {
-        start: toISODate(startOfMonthDate),
-        end: toISODate(endOfMonthDate)
-      };
+      return getMonthRangeForYear(year, month);
 
     case 'lastMonth':
-      const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-      
-      return {
-        start: toISODate(startOfLastMonth),
-        end: toISODate(endOfLastMonth)
-      };
+      return getMonthRangeForYear(year, month - 1);
 
     case 'quarter':
-      const currentMonth = today.getMonth();
-      const quarterStartMonth = Math.floor(currentMonth / 3) * 3;
-      const startOfQuarter = new Date(today.getFullYear(), quarterStartMonth, 1);
-      const endOfQuarter = new Date(today.getFullYear(), quarterStartMonth + 3, 0);
-      
-      return {
-        start: toISODate(startOfQuarter),
-        end: toISODate(endOfQuarter)
-      };
+      return getQuarterRange(year, month);
       
     case 'year':
-      const startOfYear = new Date(today.getFullYear(), 0, 1);
-      const endOfYear = new Date(today.getFullYear(), 11, 31);
-      
-      return {
-        start: toISODate(startOfYear),
-        end: toISODate(endOfYear)
-      };
+      return getYearRange(year);
 
     case 'spring':
-      // March - May (meteorological spring)
-      const springStart = new Date(today.getFullYear(), 2, 1); // March 1
-      const springEnd = new Date(today.getFullYear(), 4, 31); // May 31
-      
-      return {
-        start: toISODate(springStart),
-        end: toISODate(springEnd)
-      };
-
     case 'summer':
-      // June - August (meteorological summer)
-      const summerStart = new Date(today.getFullYear(), 5, 1); // June 1
-      const summerEnd = new Date(today.getFullYear(), 7, 31); // August 31
-      
-      return {
-        start: toISODate(summerStart),
-        end: toISODate(summerEnd)
-      };
-
     case 'autumn':
-      // September - November (meteorological autumn)
-      const autumnStart = new Date(today.getFullYear(), 8, 1); // September 1
-      const autumnEnd = new Date(today.getFullYear(), 10, 30); // November 30
-      
-      return {
-        start: toISODate(autumnStart),
-        end: toISODate(autumnEnd)
-      };
-
     case 'winter':
-      // December of current year to February of same year (inverted format)
-      // This creates: start=2025-12-01&end=2025-02-28 (represents Dec 2025 to Feb 2026)
-      const currentYear = today.getFullYear();
-      const winterStart = new Date(currentYear, 11, 1); // December 1 of current year
-      const winterEnd = new Date(currentYear, 1, 28);   // February 28 of same year (inverted)
-      
-      return {
-        start: toISODate(winterStart),
-        end: toISODate(winterEnd)
-      };
+      return getSeasonalRange(year, period);
       
     case 'custom':
-      return customRange || {
-        start: toISODate(today),
-        end: toISODate(today)
-      };
+      return customRange || createDateRange(today, today);
       
     default:
-      return {
-        start: toISODate(today),
-        end: toISODate(today)
-      };
+      return createDateRange(today, today);
   }
 }
 
+// Translation key mapping for time periods
+const PERIOD_TRANSLATION_KEYS = {
+  today: 'timePeriod.today',
+  week: 'timePeriod.thisWeek',
+  month: 'timePeriod.thisMonth',
+  lastMonth: 'timePeriod.previousMonth',
+  quarter: 'timePeriod.thisQuarter',
+  year: 'timePeriod.thisYear',
+  lastYear: 'timePeriod.lastYear',
+  spring: 'timePeriod.spring',
+  summer: 'timePeriod.summer',
+  autumn: 'timePeriod.autumn',
+  winter: 'timePeriod.winter',
+  custom: 'timePeriod.custom',
+  unknown: 'timePeriod.unknown'
+} as const;
+
 /**
- * Get display label for time period
+ * Get display label for time period (with translation support)
+ * @param period - The time period
+ * @param t - Translation function
+ * @param customRange - Custom date range if period is 'custom'
  */
-export function getTimePeriodLabel(period: TimePeriod, customRange?: DateRange): string {
-  switch (period) {
-    case 'today':
-      return 'Today';
-    case 'week':
-      return 'This Week';
-    case 'month':
-      return 'This Month';
-    case 'lastMonth':
-      return 'Previous Month';
-    case 'quarter':
-      return 'This Quarter';
-    case 'spring':
-      return 'Spring';
-    case 'summer':
-      return 'Summer';
-    case 'autumn':
-      return 'Autumn';
-    case 'winter':
-      return 'Winter';
-    case 'custom':
-      if (customRange) {
-        return `${formatDate(customRange.start)} - ${formatDate(customRange.end)}`;
-      }
-      return 'Custom';
-    default:
-      return 'Unknown';
+export function getTimePeriodLabel(
+  period: TimePeriod, 
+  t: (key: string) => string,
+  customRange?: DateRange
+): string {
+  if (period === 'custom' && customRange) {
+    return `${formatDate(customRange.start)} - ${formatDate(customRange.end)}`;
   }
+
+  const translationKey = PERIOD_TRANSLATION_KEYS[period] || PERIOD_TRANSLATION_KEYS.unknown;
+  return t(translationKey);
+}
+
+// Translation key mapping for display text
+const DISPLAY_TEXT_TRANSLATION_KEYS = {
+  today: 'timePeriod.today',
+  week: 'timePeriod.thisWeek',
+  month: 'timePeriod.thisMonth',
+  lastMonth: 'timePeriod.previousMonth',
+  quarter: 'timePeriod.thisQuarter',
+  year: 'timePeriod.thisYear',
+  lastYear: 'timePeriod.lastYear',
+  spring: 'timePeriod.inSpring',
+  summer: 'timePeriod.inSummer',
+  autumn: 'timePeriod.inAutumn',
+  winter: 'timePeriod.inWinter',
+  inTotal: 'timePeriod.inTotal'
+} as const;
+
+/**
+ * Get display text for time period (with translation support)
+ * @param t - Translation function
+ * @param filters - Filters containing date range
+ */
+export function getTimePeriodDisplayText(
+  t: (key: string) => string,
+  filters?: { dateRange?: DateRange }
+): string {
+  if (!filters || !filters.dateRange) {
+    return t(DISPLAY_TEXT_TRANSLATION_KEYS.inTotal);
+  }
+  
+  const currentPeriod = getCurrentTimePeriod(filters.dateRange);
+  
+  if (currentPeriod === 'custom') {
+    return getDateRangeDisplayText(filters.dateRange);
+  }
+
+  const translationKey = DISPLAY_TEXT_TRANSLATION_KEYS[currentPeriod];
+  if (!translationKey) {
+    return t(DISPLAY_TEXT_TRANSLATION_KEYS.inTotal);
+  }
+
+  // For seasonal periods, use the special "in X" translations
+  if (['spring', 'summer', 'autumn', 'winter'].includes(currentPeriod)) {
+    return t(translationKey);
+  }
+
+  // For other periods, use the base translation and make it lowercase
+  return t(translationKey).toLowerCase();
 }
 
 export function formatDisplayDate(dateString: string): string {
@@ -216,39 +255,8 @@ export function getCurrentTimePeriod(dateRange?: DateRange): TimePeriod {
   return 'custom';
 }
 
-export function getTimePeriodDisplayText(filters?: { dateRange?: DateRange }): string {
-  if (!filters || !filters.dateRange) {
-    return 'in total';
-  }
-  
-  const currentPeriod = getCurrentTimePeriod(filters.dateRange);
-  const label = getTimePeriodLabel(currentPeriod, filters.dateRange);
-  
-  switch (currentPeriod) {
-    case 'today':
-      return 'today';
-    case 'week':
-      return 'this week';
-    case 'month':
-      return 'this month';
-    case 'lastMonth':
-      return 'previous month';
-    case 'quarter':
-      return 'this quarter';
-    case 'spring':
-    case 'summer':
-    case 'autumn':
-    case 'winter':
-      return `in ${label.toLowerCase()}`;
-    case 'custom':
-      return getDateRangeDisplayText(filters.dateRange)
-    default:
-      return 'in total';
-  }
-}
-
 /**
- * Extract all unique years from a list of transactions (sorted ascending)
+ * Extract all unique years from a list of transactions (sorted descending)
  */
 export function getAllTransactionYears(transactionDates: string[]): number[] {
   const years = Array.from(new Set(

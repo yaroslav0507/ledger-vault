@@ -13,6 +13,7 @@ import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
 import { categoryService } from '../../service/CategoryService';
 import { Transaction } from '../../model/Transaction';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 interface TransactionFiltersProps {
   visible: boolean;
@@ -33,6 +34,7 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
   availableCards,
   transactions
 }) => {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<TransactionFilters>(currentFilters);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
@@ -116,13 +118,13 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
     >
       <View style={styles.container}>
         <ModalHeader
-          title="Filter Transactions"
+          title={t('filters.filterTransactions')}
           leftAction={{
-            label: "Cancel",
+            label: t('filters.cancel'),
             onPress: onClose
           }}
           rightAction={{
-            label: "Filter",
+            label: t('filters.filter'),
             onPress: handleApply
           }}
         />
@@ -130,7 +132,7 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Transaction Type Filter */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Transaction Type</Text>
+            <Text style={styles.sectionTitle}>{t('filters.transactionType')}</Text>
             <View style={styles.chipContainer}>
               <TouchableOpacity
                 style={[
@@ -143,7 +145,7 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
                   styles.chipText,
                   filters.isIncome === undefined && styles.selectedChipText
                 ]}>
-                  All
+                  {t('filters.all')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -157,7 +159,7 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
                   styles.chipText,
                   filters.isIncome === false && styles.selectedChipText
                 ]}>
-                  Expenses
+                  {t('filters.expenses')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -171,7 +173,7 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
                   styles.chipText,
                   filters.isIncome === true && styles.selectedChipText
                 ]}>
-                  Income
+                  {t('filters.income')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -181,13 +183,13 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
           {(categoriesLoading || availableCategories.length > 0) && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Categories</Text>
+                <Text style={styles.sectionTitle}>{t('filters.categories')}</Text>
                 
                 {/* Include/Exclude Switch - only show when categories are selected */}
                 {(filters.categories && filters.categories.length > 0) && (
                   <View style={styles.switchContainer}>
                     <Text style={styles.switchLabel}>
-                      {filters.categoriesMode === 'exclude' ? 'Exclude' : 'Include'}
+                      {filters.categoriesMode === 'exclude' ? t('filters.exclude') : t('filters.include')}
                     </Text>
                     <TouchableOpacity
                       style={[
@@ -208,10 +210,10 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
                 )}
               </View>
               
-              <View style={styles.chipContainer}>
-                {categoriesLoading ? (
-                  <Text style={styles.loadingText}>Loading categories...</Text>
-                ) : (
+                              <View style={styles.chipContainer}>
+                  {categoriesLoading ? (
+                    <Text style={styles.loadingText}>{t('filters.loadingCategories')}</Text>
+                  ) : (
                   availableCategories.map((category) => {
                     const isSelected = filters.categories?.includes(category) || false;
                     return (
@@ -237,7 +239,7 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
           {/* Cards Filter */}
           {availableCards.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Cards/Accounts</Text>
+              <Text style={styles.sectionTitle}>{t('filters.cardsAccounts')}</Text>
               <View style={styles.chipContainer}>
                 {availableCards.map((card) => {
                   const isSelected = filters.cards?.includes(card) || false;
@@ -262,7 +264,7 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
 
           {/* Search Filter */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Search</Text>
+            <Text style={styles.sectionTitle}>{t('filters.searchQuery')}</Text>
             <TextInput
               style={styles.searchInput}
               value={filters.searchQuery || ''}
@@ -270,12 +272,12 @@ export const TransactionFiltersModal: React.FC<TransactionFiltersProps> = ({
                 ...filters,
                 searchQuery: text.trim() || undefined
               })}
-              placeholder="Search descriptions, comments..."
+              placeholder={t('filters.searchPlaceholder')}
               placeholderTextColor={theme.colors.text.disabled}
             />
 
             <TouchableOpacity style={styles.applyAllButton} onPress={handleClear}>
-              <Text style={styles.applyAllButtonText}>Clear Filters</Text>
+              <Text style={styles.applyAllButtonText}>{t('filters.clearFilters')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

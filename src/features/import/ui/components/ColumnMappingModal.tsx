@@ -16,6 +16,7 @@ import {
 import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { ImportMapping } from '../../strategies/ImportStrategy';
 import { theme } from '@/shared/ui/theme/theme';
+import { useTranslation } from '../../../../shared/i18n/useTranslation';
 
 interface ColumnMappingModalProps {
   visible: boolean;
@@ -34,36 +35,36 @@ interface FieldMapping {
   description: string;
 }
 
-const FIELD_MAPPINGS: FieldMapping[] = [
+const getFieldMappings = (t: any): FieldMapping[] => [
   {
     field: 'dateColumn',
-    label: 'Date',
+    label: t('import.dateColumn'),
     required: true,
-    description: 'Transaction date (DD.MM.YYYY, MM/DD/YYYY, etc.)'
+    description: t('import.dateColumnDescription')
   },
   {
     field: 'amountColumn',
-    label: 'Amount',
+    label: t('import.amountColumn'),
     required: true,
-    description: 'Transaction amount (positive or negative)'
+    description: t('import.amountColumnDescription')
   },
   {
     field: 'cardColumn',
-    label: 'Card/Account',
+    label: t('import.cardColumn'),
     required: false,
-    description: 'Card name or account number'
+    description: t('import.cardColumnDescription')
   },
   {
     field: 'categoryColumn',
-    label: 'Category',
+    label: t('import.categoryColumn'),
     required: false,
-    description: 'Transaction category'
+    description: t('import.categoryColumnDescription')
   },
   {
     field: 'commentColumn',
-    label: 'Comment',
+    label: t('import.commentColumn'),
     required: false,
-    description: 'Additional notes or comments'
+    description: t('import.commentColumnDescription')
   }
 ];
 
@@ -85,6 +86,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
   fileName,
   suggestedMapping
 }) => {
+  const { t } = useTranslation();
   const [mapping, setMapping] = useState<Partial<ImportMapping>>({
     dateFormat: 'DD.MM.YYYY',
     hasHeader: true,
@@ -114,8 +116,10 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
     setActiveMenu(null);
   };
 
+  const fieldMappings = getFieldMappings(t);
+
   const handleConfirm = () => {
-    const requiredFields = FIELD_MAPPINGS.filter(f => f.required);
+    const requiredFields = fieldMappings.filter(f => f.required);
     const isValid = requiredFields.every(field => mapping[field.field]);
     
     if (!isValid) {
@@ -137,7 +141,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
     return sampleData.slice(startRow, startRow + 3);
   };
 
-  const isValid = FIELD_MAPPINGS
+  const isValid = fieldMappings
     .filter(f => f.required)
     .every(field => mapping[field.field]);
 
@@ -152,7 +156,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
           <ScrollView>
             {/* Header */}
             <View style={styles.header}>
-              <Text variant="headlineSmall">Map Columns</Text>
+              <Text variant="headlineSmall">{t('import.mapColumns')}</Text>
               <Text variant="bodyMedium" style={styles.subtitle}>
                 {fileName}
               </Text>
@@ -164,11 +168,10 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
             <Card style={styles.instructionsCard}>
               <Card.Content>
                 <Text variant="titleSmall" style={styles.instructionsTitle}>
-                  📋 Instructions
+                  📋 {t('import.instructions')}
                 </Text>
                 <Text variant="bodySmall" style={styles.instructionsText}>
-                  Map your spreadsheet columns to the transaction fields below. 
-                  Required fields must be mapped to proceed with import.
+                  {t('import.mappingDescription')}
                 </Text>
               </Card.Content>
             </Card>
@@ -177,11 +180,11 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
             <Card style={styles.settingsCard}>
               <Card.Content>
                 <Text variant="titleMedium" style={styles.sectionTitle}>
-                  File Settings
+                  {t('import.fileSettings')}
                 </Text>
                 
                 <View style={styles.settingRow}>
-                  <Text variant="bodyMedium">Has Header Row</Text>
+                  <Text variant="bodyMedium">{t('import.hasHeaders')}</Text>
                   <Button
                     mode={mapping.hasHeader ? 'contained' : 'outlined'}
                     compact
@@ -192,7 +195,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
                 </View>
 
                 <View style={styles.settingRow}>
-                  <Text variant="bodyMedium">Date Format</Text>
+                  <Text variant="bodyMedium">{t('import.dateFormat')}</Text>
                   <Menu
                     visible={dateFormatMenuVisible}
                     onDismiss={() => setDateFormatMenuVisible(false)}
@@ -225,10 +228,10 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
             <Card style={styles.mappingCard}>
               <Card.Content>
                 <Text variant="titleMedium" style={styles.sectionTitle}>
-                  Column Mapping
+                  {t('import.fieldMapping')}
                 </Text>
                 
-                {FIELD_MAPPINGS.map((fieldMapping) => (
+{fieldMappings.map((fieldMapping) => (
                   <View key={fieldMapping.field} style={styles.mappingRow}>
                     <View style={styles.fieldInfo}>
                       <View style={styles.fieldHeader}>
@@ -237,7 +240,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
                         </Text>
                         {fieldMapping.required && (
                           <Chip mode="outlined" compact style={styles.requiredChip}>
-                            Required
+                            {t('import.required')}
                           </Chip>
                         )}
                       </View>
@@ -259,7 +262,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
                             !mapping[fieldMapping.field] && fieldMapping.required && styles.columnButtonError
                           ]}
                         >
-                          {mapping[fieldMapping.field] || 'Select Column'}
+{mapping[fieldMapping.field] || t('import.selectColumn')}
                         </Button>
                       }
                     >
@@ -280,7 +283,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
             <Card style={styles.previewCard}>
               <Card.Content>
                 <Text variant="titleMedium" style={styles.sectionTitle}>
-                  Data Preview
+                  {t('import.sampleData')}
                 </Text>
                 
                 <View style={styles.previewContainer}>
@@ -317,7 +320,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
           {/* Actions */}
           <View style={styles.actions}>
             <Button mode="outlined" onPress={onDismiss} style={styles.actionButton}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               mode="contained"
@@ -325,7 +328,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
               disabled={!isValid}
               style={[styles.actionButton, !isValid && styles.actionButtonDisabled]}
             >
-              Continue to Preview
+              {t('import.confirmMapping')}
             </Button>
           </View>
         </Surface>

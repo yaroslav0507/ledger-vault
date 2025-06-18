@@ -17,12 +17,14 @@ import { getCurrencySymbol } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
 import { useSettingsScreen } from '../hooks/useSettingsScreen';
+import { useTranslation } from '../../../../shared/i18n/useTranslation';
 
 interface SettingsScreenProps {
   onClose: () => void;
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
+  const { t, getCurrentLanguage, changeLanguage } = useTranslation();
   const {
     availableCategories,
     settings,
@@ -43,14 +45,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <ModalHeader
-        title="Settings"
+        title={t('settings.title')}
         variant="screen"
         leftAction={{
-          label: "Back",
+          label: t('common.back'),
           onPress: onClose
         }}
         rightAction={{
-          label: "Save",
+          label: t('common.save'),
           onPress: handleSaveSettings
         }}
       />
@@ -60,11 +62,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
         <Card style={styles.section}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.sectionTitle}>
-              App Preferences
+              {t('settings.appPreferences')}
             </Text>
             
             <List.Item
-              title="Default Currency"
+              title={t('settings.defaultCurrency')}
               description={`${settings.defaultCurrency} (${getCurrencySymbol(settings.defaultCurrency)})`}
               left={(props) => <List.Icon {...props} icon="currency-usd" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
@@ -72,7 +74,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
             />
             
             <List.Item
-              title="Default Category"
+              title={t('settings.defaultCategories')}
               description={settings.defaultCategory}
               left={(props) => <List.Icon {...props} icon="tag" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
@@ -80,8 +82,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
             />
             
             <List.Item
-              title="Default Transaction Type"
-              description={settings.defaultTransactionType === 'expense' ? 'Expense' : 'Income'}
+              title={t('filters.transactionType')}
+              description={t(settings.defaultTransactionType === 'expense' ? 'common.expense' : 'common.income')}
               left={(props) => <List.Icon {...props} icon="swap-horizontal" />}
               right={() => (
                 <Switch
@@ -96,6 +98,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
                 />
               )}
             />
+            
+            <List.Item
+              title={t('settings.language')}
+              description={getCurrentLanguage() === 'uk' ? 'Українська' : 'English'}
+              left={(props) => <List.Icon {...props} icon="translate" />}
+              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => {
+                const newLang = getCurrentLanguage() === 'en' ? 'uk' : 'en';
+                changeLanguage(newLang);
+              }}
+            />
           </Card.Content>
         </Card>
 
@@ -103,12 +116,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
         <Card style={styles.section}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.sectionTitle}>
-              Display Options
+              {t('settings.appPreferences')}
             </Text>
             
             <List.Item
-              title="Auto-detect Currency"
-              description="Automatically detect currency when importing files"
+              title={t('settings.autoDetectCurrency')}
+              description={t('settings.autoDetectCurrencyDescription')}
               left={(props) => <List.Icon {...props} icon="auto-fix" />}
               right={() => (
                 <Switch
@@ -121,8 +134,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
             />
             
             <List.Item
-              title="Confirm Delete"
-              description="Ask for confirmation before deleting transactions"
+              title={t('settings.confirmDelete')}
+              description={t('settings.confirmDeleteDescription')}
               left={(props) => <List.Icon {...props} icon="shield-check" />}
               right={() => (
                 <Switch
@@ -138,20 +151,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
         <Card style={styles.section}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.sectionTitle}>
-              Data Management
+              {t('settings.dataManagement')}
             </Text>
             
             <List.Item
-              title="Export Data"
-              description="Export all transactions to CSV file"
+              title={t('settings.exportData')}
+              description={t('settings.exportDataDescription')}
               left={(props) => <List.Icon {...props} icon="export" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               onPress={handleExportData}
             />
             
             <List.Item
-              title="Clear All Data"
-              description="Permanently delete all transactions"
+              title={t('settings.clearAllData')}
+              description={t('settings.clearAllDataDescription')}
               left={(props) => <List.Icon {...props} icon="delete" color={theme.colors.error} />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               onPress={handleClearData}
@@ -164,24 +177,24 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
         <Card style={styles.section}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.sectionTitle}>
-              About
+              {t('settings.about')}
             </Text>
             
             <List.Item
-              title="Version"
+              title={t('settings.version')}
               description="1.0.0"
               left={(props) => <List.Icon {...props} icon="information" />}
             />
             
             <List.Item
-              title="Build"
-              description="React Native with Expo"
+              title={t('settings.build')}
+              description={t('settings.buildDescription')}
               left={(props) => <List.Icon {...props} icon="hammer" />}
             />
             
             <List.Item
-              title="Created by"
-              description="Matrix Sadhu"
+              title={t('settings.createdBy')}
+              description={t('settings.createdByDescription')}
               left={(props) => <List.Icon {...props} icon="account" />}
             />
           </Card.Content>
@@ -197,7 +210,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
         >
           <Surface style={styles.modalSurface}>
             <Text variant="titleMedium" style={styles.modalTitle}>
-              Select Default Currency
+              {t('settings.defaultCurrency')}
             </Text>
             <ScrollView style={styles.modalContent}>
               {SUPPORTED_CURRENCIES.map((currency) => (
@@ -230,7 +243,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onClose }) => {
         >
           <Surface style={styles.modalSurface}>
             <Text variant="titleMedium" style={styles.modalTitle}>
-              Select Default Category
+              {t('settings.defaultCategories')}
             </Text>
             <ScrollView style={styles.modalContent}>
               {availableCategories.map((category) => (

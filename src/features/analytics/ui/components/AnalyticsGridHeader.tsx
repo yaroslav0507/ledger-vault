@@ -4,6 +4,7 @@ import { Card, Text, Icon } from 'react-native-paper';
 import { formatCurrency } from '../../../../shared/utils/currencyUtils';
 import { theme } from '../../../../shared/ui/theme/theme';
 import { UI_CONSTANTS } from '../../../../shared/constants/ui';
+import { useTranslation } from '../../../../shared/i18n/useTranslation';
 
 interface AnalyticsGridHeaderProps {
   balance: {
@@ -61,8 +62,9 @@ export const AnalyticsGridHeader: React.FC<AnalyticsGridHeaderExtendedProps> = (
   onCategoriesPress,
   onTrendsPress
 }) => {
+  const { t } = useTranslation();
 
-  const netIncomeText = balance.total >= 0 ? 'Positive flow' : 'Negative flow';
+  const netIncomeText = balance.total >= 0 ? t('analytics.positiveFlow') : t('analytics.negativeFlow');
 
   return (
     <View style={styles.container}>
@@ -70,17 +72,17 @@ export const AnalyticsGridHeader: React.FC<AnalyticsGridHeaderExtendedProps> = (
         <GridCard
           icon="trending-up"
           iconColor={theme.colors.income}
-          title="TOTAL INCOME"
+          title={t('analytics.totalIncomeHeader')}
           value={formatCurrency(balance.income, currency)}
-          subtitle={`${incomeTransactionCount} transactions`}
+          subtitle={t('analytics.transactionCount', { count: incomeTransactionCount })}
           onPress={onTrendsPress}
         />
         <GridCard
           icon="trending-down"
           iconColor={theme.colors.expense}
-          title="TOTAL EXPENSES"
+          title={t('analytics.totalExpensesHeader')}
           value={formatCurrency(balance.expenses, currency)}
-          subtitle={`${expenseTransactionCount} transactions`}
+          subtitle={t('analytics.transactionCount', { count: expenseTransactionCount })}
           onPress={onTrendsPress}
         />
       </View>
@@ -89,7 +91,7 @@ export const AnalyticsGridHeader: React.FC<AnalyticsGridHeaderExtendedProps> = (
         <GridCard
           icon={balance.total >= 0 ? "cash-plus" : "cash-minus"}
           iconColor={balance.total >= 0 ? theme.colors.income : theme.colors.expense}
-          title="NET INCOME"
+          title={t('analytics.netIncomeHeader')}
           value={formatCurrency(balance.total, currency)}
           subtitle={netIncomeText}
           onPress={onTrendsPress}
@@ -97,9 +99,9 @@ export const AnalyticsGridHeader: React.FC<AnalyticsGridHeaderExtendedProps> = (
         <GridCard
           icon="shape"
           iconColor={theme.colors.primary}
-          title="CATEGORIES"
+          title={t('analytics.categoriesHeader')}
           value={categoryCount.toString()}
-          subtitle="Active categories"
+          subtitle={t('analytics.activeCategories')}
           onPress={onCategoriesPress}
         />
       </View>

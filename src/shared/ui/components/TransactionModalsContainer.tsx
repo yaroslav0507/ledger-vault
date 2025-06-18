@@ -11,6 +11,7 @@ import { useTransactionActions } from '@/features/transactions/ui/hooks/useTrans
 import { useTransactionCallbacks } from '@/features/transactions/ui/hooks/useTransactionCallbacks';
 import { useSettingsStore } from '@/shared/store/settingsStore';
 import { useMemo } from 'react';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 export interface TransactionModalsContainerProps {
   // Minimal props - just what's needed for external control
@@ -18,6 +19,7 @@ export interface TransactionModalsContainerProps {
 }
 
 export const TransactionModalsContainer: React.FC<TransactionModalsContainerProps> = () => {
+  const { t } = useTranslation();
   const { addTransaction } = useTransactionStore();
   const transactionManagement = useTransactionManagementContext();
   const confirmDeleteTransactions = useSettingsStore(state => state.confirmDeleteTransactions);
@@ -100,10 +102,10 @@ export const TransactionModalsContainer: React.FC<TransactionModalsContainerProp
       {transactionManagement.archiveConfirmDialog.isOpen && (
         <ConfirmationDialog
           visible={transactionManagement.archiveConfirmDialog.isOpen}
-          title="Archive Transaction"
-          message={`Are you sure you want to archive "${transactionManagement.transactionToArchive?.description}"?`}
-          confirmText="Archive"
-          cancelText="Cancel"
+          title={t('transactions.archiveTransaction')}
+          message={t('transactions.confirmArchive', { description: transactionManagement.transactionToArchive?.description })}
+          confirmText={t('transactions.archive')}
+          cancelText={t('common.cancel')}
           onConfirm={handleConfirmArchive}
           onCancel={transactionManagement.archiveConfirmDialog.close}
         />
@@ -115,7 +117,7 @@ export const TransactionModalsContainer: React.FC<TransactionModalsContainerProp
           onDismiss={() => setShowSnackbar(false)}
           duration={UI_CONSTANTS.TIMEOUTS.UNDO_TIMEOUT}
           action={{
-            label: 'Undo',
+            label: t('common.undo'),
             onPress: handleUndo,
           }}
         >

@@ -7,6 +7,7 @@ import { formatCurrency } from '../../../../shared/utils/currencyUtils';
 import { theme } from '../../../../shared/ui/theme/theme';
 import { UI_CONSTANTS } from '../../../../shared/constants/ui';
 import { format } from 'date-fns';
+import { useTranslation } from '../../../../shared/i18n/useTranslation';
 
 interface MonthlyTrendsChartProps {
   data: MonthlyTrendData[];
@@ -15,6 +16,7 @@ interface MonthlyTrendsChartProps {
 
 export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, currency = 'UAH' }) => {
   // Always call hooks at the top level, before any return or conditional
+  const { t } = useTranslation();
   const currentMonthShort = format(new Date(), 'MMM');
   const initialIndex = data.findIndex((item: MonthlyTrendData) => item.month.startsWith(currentMonthShort))
   const [selectedMonthIndex, setSelectedMonthIndex] = useState<number | null>(initialIndex);
@@ -83,7 +85,7 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
     return (
       <View style={styles.emptyState}>
         <Text variant="bodyMedium" style={styles.emptyText}>
-          No data available for the selected period
+          {t('analytics.noDataForPeriod')}
         </Text>
       </View>
     );
@@ -113,9 +115,9 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
   const tooltipContent = periodData && (
     <View style={[styles.tooltipContainer, tooltipStyle]}>
       <Text style={[styles.tooltipLabel, { fontFamily: theme.fontFamily.default }]}> {periodData.month} </Text>
-      <Text style={[styles.tooltipValue, { color: '#2e7d32', fontFamily: theme.fontFamily.default }]}> <View style={{ width: 8, height: 8, backgroundColor: '#2e7d32', borderRadius: 4 }} /> Income: {formatCurrency(periodData.income, currency)} </Text>
-      <Text style={[styles.tooltipValue, { color: '#64748b', fontFamily: theme.fontFamily.default }]}> <View style={{ width: 8, height: 8, backgroundColor: '#64748b', borderRadius: 4 }} /> Expenses: {formatCurrency(periodData.expenses, currency)} </Text>
-      <Text style={[styles.tooltipValue, { color: periodData.net >= 0 ? theme.colors.success : theme.colors.expense, fontFamily: theme.fontFamily.default }]}> <View style={{ width: 8, height: 8, backgroundColor: theme.colors.success, borderRadius: 4 }} /> Cashflow: {formatCurrency(periodData.net, currency)} </Text>
+      <Text style={[styles.tooltipValue, { color: '#2e7d32', fontFamily: theme.fontFamily.default }]}> <View style={{ width: 8, height: 8, backgroundColor: '#2e7d32', borderRadius: 4 }} /> {t('analytics.income')}: {formatCurrency(periodData.income, currency)} </Text>
+      <Text style={[styles.tooltipValue, { color: '#64748b', fontFamily: theme.fontFamily.default }]}> <View style={{ width: 8, height: 8, backgroundColor: '#64748b', borderRadius: 4 }} /> {t('analytics.expenses')}: {formatCurrency(periodData.expenses, currency)} </Text>
+      <Text style={[styles.tooltipValue, { color: periodData.net >= 0 ? theme.colors.success : theme.colors.expense, fontFamily: theme.fontFamily.default }]}> <View style={{ width: 8, height: 8, backgroundColor: theme.colors.success, borderRadius: 4 }} /> {t('analytics.cashflow')}: {formatCurrency(periodData.net, currency)} </Text>
     </View>
   );
 
@@ -170,7 +172,7 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
                   />
                 );
               }}
-              name="Income"
+              name={t('analytics.income')}
             />
             <Line 
               type="monotone" 
@@ -191,7 +193,7 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
                   />
                 );
               }}
-              name="Expenses"
+              name={t('analytics.expenses')}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -201,17 +203,17 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
         {/* Table Header */}
         <View style={[styles.summaryItem, styles.headerRow]}>
           <View style={styles.monthColumn}>
-            <Text variant="bodySmall" style={[styles.headerText, { textAlign: 'left' }]}> Month </Text>
+            <Text variant="bodySmall" style={[styles.headerText, { textAlign: 'left' }]}> {t('analytics.month')} </Text>
           </View>
           <View style={styles.valuesRow}>
             <View style={styles.valueColumn}>
-              <Text variant="bodySmall" style={styles.headerText}> Income </Text>
+              <Text variant="bodySmall" style={styles.headerText}> {t('analytics.income')} </Text>
             </View>
             <View style={styles.valueColumn}>
-              <Text variant="bodySmall" style={styles.headerText}> Expenses </Text>
+              <Text variant="bodySmall" style={styles.headerText}> {t('analytics.expenses')} </Text>
             </View>
             <View style={styles.valueColumn}>
-              <Text variant="bodySmall" style={styles.headerText}> Cashflow </Text>
+              <Text variant="bodySmall" style={styles.headerText}> {t('analytics.cashflow')} </Text>
             </View>
           </View>
         </View>
@@ -222,7 +224,7 @@ export const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ data, cu
             key={item.month}
             style={[styles.summaryItem, selectedMonthIndex === index && { backgroundColor: theme.colors.primary + '22' }]}
             onPress={() => handleSelectMonth(index)}
-            accessibilityLabel={selectedMonthIndex === index ? 'Selected month' : undefined}
+            accessibilityLabel={selectedMonthIndex === index ? t('analytics.selectedMonth') : undefined}
             activeOpacity={0.8}
           >
             <View style={styles.monthColumn}>

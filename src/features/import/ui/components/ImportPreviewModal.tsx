@@ -16,6 +16,7 @@ import { formatCurrency, SUPPORTED_CURRENCIES } from '@/shared/utils/currencyUti
 import { formatDate } from '@/shared/utils/dateUtils';
 import { ImportResult } from '../../strategies/ImportStrategy';
 import { Transaction } from '@/features/transactions/model/Transaction';
+import { useTranslation } from '../../../../shared/i18n/useTranslation';
 
 interface ImportPreviewModalProps {
   visible: boolean;
@@ -34,6 +35,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
   fileName,
   isLoading = false
 }) => {
+  const { t } = useTranslation();
   const [ignoreDuplicates, setIgnoreDuplicates] = React.useState(true);
   const [showDetails, setShowDetails] = React.useState(false);
   const [selectedCurrency, setSelectedCurrency] = React.useState<string | null>(null);
@@ -67,12 +69,12 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
           <ScrollView style={styles.scrollView}>
             {/* Header */}
             <View style={styles.header}>
-              <Text variant="headlineSmall">Import Preview</Text>
+              <Text variant="headlineSmall">{t('import.importPreview')}</Text>
               <Text variant="bodyMedium" style={styles.subtitle}>
                 {fileName}
               </Text>
               <View style={{ marginTop: 12 }}>
-                <Text variant="bodySmall" style={{ marginBottom: 4 }}>Currency for Imported Transactions</Text>
+                <Text variant="bodySmall" style={{ marginBottom: 4 }}>{t('import.currencyForImport')}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   {SUPPORTED_CURRENCIES.map((c) => (
                     <Chip
@@ -92,21 +94,21 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
             <Card style={styles.summaryCard}>
               <Card.Content>
                 <Text variant="titleMedium" style={styles.sectionTitle}>
-                  Import Summary
+                  {t('import.importSummary')}
                 </Text>
                 <View style={styles.summaryRow}>
-                  <Text>Total Rows Processed:</Text>
+                  <Text>{t('import.totalRowsProcessed')}:</Text>
                   <Chip mode="outlined">{summary.totalRows}</Chip>
                 </View>
                 <View style={styles.summaryRow}>
-                  <Text>Successfully Parsed:</Text>
+                  <Text>{t('import.successfullyParsed')}:</Text>
                   <Chip mode="outlined" textStyle={{ color: '#2e7d32' }}>
                     {summary.successfulImports}
                   </Chip>
                 </View>
                 {summary.duplicatesFound > 0 && (
                   <View style={styles.summaryRow}>
-                    <Text>Duplicates Found:</Text>
+                    <Text>{t('import.duplicatesFound', { count: 0 })}:</Text>
                     <Chip mode="outlined" textStyle={{ color: '#FF9800' }}>
                       {summary.duplicatesFound}
                     </Chip>
@@ -114,7 +116,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                 )}
                 {summary.errorsCount > 0 && (
                   <View style={styles.summaryRow}>
-                    <Text>Errors:</Text>
+                    <Text>{t('import.errors')}:</Text>
                     <Chip mode="outlined" textStyle={{ color: '#F44336' }}>
                       {summary.errorsCount}
                     </Chip>
@@ -122,7 +124,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                 )}
                 {summary.timeRange.earliest && (
                   <View style={styles.summaryRow}>
-                    <Text>Date Range:</Text>
+                    <Text>{t('import.dateRange')}:</Text>
                     <Text variant="bodySmall">
                       {formatDate(summary.timeRange.earliest)} - {formatDate(summary.timeRange.latest)}
                     </Text>
@@ -136,11 +138,11 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
               <Card style={styles.duplicatesCard}>
                 <Card.Content>
                   <Text variant="titleMedium" style={styles.sectionTitle}>
-                    Duplicate Handling
+                    {t('import.duplicateHandling')}
                   </Text>
                   <List.Item
-                    title="Ignore Duplicates"
-                    description={`Skip ${duplicates.length} potential duplicates`}
+                    title={t('import.ignoreDuplicates')}
+                    description={t('import.skipDuplicates', { count: duplicates.length })}
                     left={() => (
                       <IconButton
                         icon={ignoreDuplicates ? 'checkbox-marked' : 'checkbox-blank-outline'}
@@ -158,14 +160,14 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                 <Card.Content>
                   <View style={styles.detailsHeader}>
                     <Text variant="titleMedium" style={styles.sectionTitle}>
-                      Import Errors ({errors.length})
+                      {t('import.importErrors', { count: errors.length })}
                     </Text>
                     <Button
                       mode="outlined"
                       compact
                       onPress={() => setShowDetails(!showDetails)}
                     >
-                      {showDetails ? 'Hide' : 'Show'} Details
+                      {showDetails ? t('import.hideDetails') : t('import.showDetails')}
                     </Button>
                   </View>
                   {showDetails && (
@@ -179,7 +181,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                       ))}
                       {errors.length > 5 && (
                         <Text variant="bodySmall" style={styles.moreDetails}>
-                          ...and {errors.length - 5} more details
+                          {t('import.moreDetails', { count: errors.length - 5 })}
                         </Text>
                       )}
                     </View>
@@ -192,7 +194,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
             <Card style={styles.previewCard}>
               <Card.Content>
                 <Text variant="titleMedium" style={styles.sectionTitle}>
-                  Transaction Preview ({validTransactions.length} to import)
+                  {t('import.transactionPreview', { count: validTransactions.length })}
                 </Text>
                 {validTransactions.slice(0, 10).map((transaction, index) => (
                   <View key={transaction.id} style={styles.transactionItem}>
@@ -208,11 +210,11 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                       </Text>
                         <View style={styles.transactionMeta}>
                           <Text variant="bodySmall" style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
-                            {formatDate(transaction.date)} • {transaction.card} • {transaction.category} • {transaction.comment || 'No comment'}
+                            {formatDate(transaction.date)} • {transaction.card} • {transaction.category} • {transaction.comment || t('import.noComment')}
                           </Text>
                           {transaction.isDuplicate && (
                             <Chip mode="outlined" compact textStyle={{ fontSize: 10 }}>
-                              Duplicate
+                              {t('import.duplicate')}
                             </Chip>
                           )}
                         </View>
@@ -238,7 +240,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
                 ))}
                 {validTransactions.length > 10 && (
                   <Text variant="bodySmall" style={styles.moreTransactions}>
-                    ...and {validTransactions.length - 10} more transactions
+                    {t('import.moreTransactions', { count: validTransactions.length - 10 })}
                   </Text>
                 )}
               </Card.Content>
@@ -248,7 +250,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
           {/* Actions */}
           <View style={styles.actions}>
             <Button mode="outlined" onPress={onDismiss} style={styles.actionButton}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               mode="contained"
@@ -257,7 +259,7 @@ export const ImportPreviewModal: React.FC<ImportPreviewModalProps> = ({
               disabled={validTransactions.length === 0 || isLoading}
               style={styles.actionButton}
             >
-              Import {validTransactions.length} Transactions
+              {t('import.importTransactions', { count: validTransactions.length })}
             </Button>
           </View>
         </Surface>

@@ -13,6 +13,8 @@ import { TransactionModalsContainer } from './src/shared/ui/components/Transacti
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { initializeDatabase } from './src/db';
+import './src/shared/i18n';
+import { useTranslation } from './src/shared/i18n/useTranslation';
 
 // Custom theme based on our design
 const theme = {
@@ -39,6 +41,7 @@ function SettingsWrapper({ navigation }: any) {
 
 function AppNavigator() {
   const { setCurrentTabTitle, initialTab } = useAppContext();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
@@ -70,7 +73,7 @@ function AppNavigator() {
           name="transactions"
           component={TransactionListScreen}
           options={{
-            tabBarLabel: 'Transactions',
+            tabBarLabel: t('navigation.transactions'),
             tabBarIcon: ({ color, size }) => (
               <Icon source="format-list-bulleted" size={size} color={color} />
             ),
@@ -83,7 +86,7 @@ function AppNavigator() {
           name="analytics"
           component={AnalyticsScreen}
           options={{
-            tabBarLabel: 'Analytics',
+            tabBarLabel: t('navigation.analytics'),
             tabBarIcon: ({ color, size }) => (
               <Icon source="chart-line" size={size} color={color} />
             ),
@@ -96,7 +99,7 @@ function AppNavigator() {
           name="settings"
           component={SettingsWrapper}
           options={{
-            tabBarLabel: 'Settings',
+            tabBarLabel: t('navigation.settings'),
             tabBarIcon: ({ color, size }) => (
               <Icon source="cog" size={size} color={color} />
             ),

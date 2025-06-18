@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Card, Text, Icon } from 'react-native-paper';
 import { theme } from '../../../../shared/ui/theme/theme';
 import { UI_CONSTANTS } from '../../../../shared/constants/ui';
+import { useTranslation } from '../../../../shared/i18n/useTranslation';
 
 interface KeyInsightsProps {
   insights: string[];
@@ -20,6 +21,7 @@ const extractEmojiAndText = (insight: string): { emoji: string; text: string } =
 };
 
 export const KeyInsights: React.FC<KeyInsightsProps> = ({ insights }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
 
   if (!insights.length) {
@@ -36,11 +38,11 @@ export const KeyInsights: React.FC<KeyInsightsProps> = ({ insights }) => {
         <Card.Content style={styles.headerContent}>
           <View style={styles.header}>
             <Text variant="titleMedium" style={styles.title}>
-              Key Insights
+              {t('analytics.keyInsights')}
             </Text>
             <View style={styles.headerRight}>
               <Text variant="bodySmall" style={styles.insightCount}>
-                {insights.length} insight{insights.length !== 1 ? 's' : ''}
+                {t('analytics.insightCount', { count: insights.length })}
               </Text>
               <Icon 
                 source={isExpanded ? "chevron-up" : "chevron-down"} 

@@ -8,8 +8,10 @@ import { useAnalyticsScreen } from '../hooks/useAnalyticsScreen';
 import { BaseScreenLayout, CollapsibleSection } from '@/shared/ui/components';
 import { EmptyState } from '@/shared/ui/components/EmptyState';
 import { theme } from '@/shared/ui/theme/theme';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 export const AnalyticsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const {
     baseScreen,
     analyticsData,
@@ -47,8 +49,8 @@ export const AnalyticsScreen: React.FC = () => {
         return (
           <View style={styles.analyticsContent}>
             <CollapsibleSection
-              title="Monthly Trends"
-              subtitle={`${analyticsData.monthlyTrends.length} months`}
+              title={t('analytics.monthlyTrends')}
+              subtitle={t('analytics.monthCount', { count: analyticsData.monthlyTrends.length })}
             >
               <MonthlyTrendsChart data={analyticsData.monthlyTrends} currency={currency} />
             </CollapsibleSection>
@@ -58,8 +60,8 @@ export const AnalyticsScreen: React.FC = () => {
         return (
           <View style={styles.analyticsContent}>
             <CollapsibleSection
-              title="Category Breakdown"
-              subtitle={`${analyticsData.expenseCategories.length} categories`}
+              title={t('analytics.categoryBreakdown')}
+              subtitle={t('analytics.categoryCount', { count: analyticsData.expenseCategories.length })}
             >
               <CategoryPieChart
                 data={analyticsData.expenseCategories}
@@ -76,8 +78,8 @@ export const AnalyticsScreen: React.FC = () => {
             <KeyInsights insights={insights} />
             {analyticsData.transactionCount === 0 && (
               <EmptyState
-                title="No Data Available"
-                description="No transactions found for the selected time period. Try selecting a different date range or add some transactions to see your analytics."
+                title={t('analytics.noDataAvailable')}
+                description={t('analytics.noAnalyticsDescription')}
               />
             )}
           </View>

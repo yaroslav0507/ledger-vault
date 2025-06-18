@@ -5,6 +5,7 @@ import { formatCurrency } from '@/shared/utils/currencyUtils';
 import { theme } from '@/shared/ui/theme/theme';
 import { TransactionFilters } from '../../model/Transaction';
 import { getTimePeriodDisplayText, getDateRangeDisplayText, getCurrentTimePeriod } from '@/shared/utils/dateUtils';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 interface BalanceInfo {
   total: number;
@@ -29,6 +30,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   onIncomeFilter,
   onExpenseFilter
 }) => {
+  const { t } = useTranslation();
   const [isBalanceMasked, setIsBalanceMasked] = useState(false);
 
   const toggleBalanceMask = () => {
@@ -51,7 +53,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
         <View style={styles.balanceHeader}>
           <View style={styles.balanceMainRow}>
             <Text variant="bodyMedium" style={styles.balanceLabel}>
-              💰 Cashflow
+              💰 {t('transactions.cashflow')}
             </Text>
             <Text variant="headlineMedium" style={[
               styles.balanceAmount, 
@@ -88,7 +90,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
           >
             <Text style={styles.metricIcon}>📈</Text>
             <View style={styles.metricContent}>
-              <Text variant="bodySmall" style={styles.metricLabel}>Income</Text>
+              <Text variant="bodySmall" style={styles.metricLabel}>{t('transactions.income')}</Text>
               <Text variant="bodyMedium" style={[
                 styles.metricValue, 
                 { color: '#2E7D32' },
@@ -110,7 +112,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
           >
             <Text style={styles.metricIcon}>📉</Text>
             <View style={styles.metricContent}>
-              <Text variant="bodySmall" style={styles.metricLabel}>Expenses</Text>
+              <Text variant="bodySmall" style={styles.metricLabel}>{t('transactions.expenses')}</Text>
               <Text variant="bodyMedium" style={[
                 styles.metricValue, 
                 { color: balance.expenses === 0 ? '#666' : '#64748B' },
@@ -128,16 +130,16 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
         {/* Enhanced Insights Row */}
         <View style={styles.insightsRow}>
           <Text style={styles.insightText}>
-            {`💡 ${transactionCount} transaction${transactionCount !== 1 ? 's' : ''} ${getTimePeriodDisplayText()}`}
+            {`💡 ${t('transactions.transactionCount', { count: transactionCount })} ${getTimePeriodDisplayText(t)}`}
           </Text>
           {balance.expenses === 0 && transactionCount > 0 && (
             <Text style={styles.insightText}>
-              {`• All income transactions ✨`}
+              {`• ${t('transactions.allIncomeTransactions')} ✨`}
             </Text>
           )}
           {isBalanceMasked && (
             <Text style={styles.insightText}>
-              {`• Tap 👁️ to show amounts`}
+              {`• ${t('transactions.tapToShowAmounts')}`}
             </Text>
           )}
         </View>

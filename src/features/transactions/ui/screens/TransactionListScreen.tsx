@@ -4,10 +4,12 @@ import { useBaseScreen } from '@/shared/hooks';
 import { BaseScreenLayout, MetricsSummaryHeader } from '@/shared/ui/components';
 import { TransactionCard } from '../components/TransactionCard';
 import { Transaction } from '../../model/Transaction';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 export const TransactionListScreen: React.FC = () => {
+  const { t } = useTranslation();
   const baseScreen = useBaseScreen({
-    screenName: 'Transactions',
+    screenName: t('transactions.transactionsScreen'),
     loadAvailableCards: true,
     enableScrollToTop: true,
     enableSwipeHandling: true
@@ -48,7 +50,7 @@ export const TransactionListScreen: React.FC = () => {
     clearFilters: baseScreen.clearFilters,
     availableCards: baseScreen.availableCards,
     transactions: baseScreen.transactions,
-    screenTitle: 'Transactions'
+    screenTitle: t('transactions.transactionsScreen')
   }), [
     baseScreen.filteredTransactions.length, 
     baseScreen.transactions.length, 
@@ -56,15 +58,16 @@ export const TransactionListScreen: React.FC = () => {
     baseScreen.setFilters, 
     baseScreen.clearFilters, 
     baseScreen.availableCards, 
-    baseScreen.transactions
+    baseScreen.transactions,
+    t
   ]);
 
   const sectionsData = useMemo(() => [
     {
-      title: 'Transactions',
+      title: t('transactions.transactionsList'),
       data: baseScreen.filteredTransactions
     }
-  ], [baseScreen.filteredTransactions]);
+  ], [baseScreen.filteredTransactions, t]);
 
   const getItemLayout = useCallback((data: any, index: number) => ({
     length: 80, // UI_CONSTANTS.DIMENSIONS.TRANSACTION_CARD_HEIGHT
@@ -77,7 +80,7 @@ export const TransactionListScreen: React.FC = () => {
   return (
     <BaseScreenLayout
       isInitialized={baseScreen.isInitialized}
-      screenName="Transactions"
+      screenName={t('transactions.transactionsScreen')}
       sections={sectionsData}
       renderItem={renderSectionItem}
       keyExtractor={(item) => item.id}

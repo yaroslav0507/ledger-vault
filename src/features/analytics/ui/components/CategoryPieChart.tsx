@@ -6,6 +6,7 @@ import { CategoryData } from '../../service/AnalyticsService';
 import { formatCurrency } from '../../../../shared/utils/currencyUtils';
 import { theme } from '../../../../shared/ui/theme/theme';
 import { UI_CONSTANTS } from '../../../../shared/constants/ui';
+import { useTranslation } from '../../../../shared/i18n/useTranslation';
 
 interface CategoryPieChartProps {
   data: CategoryData[];
@@ -15,6 +16,7 @@ interface CategoryPieChartProps {
 }
 
 export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, currency = 'UAH', onCategoryLongPress, activeCategories: propActiveCategories = [] }) => {
+  const { t } = useTranslation();
   const [showAllCategories, setShowAllCategories] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState<number | null>(data.length > 0 ? 0 : null);
   const [activeCategories, setActiveCategories] = React.useState<string[]>(propActiveCategories);
@@ -37,7 +39,7 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, curren
     return (
       <View style={styles.emptyState}>
         <Text variant="bodyMedium" style={styles.emptyText}>
-          No data available for the selected period
+          {t('analytics.noDataAvailable')}
         </Text>
       </View>
     );
@@ -210,7 +212,7 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, curren
                 contentStyle={styles.moreButtonContent}
                 icon="chevron-down"
               >
-                more categories (+{data.length - 6})
+{t('analytics.showMore')} (+{data.length - 6})
               </Button>
             </View>
           )}
@@ -224,7 +226,7 @@ export const CategoryPieChart: React.FC<CategoryPieChartProps> = ({ data, curren
                 contentStyle={styles.moreButtonContent}
                 icon="chevron-up"
               >
-                Show less
+{t('analytics.showLess')}
               </Button>
             </View>
           )}

@@ -10,6 +10,7 @@ import { Modal, Portal, Surface, TextInput, Button } from 'react-native-paper';
 import { TimePeriod, DateRange, getDateRangeForPeriod, getTimePeriodLabel, getCurrentTimePeriod, getMonthRange } from '../../utils/dateUtils';
 import { theme } from '../theme/theme';
 import { ModalHeader } from './ModalHeader';
+import { useTranslation } from '../../i18n/useTranslation';
 
 interface TimePeriodSelectorProps {
   currentDateRange?: DateRange;
@@ -24,6 +25,7 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
   onPeriodChange,
   availableYears = []
 }) => {
+  const { t } = useTranslation();
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customRange, setCustomRange] = useState<DateRange>({
     start: '',
@@ -35,16 +37,16 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
   const lastScrolledPeriodRef = useRef<TimePeriod | null>(null);
 
   const allTimePeriods: { period: TimePeriod; label: string; icon: string }[] = [
-    { period: 'today', label: 'Today', icon: '📅' },
-    { period: 'week', label: 'This Week', icon: '📊' },
-    { period: 'month', label: 'This Month', icon: '🗓️' },
-    { period: 'lastMonth', label: 'Last Month', icon: '📅' },
-    { period: 'quarter', label: 'This Quarter', icon: '📈' },
-    { period: 'winter', label: 'Winter', icon: '❄️' },
-    { period: 'spring', label: 'Spring', icon: '🌸' },
-    { period: 'summer', label: 'Summer', icon: '☀️' },
-    { period: 'autumn', label: 'Autumn', icon: '🍂' },
-    { period: 'custom', label: 'Custom Range', icon: '⚙️' }
+    { period: 'today', label: t('timePeriod.today'), icon: '📅' },
+    { period: 'week', label: t('timePeriod.thisWeek'), icon: '📊' },
+    { period: 'month', label: t('timePeriod.thisMonth'), icon: '🗓️' },
+    { period: 'lastMonth', label: t('timePeriod.lastMonth'), icon: '📅' },
+    { period: 'quarter', label: t('timePeriod.thisQuarter'), icon: '📈' },
+    { period: 'winter', label: t('timePeriod.winter'), icon: '❄️' },
+    { period: 'spring', label: t('timePeriod.spring'), icon: '🌸' },
+    { period: 'summer', label: t('timePeriod.summer'), icon: '☀️' },
+    { period: 'autumn', label: t('timePeriod.autumn'), icon: '🍂' },
+    { period: 'custom', label: t('timePeriod.customRange'), icon: '⚙️' }
   ];
 
   // Compose time periods with dynamic years
@@ -233,13 +235,13 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
         >
           <Surface style={styles.modalSurface}>
             <ModalHeader
-              title="Custom Date Range"
+              title={t('timePeriod.customDateRange')}
               leftAction={{
-                label: "Cancel",
+                label: t('timePeriod.cancel'),
                 onPress: () => setShowCustomModal(false)
               }}
               rightAction={{
-                label: "Apply",
+                label: t('timePeriod.apply'),
                 onPress: handleCustomRangeApply,
                 disabled: !isCustomRangeValid
               }}
@@ -247,30 +249,30 @@ export const TimePeriodSelector: React.FC<TimePeriodSelectorProps> = ({
             
             <View style={styles.modalContent}>
               <View style={styles.dateInputGroup}>
-                <Text style={styles.inputLabel}>From Date</Text>
+                <Text style={styles.inputLabel}>{t('timePeriod.fromDate')}</Text>
                 <TextInput
                   mode="outlined"
                   value={customRange.start}
                   onChangeText={(text) => setCustomRange({ ...customRange, start: text })}
-                  placeholder="YYYY-MM-DD"
+                  placeholder={t('timePeriod.datePlaceholder')}
                   style={styles.dateInput}
                 />
               </View>
               
               <View style={styles.dateInputGroup}>
-                <Text style={styles.inputLabel}>To Date</Text>
+                <Text style={styles.inputLabel}>{t('timePeriod.toDate')}</Text>
                 <TextInput
                   mode="outlined"
                   value={customRange.end}
                   onChangeText={(text) => setCustomRange({ ...customRange, end: text })}
-                  placeholder="YYYY-MM-DD"
+                  placeholder={t('timePeriod.datePlaceholder')}
                   style={styles.dateInput}
                 />
               </View>
 
               {!isCustomRangeValid && customRange.start && customRange.end && (
                 <Text style={styles.errorText}>
-                  End date must be after start date
+                  {t('timePeriod.endDateAfterStart')}
                 </Text>
               )}
             </View>

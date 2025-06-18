@@ -7,6 +7,7 @@ import { useTransactionCallbacks } from '@/features/transactions/ui/hooks/useTra
 import { initializeDatabase } from '@/db';
 import { useSettingsStore } from '@/shared/store/settingsStore';
 import { UI_CONSTANTS } from '@/shared/constants/ui';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 export interface BaseScreenConfig {
   screenName: string;
@@ -16,6 +17,7 @@ export interface BaseScreenConfig {
 }
 
 export const useBaseScreen = (config: BaseScreenConfig) => {
+  const { t } = useTranslation();
   const { 
     transactions, 
     loading, 
@@ -146,7 +148,9 @@ export const useBaseScreen = (config: BaseScreenConfig) => {
     if (loading) {
       return {
         loading: true,
-        loadingText: `Loading ${config.screenName.toLowerCase()}...`,
+        loadingText: config.screenName === "Analytics" 
+          ? t('analytics.loadingAnalytics')
+          : t('transactions.loadingTransactions'),
         title: "",
         description: ""
       };
@@ -154,22 +158,22 @@ export const useBaseScreen = (config: BaseScreenConfig) => {
 
     if (!transactions.length) {
       return {
-        title: "No transactions yet",
+        title: t('transactions.noTransactions'),
         description: config.screenName === "Analytics" 
-          ? "Start by adding your first transaction or importing data from your bank statements to see your analytics."
-          : "Start by adding your first transaction or importing data from your bank statements"
+          ? t('analytics.noAnalyticsDescription')
+          : t('transactions.noTransactionsDescription')
       };
     }
 
     if (!filteredTransactions.length) {
       return {
-        title: "No transactions match your filters",
+        title: t('transactions.noFilteredTransactions'),
         description: config.screenName === "Analytics"
-          ? `Try adjusting your filters to see analytics for your ${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}`
-          : `Try adjusting your filters or clearing them to see all ${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}`,
+          ? t('analytics.noFilteredAnalytics', { count: transactions.length })
+          : t('transactions.noFilteredTransactionsDescription', { count: transactions.length }),
         actions: config.screenName === "Transactions" ? [
           {
-            label: 'Clear Filters',
+            label: t('transactions.clearFilters'),
             icon: 'filter-remove',
             mode: 'outlined' as const,
             onPress: clearFilters
@@ -179,7 +183,7 @@ export const useBaseScreen = (config: BaseScreenConfig) => {
     }
 
     return null;
-  }, [loading, transactions.length, filteredTransactions.length, clearFilters, config.screenName]);
+  }, [loading, transactions.length, filteredTransactions.length, clearFilters, config.screenName, t]);
 
   // Common list header renderer
   const renderListHeader = useCallback(() => ({

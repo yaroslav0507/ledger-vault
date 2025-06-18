@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { Button, FAB } from 'react-native-paper';
 import { Platform, ViewStyle, TextStyle } from 'react-native';
+import { useTranslation } from '../../../../shared/i18n/useTranslation';
 
 interface ImportButtonProps {
   onFileSelect: (file: File) => void;
@@ -19,12 +20,14 @@ export const ImportButton: React.FC<ImportButtonProps> = ({
   variant = 'button',
   disabled = false,
   loading = false,
-  label = 'Import File',
+  label,
   icon = 'upload',
   style,
   contentStyle,
   labelStyle
 }) => {
+  const { t } = useTranslation();
+  const defaultLabel = label || t('import.importFile');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePress = () => {
@@ -77,7 +80,7 @@ export const ImportButton: React.FC<ImportButtonProps> = ({
         contentStyle={contentStyle}
         labelStyle={labelStyle}
       >
-        {label}
+        {defaultLabel}
       </Button>
       {Platform.OS === 'web' && (
         <input

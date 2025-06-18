@@ -17,6 +17,7 @@ import { parseCurrency, formatAmount, SUPPORTED_CURRENCIES, getCurrencySymbol, p
 import { theme } from '@/shared/ui/theme/theme';
 import { ModalHeader } from '@/shared/ui/components/ModalHeader';
 import { categoryService } from '../../service/CategoryService';
+import { useTranslation } from '../../../../shared/i18n/useTranslation';
 
 interface AddTransactionModalProps {
   visible: boolean;
@@ -35,6 +36,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   transactionToEdit,
   onUpdate
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<TransactionFormData>({
     description: '',
     amount: '',
@@ -143,7 +145,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Error creating transaction:', error);
-      Alert.alert('Error', 'Failed to create transaction. Please try again.');
+              Alert.alert(t('errors.error'), t('errors.failedToCreateTransaction'));
     } finally {
       setIsSubmitting(false);
     }
@@ -173,13 +175,15 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     >
       <View style={styles.container}>
         <ModalHeader
-          title={editMode ? "Edit Transaction" : "Add Transaction"}
+          title={t(editMode ? 'transactions.editTransaction' : 'transactions.addTransaction')}
           leftAction={{
-            label: "Cancel",
+            label: t('common.cancel'),
             onPress: onClose
           }}
           rightAction={{
-            label: isSubmitting ? (editMode ? "Updating..." : "Adding...") : (editMode ? "Update" : "Add"),
+            label: isSubmitting 
+              ? t(editMode ? 'transactions.updating' : 'transactions.adding') 
+              : t(editMode ? 'common.update' : 'common.add'),
             onPress: handleSubmit,
             disabled: isSubmitting || isResettingForm
           }}
@@ -188,10 +192,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
           {/* Transaction Type Toggle */}
           <View style={styles.toggleContainer}>
-            <Text style={styles.toggleLabel}>Transaction Type</Text>
+            <Text style={styles.toggleLabel}>{t('transactions.transactionType')}</Text>
             <View style={styles.toggleRow}>
               <Text style={[styles.toggleText, !formData.isIncome && styles.activeToggleText]}>
-                Expense
+                {t('common.expense')}
               </Text>
               <Switch
                 value={formData.isIncome}
@@ -200,19 +204,19 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 thumbColor={formData.isIncome ? theme.colors.surface : theme.colors.surface}
               />
               <Text style={[styles.toggleText, formData.isIncome && styles.activeToggleText]}>
-                Income
+                {t('common.income')}
               </Text>
             </View>
           </View>
 
           {/* Description */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description *</Text>
+            <Text style={styles.label}>{t('transactions.descriptionRequired')}</Text>
             <TextInput
               style={[styles.input, errors.description && styles.inputError]}
               value={formData.description}
               onChangeText={(text) => handleFieldChange('description', text)}
-              placeholder="Enter transaction description"
+              placeholder={t('transactions.descriptionPlaceholder')}
               placeholderTextColor={theme.colors.text.disabled}
               autoCapitalize="sentences"
             />
@@ -221,13 +225,13 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
           {/* Amount */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Amount *</Text>
+            <Text style={styles.label}>{t('transactions.amountRequired')}</Text>
             <View style={styles.amountContainer}>
               <TextInput
                 style={[styles.input, styles.amountInput, errors.amount && styles.inputError]}
                 value={formData.amount}
                 onChangeText={(text) => handleFieldChange('amount', text)}
-                placeholder="0.00"
+                placeholder={t('transactions.amountPlaceholder')}
                 placeholderTextColor={theme.colors.text.disabled}
                 keyboardType="decimal-pad"
               />
@@ -240,12 +244,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
           {/* Card/Account */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Card/Account *</Text>
+            <Text style={styles.label}>{t('transactions.cardRequired')}</Text>
             <TextInput
               style={[styles.input, errors.card && styles.inputError]}
               value={formData.card}
               onChangeText={(text) => handleFieldChange('card', text)}
-              placeholder="Enter card or account name"
+              placeholder={t('transactions.cardPlaceholder')}
               placeholderTextColor={theme.colors.text.disabled}
               autoCapitalize="words"
             />
@@ -254,12 +258,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
           {/* Category */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Category *</Text>
+            <Text style={styles.label}>{t('transactions.categoryRequired')}</Text>
             <TextInput
               style={[styles.input, errors.category && styles.inputError]}
               value={formData.category}
               onChangeText={(text) => handleFieldChange('category', text)}
-              placeholder="Enter or select category"
+              placeholder={t('transactions.categoryPlaceholder')}
               placeholderTextColor={theme.colors.text.disabled}
               autoCapitalize="words"
             />
@@ -291,12 +295,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
           {/* Comment */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Comment</Text>
+            <Text style={styles.label}>{t('transactions.comment')}</Text>
             <TextInput
               style={[styles.input, styles.textArea, errors.comment && styles.inputError]}
               value={formData.comment}
               onChangeText={(text) => handleFieldChange('comment', text)}
-              placeholder="Add a comment (optional)"
+              placeholder={t('transactions.commentPlaceholder')}
               placeholderTextColor={theme.colors.text.disabled}
               multiline
               numberOfLines={3}
