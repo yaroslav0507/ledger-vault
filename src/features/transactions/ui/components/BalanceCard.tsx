@@ -213,7 +213,6 @@ const styles = StyleSheet.create({
   trendText: {
     fontSize: 10,
     fontWeight: '700',
-    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   metricsRow: {

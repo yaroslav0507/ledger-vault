@@ -1,4 +1,5 @@
 {
+  "appName": "Cash Flow",
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -86,17 +87,12 @@
     "monthlyTrends": "Monthly Trends",
     "categoryBreakdown": "Category Breakdown",
     "topCategories": "Top Categories",
-    "insights": "Key Insights",
     "keyInsights": "Key Insights",
     "insightCount": "{{count}} insight{{count, plural, one {} other {s}}}",
     "noDataAvailable": "No data available",
     "showLess": "Show Less",
     "showMore": "Show More",
     "loadingAnalytics": "Loading analytics...",
-    "totalIncomeHeader": "TOTAL INCOME",
-    "totalExpensesHeader": "TOTAL EXPENSES",
-    "netIncomeHeader": "NET INCOME",
-    "categoriesHeader": "CATEGORIES",
     "activeCategories": "Active categories",
     "month": "Month",
     "income": "Income",

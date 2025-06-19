@@ -72,7 +72,7 @@ export const AnalyticsGridHeader: React.FC<AnalyticsGridHeaderExtendedProps> = (
         <GridCard
           icon="trending-up"
           iconColor={theme.colors.income}
-          title={t('analytics.totalIncomeHeader')}
+          title={t('analytics.totalIncome')}
           value={formatCurrency(balance.income, currency)}
           subtitle={t('analytics.transactionCount', { count: incomeTransactionCount })}
           onPress={onTrendsPress}
@@ -80,7 +80,7 @@ export const AnalyticsGridHeader: React.FC<AnalyticsGridHeaderExtendedProps> = (
         <GridCard
           icon="trending-down"
           iconColor={theme.colors.expense}
-          title={t('analytics.totalExpensesHeader')}
+          title={t('analytics.totalExpenses')}
           value={formatCurrency(balance.expenses, currency)}
           subtitle={t('analytics.transactionCount', { count: expenseTransactionCount })}
           onPress={onTrendsPress}
@@ -91,7 +91,7 @@ export const AnalyticsGridHeader: React.FC<AnalyticsGridHeaderExtendedProps> = (
         <GridCard
           icon={balance.total >= 0 ? "cash-plus" : "cash-minus"}
           iconColor={balance.total >= 0 ? theme.colors.income : theme.colors.expense}
-          title={t('analytics.netIncomeHeader')}
+          title={t('analytics.netIncome')}
           value={formatCurrency(balance.total, currency)}
           subtitle={netIncomeText}
           onPress={onTrendsPress}
@@ -99,7 +99,7 @@ export const AnalyticsGridHeader: React.FC<AnalyticsGridHeaderExtendedProps> = (
         <GridCard
           icon="shape"
           iconColor={theme.colors.primary}
-          title={t('analytics.categoriesHeader')}
+          title={t('analytics.categories')}
           value={categoryCount.toString()}
           subtitle={t('analytics.activeCategories')}
           onPress={onCategoriesPress}
@@ -140,7 +140,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: theme.colors.text.secondary,
     fontWeight: UI_CONSTANTS.FONT_WEIGHTS.SEMIBOLD,
-    textTransform: 'uppercase',
   },
   cardValue: {
     fontWeight: UI_CONSTANTS.FONT_WEIGHTS.BOLD,

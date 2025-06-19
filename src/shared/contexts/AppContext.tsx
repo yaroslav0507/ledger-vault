@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { TabName, getInitialTabFromUrl, updateUrlWithTab } from '../utils/tabPersistence';
+import { useTranslation } from 'react-i18next';
 
 interface AppContextType {
   currentTabTitle: TabName;
@@ -16,6 +17,11 @@ interface AppProviderProps {
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [initialTab] = useState<TabName>(() => getInitialTabFromUrl());
   const [currentTabTitle, setCurrentTabTitleState] = useState<TabName>(initialTab);
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    document.title = t('appName');
+  }, [t]);
 
   const setCurrentTabTitle = (title: TabName) => {
     setCurrentTabTitleState(title);

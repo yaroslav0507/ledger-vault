@@ -1,4 +1,5 @@
 {
+  "appName": "Фінансовий Потік",
   "common": {
     "save": "Зберегти",
     "cancel": "Скасувати",
@@ -92,7 +93,6 @@
     "monthlyTrends": "Місячні тренди",
     "categoryBreakdown": "Розподіл за категоріями",
     "topCategories": "Топ категорії",
-    "insights": "Ключові інсайти",
     "keyInsights": "Ключові інсайти",
     "insightCount_one": "{{count}} інсайт",
     "insightCount_few": "{{count}} інсайти",
@@ -102,10 +102,6 @@
     "showLess": "Показати менше",
     "showMore": "Показати більше",
     "loadingAnalytics": "Завантаження аналітики...",
-    "totalIncomeHeader": "ЗАГАЛЬНИЙ ПРИБУТОК",
-    "totalExpensesHeader": "ЗАГАЛЬНІ ВИТРАТИ",
-    "netIncomeHeader": "ЧИСТИЙ ПРИБУТОК",
-    "categoriesHeader": "КАТЕГОРІЇ",
     "activeCategories": "Активні категорії",
     "month": "Місяць",
     "income": "Прибуток",
