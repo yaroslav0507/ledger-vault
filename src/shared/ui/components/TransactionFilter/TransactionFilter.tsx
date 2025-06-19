@@ -1,6 +1,7 @@
 import React from 'react';
 import { StickyHeader } from '../StickyHeader';
 import { TransactionFilters } from '../../../../features/transactions/model/Transaction';
+import { useTranslation } from '../../../i18n/useTranslation';
 
 interface TransactionFilterProps {
   transactionCount: number;
@@ -15,8 +16,10 @@ export const TransactionFilter: React.FC<TransactionFilterProps> = ({
   totalTransactionCount,
   filters,
   onFiltersPress,
-  screenTitle = 'Transactions'
+  screenTitle,
 }) => {
+  const { t } = useTranslation();
+  
   // Calculate active filters count
   const activeFiltersCount = React.useMemo(() => {
     let count = 0;
@@ -45,7 +48,7 @@ export const TransactionFilter: React.FC<TransactionFilterProps> = ({
       title={title}
       actionButton={{
         icon: '🔍',
-        label: 'Filters',
+        label: t('filters.title'),
         onPress: onFiltersPress,
         isActive: activeFiltersCount > 0,
         ...(activeFiltersCount > 0 && { activeCount: activeFiltersCount })

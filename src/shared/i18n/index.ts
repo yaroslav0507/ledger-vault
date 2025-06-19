@@ -11,6 +11,17 @@ const resources = {
   uk: { translation: uk }
 };
 
+// Ukrainian pluralization rule for i18next
+const ukrainianPluralRule = {
+  name: 'ukrainian',
+  numbers: [1, 2, 5],
+  plurals: (n: number) => {
+    if (n === 1) return 0; // one
+    if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return 1; // few
+    return 2; // many
+  }
+};
+
 const getDeviceLanguage = () => {
   const locales = RNLocalize.getLocales();
   if (locales && locales.length > 0) {
@@ -43,6 +54,9 @@ const initI18n = async () => {
         useSuspense: false,
       },
     });
+
+  // Add Ukrainian pluralization rule
+  i18n.services.pluralResolver.addRule('uk', ukrainianPluralRule);
 };
 
 // Initialize i18n

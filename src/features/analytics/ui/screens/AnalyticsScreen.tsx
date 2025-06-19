@@ -92,7 +92,7 @@ export const AnalyticsScreen: React.FC = () => {
   return (
     <BaseScreenLayout
       isInitialized={baseScreen.isInitialized}
-      screenName="Analytics"
+      screenName={t('navigation.analytics')}
       sections={sectionsData}
       renderItem={renderAnalyticsItem}
       keyExtractor={(item) => item}

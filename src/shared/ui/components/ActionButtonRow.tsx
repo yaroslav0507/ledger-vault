@@ -4,6 +4,7 @@ import { Button } from 'react-native-paper';
 import { ImportButton } from '@/features/import/ui/components/ImportButton';
 import { theme } from '@/shared/ui/theme/theme';
 import { UI_CONSTANTS } from '@/shared/constants/ui';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 interface ActionButtonRowProps {
   onAddTransaction?: () => void;
@@ -16,6 +17,8 @@ export const ActionButtonRow: React.FC<ActionButtonRowProps> = ({
   onFileSelect,
   style,
 }) => {
+  const { t } = useTranslation();
+  
   if (!onAddTransaction && !onFileSelect) {
     return null;
   }
@@ -23,7 +26,7 @@ export const ActionButtonRow: React.FC<ActionButtonRowProps> = ({
   return (
     <View style={[
       styles.actionButtons,
-      Platform.OS === 'web' && { paddingBottom: 'env(safe-area-inset-bottom, 16px)' },
+      Platform.OS === 'web' && { paddingBottom: 16 },
       style
     ]}>
       {onAddTransaction && (
@@ -35,7 +38,7 @@ export const ActionButtonRow: React.FC<ActionButtonRowProps> = ({
           labelStyle={styles.actionButtonLabel}
           contentStyle={styles.actionButtonContent}
         >
-          Add Transaction
+          {t('transactions.addTransaction')}
         </Button>
       )}
 

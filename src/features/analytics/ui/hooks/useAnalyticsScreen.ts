@@ -1,8 +1,10 @@
 import { useMemo, useCallback } from 'react';
 import { useBaseScreen } from '@/shared/hooks';
 import { AnalyticsService } from '../../service/AnalyticsService';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 export const useAnalyticsScreen = () => {
+  const { t, getCurrentLanguage } = useTranslation();
   const baseScreen = useBaseScreen({
     screenName: 'Analytics',
     loadAvailableCards: false,
@@ -16,12 +18,12 @@ export const useAnalyticsScreen = () => {
   }, [baseScreen.filteredTransactions]);
 
   const analyticsData = useMemo(() => {
-    return AnalyticsService.calculateAnalytics(baseScreen.filteredTransactions);
-  }, [baseScreen.filteredTransactions]);
+    return AnalyticsService.calculateAnalytics(baseScreen.filteredTransactions, getCurrentLanguage());
+  }, [baseScreen.filteredTransactions, getCurrentLanguage]);
 
   const insights = useMemo(() => {
-    return AnalyticsService.getInsights(analyticsData, currency);
-  }, [analyticsData, currency]);
+    return AnalyticsService.getInsights(analyticsData, currency, t);
+  }, [analyticsData, currency, t]);
 
   const listItems = useMemo(() => ['trends', 'categories', 'insights'], []);
 
@@ -59,7 +61,7 @@ export const useAnalyticsScreen = () => {
       clearFilters: baseScreen.clearFilters,
       availableCards: baseScreen.availableCards,
       transactions: baseScreen.transactions,
-      screenTitle: 'Analytics',
+      screenTitle: t('navigation.analytics'),
     }),
     [
       baseScreen.filteredTransactions.length,

@@ -171,6 +171,11 @@ const languages = getAvailableLanguages(); // ['en', 'uk']
 - `analytics.totalIncome` - Total Income
 - `analytics.totalExpenses` - Total Expenses
 - `analytics.netIncome` - Net Income
+- `analytics.insights.positiveCashFlow` - Positive cash flow insights
+- `analytics.insights.topSpendingCategory` - Top spending category insights
+- `analytics.insights.netIncomeDecreased` - Net income change insights
+- `analytics.insights.savingsRatePositive` - Savings rate insights
+- (and other insight keys...)
 
 ### Settings
 - `settings.title` - Settings
@@ -199,10 +204,13 @@ const languages = getAvailableLanguages(); // ['en', 'uk']
 - AddTransactionModal
 - SettingsScreen
 - useBaseScreen hook (Empty states)
+- AnalyticsScreen (complete with insights and month localization)
+- TransactionFilter component
+- AnalyticsService (insights generation and month formatting)
+- ActionButtonRow component
 
 ### 🔄 In Progress
 - TransactionListScreen
-- AnalyticsScreen
 - Filter components
 - Import components
 
@@ -256,7 +264,7 @@ Ukrainian has complex plural rules handled by i18next:
 
 ### Advanced Features
 - Right-to-left (RTL) language support
-- Date/time localization
+- ✅ Date/time localization (month names implemented)
 - Number formatting localization
 - Currency formatting per locale
 - Regional preferences

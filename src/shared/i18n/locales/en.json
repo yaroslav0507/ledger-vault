@@ -108,7 +108,27 @@
     "negativeFlow": "Negative flow",
     "monthCount": "{{count}} month{{count, plural, one {} other {s}}}",
     "categoryCount": "{{count}} categor{{count, plural, one {y} other {ies}}}",
-    "selectedMonth": "Selected month"
+    "selectedMonth": "Selected month",
+    "insights": {
+      "positiveCashFlow": "Positive cash flow of {{amount}} - Spending is {{amount}} less than income",
+      "negativeCashFlow": "Negative cash flow of {{amount}} - Spending exceeds income by this amount",
+      "balancedFinances": "Balanced finances - Income exactly matches expenses this period",
+      "topSpendingCategory": "Top spending category is \"{{category}}\" accounting for {{percentage}}% of all expenses ({{amount}})",
+      "secondHighestExpenseCategory": "Second highest expense category is \"{{category}}\" with {{percentage}}% of expenses ({{amount}})",
+      "netIncomeIncreased": "Net income increased by {{amount}} compared to the previous month",
+      "netIncomeDecreased": "Net income decreased by {{amount}} compared to the previous month",
+      "netIncomeConsistent": "Net income remained consistent with the previous month",
+      "savingsRateExcellent": "Savings rate of {{rate}}% - Above the recommended 20% threshold",
+      "savingsRateGood": "Savings rate of {{rate}}% - Above 10% but below the optimal 20%",
+      "savingsRatePositive": "Savings rate of {{rate}}% - Positive but below typical recommendations",
+      "highValueTransactions": "High-value transactions averaging {{amount}} per transaction",
+      "frequentSmallTransactions": "Frequent small transactions averaging {{amount}} per transaction",
+      "spendingHighlyConcentrated": "Spending highly concentrated in \"{{category}}\" at {{percentage}}% of total expenses",
+      "highTransactionVolume": "High transaction volume with {{count}} transactions this period",
+      "lowTransactionVolume": "Low transaction volume with only {{count}} transactions this period",
+      "highExpenseRatio": "High expense ratio at {{ratio}}% of income",
+      "lowExpenseRatio": "Low expense ratio at {{ratio}}% of income"
+    }
   },
   "settings": {
     "title": "Settings",

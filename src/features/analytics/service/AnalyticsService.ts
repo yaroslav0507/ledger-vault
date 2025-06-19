@@ -2,6 +2,20 @@ import { Transaction } from '../../transactions/model/Transaction';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { formatCurrency } from '../../../shared/utils/currencyUtils';
 
+const UKRAINIAN_MONTHS = [
+  'Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер',
+  'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'
+];
+
+const formatMonthLocalized = (date: Date, locale?: string): string => {
+  if (locale === 'uk') {
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    return `${UKRAINIAN_MONTHS[month]} ${year}`;
+  }
+  return format(date, 'MMM yyyy');
+};
+
 export interface AnalyticsData {
   totalIncome: number;
   totalExpenses: number;
@@ -58,7 +72,7 @@ const CATEGORY_COLORS = [
 ];
 
 export class AnalyticsService {
-  static calculateAnalytics(transactions: Transaction[]): AnalyticsData {
+  static calculateAnalytics(transactions: Transaction[], locale?: string): AnalyticsData {
     if (!transactions.length) {
       return {
         totalIncome: 0,
@@ -156,7 +170,7 @@ export class AnalyticsService {
       }))
       .sort((a, b) => b.amount - a.amount);
 
-    const monthlyTrends = this.calculateMonthlyTrends(transactions);
+    const monthlyTrends = this.calculateMonthlyTrends(transactions, locale);
     const topCategories = categoryBreakdown.slice(0, 5);
     const topExpenseCategories = expenseCategories.slice(0, 5);
 
@@ -174,7 +188,7 @@ export class AnalyticsService {
     };
   }
 
-  private static calculateMonthlyTrends(transactions: Transaction[]): MonthlyTrendData[] {
+  private static calculateMonthlyTrends(transactions: Transaction[], locale?: string): MonthlyTrendData[] {
     const monthMap = new Map<string, { income: number; expenses: number }>();
 
     transactions.forEach(transaction => {
@@ -193,7 +207,7 @@ export class AnalyticsService {
     return Array.from(monthMap.entries())
       .map(([monthKey, data]) => ({
         monthKey,
-        month: format(new Date(monthKey + '-01'), 'MMM yyyy'),
+        month: formatMonthLocalized(new Date(monthKey + '-01'), locale),
         income: data.income,
         expenses: data.expenses,
         net: data.income - data.expenses
@@ -202,26 +216,43 @@ export class AnalyticsService {
       .map(({ monthKey, ...rest }) => rest);
   }
 
-  static getInsights(data: AnalyticsData, currency: string = 'UAH'): string[] {
+  static getInsights(data: AnalyticsData, currency: string = 'UAH', t?: (key: string, options?: any) => string): string[] {
     const insights: string[] = [];
 
     if (data.netIncome > 0) {
-      insights.push(`💰Positive cash flow of ${formatCurrency(data.netIncome, currency)} - Spending is ${formatCurrency(data.netIncome, currency)} less than income`);
+      const amount = formatCurrency(data.netIncome, currency);
+      const text = t ? t('analytics.insights.positiveCashFlow', { amount }) : `Positive cash flow of ${amount} - Spending is ${amount} less than income`;
+      insights.push(`💰${text}`);
     } else if (data.netIncome < 0) {
-      insights.push(`⚠️Negative cash flow of ${formatCurrency(Math.abs(data.netIncome), currency)} - Spending exceeds income by this amount`);
+      const amount = formatCurrency(Math.abs(data.netIncome), currency);
+      const text = t ? t('analytics.insights.negativeCashFlow', { amount }) : `Negative cash flow of ${amount} - Spending exceeds income by this amount`;
+      insights.push(`⚠️${text}`);
     } else if (data.transactionCount > 0) {
-      insights.push(`⚖️Balanced finances - Income exactly matches expenses this period`);
+      const text = t ? t('analytics.insights.balancedFinances') : 'Balanced finances - Income exactly matches expenses this period';
+      insights.push(`⚖️${text}`);
     }
 
     if (data.topExpenseCategories.length > 0) {
       const topExpenseCategory = data.topExpenseCategories[0];
       const percentage = topExpenseCategory.percentage.toFixed(1);
-      insights.push(`📊Top spending category is "${topExpenseCategory.category}" accounting for ${percentage}% of all expenses (${formatCurrency(topExpenseCategory.amount, currency)})`);
+      const amount = formatCurrency(topExpenseCategory.amount, currency);
+      const text = t ? t('analytics.insights.topSpendingCategory', { 
+        category: topExpenseCategory.category, 
+        percentage, 
+        amount 
+      }) : `Top spending category is "${topExpenseCategory.category}" accounting for ${percentage}% of all expenses (${amount})`;
+      insights.push(`📊${text}`);
       
       if (data.topExpenseCategories.length > 1) {
         const secondExpenseCategory = data.topExpenseCategories[1];
         const secondPercentage = secondExpenseCategory.percentage.toFixed(1);
-        insights.push(`🥈Second highest expense category is "${secondExpenseCategory.category}" with ${secondPercentage}% of expenses (${formatCurrency(secondExpenseCategory.amount, currency)})`);
+        const secondAmount = formatCurrency(secondExpenseCategory.amount, currency);
+        const secondText = t ? t('analytics.insights.secondHighestExpenseCategory', { 
+          category: secondExpenseCategory.category, 
+          percentage: secondPercentage, 
+          amount: secondAmount 
+        }) : `Second highest expense category is "${secondExpenseCategory.category}" with ${secondPercentage}% of expenses (${secondAmount})`;
+        insights.push(`🥈${secondText}`);
       }
     }
 
@@ -231,54 +262,74 @@ export class AnalyticsService {
       const trend = lastMonth.net - prevMonth.net;
       
       if (trend > 0) {
-        insights.push(`📈Net income increased by ${formatCurrency(trend, currency)} compared to the previous month`);
+        const amount = formatCurrency(trend, currency);
+        const text = t ? t('analytics.insights.netIncomeIncreased', { amount }) : `Net income increased by ${amount} compared to the previous month`;
+        insights.push(`📈${text}`);
       } else if (trend < 0) {
-        insights.push(`📉Net income decreased by ${formatCurrency(Math.abs(trend), currency)} compared to the previous month`);
+        const amount = formatCurrency(Math.abs(trend), currency);
+        const text = t ? t('analytics.insights.netIncomeDecreased', { amount }) : `Net income decreased by ${amount} compared to the previous month`;
+        insights.push(`📉${text}`);
       } else {
-        insights.push(`➡️Net income remained consistent with the previous month`);
+        const text = t ? t('analytics.insights.netIncomeConsistent') : 'Net income remained consistent with the previous month';
+        insights.push(`➡️${text}`);
       }
     }
 
     if (data.totalIncome > 0 && data.totalExpenses > 0) {
       const savingsRate = ((data.totalIncome - data.totalExpenses) / data.totalIncome) * 100;
+      const rate = savingsRate.toFixed(1);
       if (savingsRate > 20) {
-        insights.push(`🎯Savings rate of ${savingsRate.toFixed(1)}% - Above the recommended 20% threshold`);
+        const text = t ? t('analytics.insights.savingsRateExcellent', { rate }) : `Savings rate of ${rate}% - Above the recommended 20% threshold`;
+        insights.push(`🎯${text}`);
       } else if (savingsRate > 10) {
-        insights.push(`💪Savings rate of ${savingsRate.toFixed(1)}% - Above 10% but below the optimal 20%`);
+        const text = t ? t('analytics.insights.savingsRateGood', { rate }) : `Savings rate of ${rate}% - Above 10% but below the optimal 20%`;
+        insights.push(`💪${text}`);
       } else if (savingsRate > 0) {
-        insights.push(`🌱Savings rate of ${savingsRate.toFixed(1)}% - Positive but below typical recommendations`);
+        const text = t ? t('analytics.insights.savingsRatePositive', { rate }) : `Savings rate of ${rate}% - Positive but below typical recommendations`;
+        insights.push(`🌱${text}`);
       }
     }
 
     // Average transaction insights
     if (data.transactionCount > 0) {
       const avgTransaction = (data.totalIncome + data.totalExpenses) / data.transactionCount;
+      const amount = formatCurrency(avgTransaction, currency);
       if (avgTransaction > 1000) {
-        insights.push(`💳High-value transactions averaging ${formatCurrency(avgTransaction, currency)} per transaction`);
+        const text = t ? t('analytics.insights.highValueTransactions', { amount }) : `High-value transactions averaging ${amount} per transaction`;
+        insights.push(`💳${text}`);
       } else if (avgTransaction < 100) {
-        insights.push(`🛒Frequent small transactions averaging ${formatCurrency(avgTransaction, currency)} per transaction`);
+        const text = t ? t('analytics.insights.frequentSmallTransactions', { amount }) : `Frequent small transactions averaging ${amount} per transaction`;
+        insights.push(`🛒${text}`);
       }
     }
 
     // Category concentration insights - use expense categories for spending concentration
     if (data.topExpenseCategories.length > 0 && data.topExpenseCategories[0].percentage > 50) {
-      insights.push(`🎯Spending highly concentrated in "${data.topExpenseCategories[0].category}" at ${data.topExpenseCategories[0].percentage.toFixed(1)}% of total expenses`);
+      const category = data.topExpenseCategories[0].category;
+      const percentage = data.topExpenseCategories[0].percentage.toFixed(1);
+      const text = t ? t('analytics.insights.spendingHighlyConcentrated', { category, percentage }) : `Spending highly concentrated in "${category}" at ${percentage}% of total expenses`;
+      insights.push(`🎯${text}`);
     }
 
     // Transaction volume insights
     if (data.transactionCount > 50) {
-      insights.push(`📈High transaction volume with ${data.transactionCount} transactions this period`);
+      const text = t ? t('analytics.insights.highTransactionVolume', { count: data.transactionCount }) : `High transaction volume with ${data.transactionCount} transactions this period`;
+      insights.push(`📈${text}`);
     } else if (data.transactionCount < 10 && data.transactionCount > 0) {
-      insights.push(`📉Low transaction volume with only ${data.transactionCount} transactions this period`);
+      const text = t ? t('analytics.insights.lowTransactionVolume', { count: data.transactionCount }) : `Low transaction volume with only ${data.transactionCount} transactions this period`;
+      insights.push(`📉${text}`);
     }
 
     // Income vs expenses ratio insight
     if (data.totalIncome > 0 && data.totalExpenses > 0) {
       const expenseRatio = (data.totalExpenses / data.totalIncome) * 100;
+      const ratio = expenseRatio.toFixed(1);
       if (expenseRatio > 90) {
-        insights.push(`⚠️High expense ratio at ${expenseRatio.toFixed(1)}% of income`);
+        const text = t ? t('analytics.insights.highExpenseRatio', { ratio }) : `High expense ratio at ${ratio}% of income`;
+        insights.push(`⚠️${text}`);
       } else if (expenseRatio < 50) {
-        insights.push(`💎Low expense ratio at ${expenseRatio.toFixed(1)}% of income`);
+        const text = t ? t('analytics.insights.lowExpenseRatio', { ratio }) : `Low expense ratio at ${ratio}% of income`;
+        insights.push(`💎${text}`);
       }
     }
 
